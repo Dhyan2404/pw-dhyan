@@ -20,22 +20,23 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android Build Tools & Platforms
+      - name: Accept Android SDK Licenses
         run: |
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" || true
 
-      - name: Generate Wrapper if missing
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Ensure Wrapper Ready
         run: |
-          if [ ! -f "gradlew" ]; then
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
             gradle wrapper --gradle-version 9.3.1
           fi
           chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload Ready APK
         uses: actions/upload-artifact@v4
