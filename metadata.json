@@ -1,0 +1,6 @@
+{
+  "name": "PW DHYAN",
+  "description": "Dedicated secure vertical browser for StudyParcham with dynamic passkey verification and custom player engine",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
