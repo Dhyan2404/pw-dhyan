@@ -114,7 +114,7 @@ fun LockScreen(
             is UnlockResult.PermanentUnlocked -> {
                 errorMessage = null
                 successMessage = "Master Code Accepted: Infinite Admin Active!"
-                showAdminDialog = true
+                onUnlocked(true)
             }
             is UnlockResult.KeyUnlocked -> {
                 errorMessage = null

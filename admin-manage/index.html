@@ -882,15 +882,24 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toast-msg"><i class="fas fa-info-circle" style="color:var(--cyan)"></i> <span id="toast-text">Toast message</span></div>
 
-  <!-- FIREBASE SCRIPTS (v10 Modular SDK via compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <!-- FIREBASE 12.19.0 MODULAR SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      onSnapshot, 
+      getDoc, 
+      setDoc, 
+      updateDoc, 
+      deleteDoc, 
+      addDoc, 
+      writeBatch 
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 
-  <script>
-    let cloudAdminPin = "240411";
-    let enteredPin = "";
-
-    // Web app's Firebase configuration
+    // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCenufaqeXZj9LeLhc_Kv5_artxWI-Kb2E",
       authDomain: "dhyan11-acc24.firebaseapp.com",
@@ -901,18 +910,14 @@
       measurementId: "G-QBF0PEEZTH"
     };
 
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    // Initialize Firebase v12
+    const app = initializeApp(firebaseConfig);
+    let analytics = null;
+    try { analytics = getAnalytics(app); } catch (e) { }
+    const db = getFirestore(app);
 
-    // Fetch cloud admin PIN from Firestore
-    try {
-      db.collection('system_config').doc('admin_auth').onSnapshot(doc => {
-        if (doc.exists && doc.data().pin) {
-          cloudAdminPin = doc.data().pin;
-        }
-      });
-    } catch (e) { }
+    let cloudAdminPin = "240411";
+    let enteredPin = "";
 
     // App State
     let userSessions = [];
@@ -922,16 +927,35 @@
     let pushNotifications = [];
     let maintenanceActive = false;
 
+    // Fetch cloud admin PIN from Firestore system_config/admin_auth
+    try {
+      onSnapshot(doc(db, 'system_config', 'admin_auth'), snapshot => {
+        if (snapshot.exists() && snapshot.data().pin) {
+          cloudAdminPin = snapshot.data().pin;
+        } else if (!snapshot.exists()) {
+          // Initialize default admin auth document in cloud
+          setDoc(doc(db, 'system_config', 'admin_auth'), {
+            pin: "240411",
+            updatedAt: Date.now(),
+            role: "super_admin"
+          }).catch(() => {});
+        }
+      }, err => console.warn("Admin pin sync:", err));
+    } catch (e) { }
+
     // Toast Notification helper
     function showToast(msg) {
       const toast = document.getElementById('toast-msg');
       const text = document.getElementById('toast-text');
-      text.innerText = msg;
-      toast.style.display = 'flex';
-      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+      if (text && toast) {
+        text.innerText = msg;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 3500);
+      }
     }
+    window.showToast = showToast;
 
-    // PIN Authentication
+    // PIN Authentication Functions
     function typePin(digit) {
       if (enteredPin.length < 6) {
         enteredPin += digit;
@@ -941,123 +965,162 @@
         }
       }
     }
+    window.typePin = typePin;
 
     function backspacePin() {
       enteredPin = enteredPin.slice(0, -1);
       updatePinUI();
-      document.getElementById('auth-error').innerText = '';
+      const err = document.getElementById('auth-error');
+      if (err) err.innerText = '';
     }
+    window.backspacePin = backspacePin;
 
     function clearPin() {
       enteredPin = '';
       updatePinUI();
-      document.getElementById('auth-error').innerText = '';
+      const err = document.getElementById('auth-error');
+      if (err) err.innerText = '';
     }
+    window.clearPin = clearPin;
 
     function updatePinUI() {
       for (let i = 1; i <= 6; i++) {
         const input = document.getElementById(`p${i}`);
-        input.value = enteredPin[i - 1] ? '•' : '';
+        if (input) input.value = enteredPin[i - 1] ? '•' : '';
       }
     }
 
     function verifyPin() {
       if (enteredPin === cloudAdminPin || enteredPin === "240411" || enteredPin === "2404") {
         sessionStorage.setItem('pw_admin_authenticated', 'true');
-        document.getElementById('auth-gate').style.display = 'none';
+        const gate = document.getElementById('auth-gate');
+        if (gate) gate.style.display = 'none';
         showToast('Admin Authenticated Successfully!');
         startFirestoreListeners();
       } else {
-        document.getElementById('auth-error').innerText = 'Invalid Admin Passkey. Please enter 240411.';
+        const err = document.getElementById('auth-error');
+        if (err) err.innerText = 'Invalid Admin Passkey. Please enter 240411.';
         setTimeout(clearPin, 600);
       }
     }
+    window.verifyPin = verifyPin;
 
     function lockAdmin() {
       sessionStorage.removeItem('pw_admin_authenticated');
       enteredPin = '';
       updatePinUI();
-      document.getElementById('auth-gate').style.display = 'flex';
+      const gate = document.getElementById('auth-gate');
+      if (gate) gate.style.display = 'flex';
     }
+    window.lockAdmin = lockAdmin;
+
+    // Physical Keyboard Listener
+    window.addEventListener('keydown', (e) => {
+      const gate = document.getElementById('auth-gate');
+      if (gate && gate.style.display !== 'none') {
+        if (e.key >= '0' && e.key <= '9') {
+          typePin(e.key);
+        } else if (e.key === 'Backspace') {
+          backspacePin();
+        } else if (e.key === 'Escape' || e.key === 'Delete') {
+          clearPin();
+        } else if (e.key === 'Enter' && enteredPin.length === 6) {
+          verifyPin();
+        }
+      }
+    });
 
     // Tab Navigation
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
-      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => {
+        const attr = b.getAttribute('onclick');
+        return attr && attr.includes(tabId);
+      });
       if (targetBtn) targetBtn.classList.add('active');
       
       const targetContent = document.getElementById(`tab-${tabId}`);
       if (targetContent) targetContent.classList.add('active');
     }
+    window.switchTab = switchTab;
 
     // Real-Time Firestore Listeners
     function startFirestoreListeners() {
       // 1. User Sessions Listener
-      db.collection('user_sessions').onSnapshot(snapshot => {
-        userSessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      onSnapshot(collection(db, 'user_sessions'), snapshot => {
+        userSessions = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         userSessions.sort((a, b) => (b.lastActiveTime || 0) - (a.lastActiveTime || 0));
-        document.getElementById('metric-devices-count').innerText = userSessions.length;
-        document.getElementById('badge-devices').innerText = userSessions.length;
+        const elMetric = document.getElementById('metric-devices-count');
+        const elBadge = document.getElementById('badge-devices');
+        if (elMetric) elMetric.innerText = userSessions.length;
+        if (elBadge) elBadge.innerText = userSessions.length;
         renderDevicesTable();
         updateTargetDeviceDropdown();
       }, err => console.error("Sessions error", err));
 
       // 2. Access Keys Listener
-      db.collection('access_keys').onSnapshot(snapshot => {
-        accessKeys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      onSnapshot(collection(db, 'access_keys'), snapshot => {
+        accessKeys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         accessKeys.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         const activeCount = accessKeys.filter(k => k.isInfinite || (!k.isUsed && (Date.now() < (k.createdAt + k.durationMillis)))).length;
-        document.getElementById('metric-active-keys').innerText = activeCount;
-        document.getElementById('badge-keys').innerText = accessKeys.length;
+        const elMetric = document.getElementById('metric-active-keys');
+        const elBadge = document.getElementById('badge-keys');
+        if (elMetric) elMetric.innerText = activeCount;
+        if (elBadge) elBadge.innerText = accessKeys.length;
         renderKeysTable();
       }, err => console.error("Keys error", err));
 
       // 3. Watch Logs Listener
-      db.collection('watch_logs').onSnapshot(snapshot => {
-        watchLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      onSnapshot(collection(db, 'watch_logs'), snapshot => {
+        watchLogs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         watchLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        document.getElementById('metric-watch-count').innerText = watchLogs.length;
-        document.getElementById('badge-watch').innerText = watchLogs.length;
+        const elMetric = document.getElementById('metric-watch-count');
+        const elBadge = document.getElementById('badge-watch');
+        if (elMetric) elMetric.innerText = watchLogs.length;
+        if (elBadge) elBadge.innerText = watchLogs.length;
         renderWatchLogsTable();
       }, err => console.error("Watch logs error", err));
 
       // 4. Login Logs Listener
-      db.collection('login_logs').onSnapshot(snapshot => {
-        loginLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      onSnapshot(collection(db, 'login_logs'), snapshot => {
+        loginLogs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         loginLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         renderLoginLogsTable();
       }, err => console.error("Login logs error", err));
 
       // 5. Push Notifications Listener
-      db.collection('push_notifications').onSnapshot(snapshot => {
-        pushNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      onSnapshot(collection(db, 'push_notifications'), snapshot => {
+        pushNotifications = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         pushNotifications.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        document.getElementById('metric-notif-count').innerText = pushNotifications.length;
+        const elMetric = document.getElementById('metric-notif-count');
+        if (elMetric) elMetric.innerText = pushNotifications.length;
         renderNotificationsStream();
       }, err => console.error("Notifications error", err));
 
       // 6. Maintenance Mode Listener
-      db.collection('system_config').doc('maintenance_mode').onSnapshot(doc => {
-        if (doc.exists) {
-          const data = doc.data();
+      onSnapshot(doc(db, 'system_config', 'maintenance_mode'), snapshot => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
           maintenanceActive = !!data.isActive;
           const badge = document.getElementById('maintenance-status-badge');
           const btn = document.getElementById('btn-toggle-maintenance');
-          if (maintenanceActive) {
-            badge.innerText = 'Status: ACTIVE (Lockdown)';
-            badge.style.color = 'var(--crimson)';
-            btn.innerHTML = '<i class="fas fa-unlock"></i> Deactivate Maintenance Mode';
-            btn.className = 'btn btn-emerald';
-          } else {
-            badge.innerText = 'Status: Inactive (Normal)';
-            badge.style.color = 'var(--emerald)';
-            btn.innerHTML = '<i class="fas fa-lock"></i> Activate Maintenance Mode';
-            btn.className = 'btn btn-danger';
+          if (badge && btn) {
+            if (maintenanceActive) {
+              badge.innerText = 'Status: ACTIVE (Lockdown)';
+              badge.style.color = 'var(--crimson)';
+              btn.innerHTML = '<i class="fas fa-unlock"></i> Deactivate Maintenance Mode';
+              btn.className = 'btn btn-emerald';
+            } else {
+              badge.innerText = 'Status: Inactive (Normal)';
+              badge.style.color = 'var(--emerald)';
+              btn.innerHTML = '<i class="fas fa-lock"></i> Activate Maintenance Mode';
+              btn.className = 'btn btn-danger';
+            }
           }
         }
-      });
+      }, err => console.error("Maintenance sync error", err));
     }
 
     // Formatting Helpers
@@ -1075,8 +1138,11 @@
 
     // Render Tab 1: Live Devices
     function renderDevicesTable() {
-      const q = (document.getElementById('search-devices').value || '').toLowerCase();
+      const searchInput = document.getElementById('search-devices');
+      const q = (searchInput ? searchInput.value : '').toLowerCase();
       const tbody = document.getElementById('devices-table-body');
+      if (!tbody) return;
+
       const filtered = userSessions.filter(s => 
         (s.deviceModel || '').toLowerCase().includes(q) ||
         (s.deviceId || '').toLowerCase().includes(q) ||
@@ -1139,10 +1205,12 @@
         `;
       }).join('');
     }
+    window.renderDevicesTable = renderDevicesTable;
 
     // Render Tab 2: Notification Stream
     function renderNotificationsStream() {
       const container = document.getElementById('notifications-stream-list');
+      if (!container) return;
       if (pushNotifications.length === 0) {
         container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">No push notifications sent yet.</div>`;
         return;
@@ -1164,8 +1232,11 @@
 
     // Render Tab 3: Watch History
     function renderWatchLogsTable() {
-      const q = (document.getElementById('search-watch').value || '').toLowerCase();
+      const searchInput = document.getElementById('search-watch');
+      const q = (searchInput ? searchInput.value : '').toLowerCase();
       const tbody = document.getElementById('watch-table-body');
+      if (!tbody) return;
+
       const filtered = watchLogs.filter(w => 
         (w.lectureTitle || '').toLowerCase().includes(q) ||
         (w.subjectName || '').toLowerCase().includes(q) ||
@@ -1201,11 +1272,15 @@
         `;
       }).join('');
     }
+    window.renderWatchLogsTable = renderWatchLogsTable;
 
     // Render Tab 4: Passkeys Table
     function renderKeysTable() {
-      const q = (document.getElementById('search-keys').value || '').toLowerCase();
+      const searchInput = document.getElementById('search-keys');
+      const q = (searchInput ? searchInput.value : '').toLowerCase();
       const tbody = document.getElementById('keys-table-body');
+      if (!tbody) return;
+
       const filtered = accessKeys.filter(k => 
         (k.code || '').toLowerCase().includes(q) ||
         (k.label || '').toLowerCase().includes(q) ||
@@ -1241,11 +1316,15 @@
         `;
       }).join('');
     }
+    window.renderKeysTable = renderKeysTable;
 
     // Render Tab 5: Login Audit Table
     function renderLoginLogsTable() {
-      const q = (document.getElementById('search-login-logs').value || '').toLowerCase();
+      const searchInput = document.getElementById('search-login-logs');
+      const q = (searchInput ? searchInput.value : '').toLowerCase();
       const tbody = document.getElementById('login-logs-table-body');
+      if (!tbody) return;
+
       const filtered = loginLogs.filter(l => 
         (l.deviceModel || '').toLowerCase().includes(q) ||
         (l.passkey || '').toLowerCase().includes(q) ||
@@ -1281,11 +1360,14 @@
         `;
       }).join('');
     }
+    window.renderLoginLogsTable = renderLoginLogsTable;
 
     // Dynamic Target Dropdown for Notifications
     function updateTargetDeviceDropdown() {
       const container = document.getElementById('notif-target-dynamic-container');
-      const type = document.getElementById('notif-target-type').value;
+      const typeSelect = document.getElementById('notif-target-type');
+      if (!container || !typeSelect) return;
+      const type = typeSelect.value;
       if (type === 'DEVICE') {
         const options = userSessions.map(s => `<option value="${s.deviceId}">${s.deviceModel || 'Android'} (${s.passkey}) - ${s.deviceId.slice(0,8)}...</option>`).join('');
         container.innerHTML = `<select id="notif-target-value" class="form-control">${options || '<option value="">No devices online</option>'}</select>`;
@@ -1297,6 +1379,8 @@
       const group = document.getElementById('notif-target-value-group');
       const label = document.getElementById('notif-target-label');
       const container = document.getElementById('notif-target-dynamic-container');
+
+      if (!group || !label || !container) return;
 
       if (type === 'ALL') {
         group.style.display = 'none';
@@ -1310,19 +1394,24 @@
         container.innerHTML = `<input type="text" id="notif-target-value" class="form-control" placeholder="Enter 6-digit passkey..." maxlength="8" />`;
       }
     }
+    window.handleTargetTypeChange = handleTargetTypeChange;
 
     function setNotifPreset(text) {
-      document.getElementById('notif-message').value = text;
+      const msg = document.getElementById('notif-message');
+      if (msg) msg.value = text;
     }
+    window.setNotifPreset = setNotifPreset;
 
     function promptDirectAlert(deviceId, model) {
       switchTab('notifications');
-      document.getElementById('notif-target-type').value = 'DEVICE';
+      const sel = document.getElementById('notif-target-type');
+      if (sel) sel.value = 'DEVICE';
       handleTargetTypeChange();
-      const sel = document.getElementById('notif-target-value');
-      if (sel) sel.value = deviceId;
+      const valEl = document.getElementById('notif-target-value');
+      if (valEl) valEl.value = deviceId;
       showToast(`Target set to ${model}`);
     }
+    window.promptDirectAlert = promptDirectAlert;
 
     // ACTIONS: Push Notification from Web
     function sendNotificationFromWeb() {
@@ -1355,41 +1444,46 @@
         isActive: true
       };
 
-      db.collection('push_notifications').add(notifItem).then(() => {
+      addDoc(collection(db, 'push_notifications'), notifItem).then(() => {
         showToast('Push Notification Sent to Cloud!');
         document.getElementById('notif-message').value = '';
       }).catch(err => alert("Error: " + err.message));
     }
+    window.sendNotificationFromWeb = sendNotificationFromWeb;
 
     // ACTIONS: Device Controls
     function suspendDevice(deviceId, mins = 5) {
       const until = Date.now() + (mins * 60 * 1000);
-      db.collection('user_sessions').doc(deviceId).update({ suspendedUntil: until }).then(() => {
+      updateDoc(doc(db, 'user_sessions', deviceId), { suspendedUntil: until }).then(() => {
         showToast(`Device placed on ${mins}-min timeout.`);
-      });
+      }).catch(err => console.error("Suspend error", err));
     }
+    window.suspendDevice = suspendDevice;
 
     function unsuspendDevice(deviceId) {
-      db.collection('user_sessions').doc(deviceId).update({ suspendedUntil: 0, isRevoked: false }).then(() => {
+      updateDoc(doc(db, 'user_sessions', deviceId), { suspendedUntil: 0, isRevoked: false }).then(() => {
         showToast('Device Unbanned & Reactivated!');
-      });
+      }).catch(err => console.error("Unban error", err));
     }
+    window.unsuspendDevice = unsuspendDevice;
 
     function revokeDevice(deviceId) {
       if (confirm(`Revoke and block access for device ${deviceId}?`)) {
-        db.collection('user_sessions').doc(deviceId).update({ isRevoked: true }).then(() => {
+        updateDoc(doc(db, 'user_sessions', deviceId), { isRevoked: true }).then(() => {
           showToast('Device revoked successfully.');
-        });
+        }).catch(err => console.error("Revoke error", err));
       }
     }
+    window.revokeDevice = revokeDevice;
 
     function deleteDeviceSession(deviceId) {
       if (confirm(`Remove device record ${deviceId}?`)) {
-        db.collection('user_sessions').doc(deviceId).delete().then(() => {
+        deleteDoc(doc(db, 'user_sessions', deviceId)).then(() => {
           showToast('Device session record removed.');
-        });
+        }).catch(err => console.error("Delete session error", err));
       }
     }
+    window.deleteDeviceSession = deleteDeviceSession;
 
     // ACTIONS: Passkey Creation
     function createSingleKeyFromWeb() {
@@ -1418,22 +1512,23 @@
         isUsed: false
       };
 
-      db.collection('access_keys').add(newKey).then(() => {
+      addDoc(collection(db, 'access_keys'), newKey).then(() => {
         showToast(`Key ${code} created successfully!`);
         document.getElementById('create-key-code').value = '';
         document.getElementById('create-key-label').value = '';
-      });
+      }).catch(err => alert("Error: " + err.message));
     }
+    window.createSingleKeyFromWeb = createSingleKeyFromWeb;
 
     function generateBatchKeysFromWeb() {
       const count = parseInt(document.getElementById('batch-key-count').value, 10) || 10;
       const prefix = document.getElementById('batch-key-prefix').value.trim() || 'Student Batch';
-      const batch = db.batch();
+      const batch = writeBatch(db);
       const now = Date.now();
 
       for (let i = 1; i <= count; i++) {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const docRef = db.collection('access_keys').doc();
+        const docRef = doc(collection(db, 'access_keys'));
         batch.set(docRef, {
           code: code,
           label: `${prefix} #${i}`,
@@ -1446,8 +1541,9 @@
 
       batch.commit().then(() => {
         showToast(`Batch of ${count} passkeys created in Cloud!`);
-      });
+      }).catch(err => alert("Batch error: " + err.message));
     }
+    window.generateBatchKeysFromWeb = generateBatchKeysFromWeb;
 
     function copyAllActiveKeys() {
       const active = accessKeys.filter(k => k.isInfinite || (!k.isUsed && (Date.now() < (k.createdAt + k.durationMillis))));
@@ -1459,16 +1555,20 @@
       const text = `🔑 PW DHYAN ACTIVE PASSKEYS (${active.length} Available):\n\n${lines}\n\nEnter any 6-digit passkey above in the app for instant study access.`;
       navigator.clipboard.writeText(text).then(() => {
         showToast('All active passkeys copied to clipboard!');
+      }).catch(() => {
+        alert(text);
       });
     }
+    window.copyAllActiveKeys = copyAllActiveKeys;
 
     function deletePasskey(docId, code) {
       if (confirm(`Delete passkey ${code}?`)) {
-        db.collection('access_keys').doc(docId).delete().then(() => {
+        deleteDoc(doc(db, 'access_keys', docId)).then(() => {
           showToast(`Passkey ${code} deleted.`);
-        });
+        }).catch(err => alert("Delete error: " + err.message));
       }
     }
+    window.deletePasskey = deletePasskey;
 
     function clearExpiredKeysFromWeb() {
       const expired = accessKeys.filter(k => !k.isInfinite && (Date.now() >= (k.createdAt + k.durationMillis)));
@@ -1477,13 +1577,14 @@
         return;
       }
       if (confirm(`Delete all ${expired.length} expired passkeys?`)) {
-        const batch = db.batch();
-        expired.forEach(k => batch.delete(db.collection('access_keys').doc(k.id)));
+        const batch = writeBatch(db);
+        expired.forEach(k => batch.delete(doc(db, 'access_keys', k.id)));
         batch.commit().then(() => {
           showToast(`Deleted ${expired.length} expired passkeys.`);
-        });
+        }).catch(err => alert("Clear error: " + err.message));
       }
     }
+    window.clearExpiredKeysFromWeb = clearExpiredKeysFromWeb;
 
     // ACTIONS: Announcements & Maintenance
     function publishAnnouncementFromWeb() {
@@ -1492,7 +1593,7 @@
         alert('Please enter an announcement message.');
         return;
       }
-      db.collection('announcements').doc('latest_announcement').set({
+      setDoc(doc(db, 'announcements', 'latest_announcement'), {
         message: msg,
         author: 'Admin Web',
         timestamp: Date.now(),
@@ -1500,30 +1601,34 @@
       }).then(() => {
         showToast('Announcement Broadcast Live to all students!');
         document.getElementById('broadcast-input').value = '';
-      });
+      }).catch(err => alert("Broadcast error: " + err.message));
     }
+    window.publishAnnouncementFromWeb = publishAnnouncementFromWeb;
 
     function clearAnnouncementFromWeb() {
-      db.collection('announcements').doc('latest_announcement').update({ isActive: false }).then(() => {
+      updateDoc(doc(db, 'announcements', 'latest_announcement'), { isActive: false }).then(() => {
         showToast('Broadcast Announcement cleared.');
-      });
+      }).catch(err => alert("Clear error: " + err.message));
     }
+    window.clearAnnouncementFromWeb = clearAnnouncementFromWeb;
 
     function toggleMaintenanceFromWeb() {
       const targetState = !maintenanceActive;
       const msg = document.getElementById('maintenance-msg-input').value.trim();
-      db.collection('system_config').doc('maintenance_mode').set({
+      setDoc(doc(db, 'system_config', 'maintenance_mode'), {
         isActive: targetState,
         message: msg || 'Server maintenance is underway. Please check back shortly!',
         updatedAt: Date.now()
       }).then(() => {
         showToast(targetState ? 'Maintenance Mode ACTIVATED' : 'Maintenance Mode DEACTIVATED');
-      });
+      }).catch(err => alert("Maintenance error: " + err.message));
     }
+    window.toggleMaintenanceFromWeb = toggleMaintenanceFromWeb;
 
     // Auto-check session on load
     if (sessionStorage.getItem('pw_admin_authenticated') === 'true') {
-      document.getElementById('auth-gate').style.display = 'none';
+      const gate = document.getElementById('auth-gate');
+      if (gate) gate.style.display = 'none';
       startFirestoreListeners();
     }
   </script>
