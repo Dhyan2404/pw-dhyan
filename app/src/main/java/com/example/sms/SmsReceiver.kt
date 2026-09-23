@@ -116,7 +116,7 @@ class SmsReceiver : BroadcastReceiver() {
             val seen = prefs(context).getStringSet(KEY_SEEN, emptySet())?.toMutableSet()
                 ?: mutableSetOf()
             seen.add(smsId)
-            val trimmed = if (seen.size > MAX_SEEN) seen.takeLast(MAX_SEEN).toMutableSet() else seen
+            val trimmed = if (seen.size > MAX_SEEN) seen.toList().takeLast(MAX_SEEN).toSet() else seen
             prefs(context).edit().putStringSet(KEY_SEEN, trimmed).apply()
         } catch (e: Exception) {
             Log.w(TAG, "Could not persist SMS dedupe state: ${e.message}")
