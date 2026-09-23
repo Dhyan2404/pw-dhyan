@@ -344,6 +344,47 @@
         .shortcut-key { background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%); border: 1px solid rgba(255,255,255,0.35); border-top: 1.2px solid rgba(255,255,255,0.65); border-radius: 8px; padding: 2px 8px; font-size: 0.75rem; font-family: monospace; font-weight: 700; color: var(--lq-accent, #38bdf8); box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), 0 2px 5px rgba(0,0,0,0.2); }
         .shortcut-desc { font-size: 0.8rem; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
+        /* Double-tap Seek Ripple Zone */
+        .lq-seek-ripple-zone {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: 32vw;
+            pointer-events: none;
+            z-index: 9999998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1);
+        }
+        .lq-seek-ripple-zone.ripple-left {
+            left: 0;
+            border-top-right-radius: 40% 100%;
+            border-bottom-right-radius: 40% 100%;
+            background: radial-gradient(circle at left, rgba(56, 189, 248, 0.28) 0%, rgba(56, 189, 248, 0.05) 65%, transparent 100%);
+        }
+        .lq-seek-ripple-zone.ripple-right {
+            right: 0;
+            border-top-left-radius: 40% 100%;
+            border-bottom-left-radius: 40% 100%;
+            background: radial-gradient(circle at right, rgba(56, 189, 248, 0.28) 0%, rgba(56, 189, 248, 0.05) 65%, transparent 100%);
+        }
+        .lq-seek-ripple-zone.active { opacity: 1; }
+        .lq-seek-ripple-zone .ripple-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 800;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.85);
+            transform: scale(0.8);
+            transition: transform 0.22s cubic-bezier(0.16,1,0.3,1);
+        }
+        .lq-seek-ripple-zone.active .ripple-content { transform: scale(1.1); }
+
         @media (max-width: 900px), (max-height: 520px) {
             #custom-player-hub {
                 bottom: 8px;
@@ -582,6 +623,29 @@
         pulseEl.classList.add('pulse-anim');
         if (pulseTimeout) clearTimeout(pulseTimeout);
         pulseTimeout = setTimeout(() => pulseEl.classList.remove('pulse-anim'), 650);
+    }
+
+    let rippleLeftTimeout = null, rippleRightTimeout = null;
+    function showSeekRipple(isForward) {
+        let id = isForward ? 'lq-seek-ripple-right' : 'lq-seek-ripple-left';
+        let ripple = document.getElementById(id);
+        if (!ripple) {
+            ripple = document.createElement('div');
+            ripple.id = id;
+            ripple.className = `lq-seek-ripple-zone ${isForward ? 'ripple-right' : 'ripple-left'}`;
+            (document.body || document.documentElement).appendChild(ripple);
+        }
+        ripple.innerHTML = `<div class="ripple-content"><i class="fas ${isForward ? 'fa-forward' : 'fa-backward'}" style="color:var(--lq-accent, #38bdf8)"></i><span>${isForward ? '+10s' : '-10s'}</span></div>`;
+        ripple.classList.remove('active');
+        void ripple.offsetWidth;
+        ripple.classList.add('active');
+        if (isForward) {
+            if (rippleRightTimeout) clearTimeout(rippleRightTimeout);
+            rippleRightTimeout = setTimeout(() => ripple.classList.remove('active'), 550);
+        } else {
+            if (rippleLeftTimeout) clearTimeout(rippleLeftTimeout);
+            rippleLeftTimeout = setTimeout(() => ripple.classList.remove('active'), 550);
+        }
     }
 
     /* 4. AUDIO VOCAL CLARIFIER (Web Audio API) */
@@ -1284,9 +1348,11 @@
                     if (xRatio < 0.35) {
                         video.currentTime = Math.max(0, video.currentTime - 10);
                         showOSD('<i class="fas fa-backward" style="color:var(--lq-accent, #38bdf8)"></i>', '-10s');
+                        showSeekRipple(false);
                     } else if (xRatio > 0.65) {
                         video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
                         showOSD('<i class="fas fa-forward" style="color:var(--lq-accent, #38bdf8)"></i>', '+10s');
+                        showSeekRipple(true);
                     } else {
                         // Center double-tap: toggle HUD visibility without stopping video
                         const isHubActive = hub.classList.contains('user-active');

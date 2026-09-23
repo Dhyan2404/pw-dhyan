@@ -67,6 +67,7 @@ fun AdminVerificationDialog(
     securityManager: SecurityManager,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
+) {
     var adminCode by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var isPasswordVisible by remember { mutableStateOf(false) }
