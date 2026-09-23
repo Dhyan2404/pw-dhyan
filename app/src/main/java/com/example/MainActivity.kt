@@ -1,6 +1,8 @@
 package com.example
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -67,7 +69,7 @@ class MainActivity : ComponentActivity() {
 
         // Proactively clear and remove any legacy persistent foreground notifications
         try {
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             nm?.cancel(PushNotificationService.FOREGROUND_NOTIF_ID)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 nm?.deleteNotificationChannel(PushNotificationService.FOREGROUND_CHANNEL_ID)
