@@ -39,15 +39,24 @@ jobs:
           chmod +x gradlew
 
       - name: Build Debug APK
+        shell: bash
         run: |
-          set -o pipefail
           ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "## ❌ Gradle Build Failed (Exit Code: $EXIT_CODE)" >> $GITHUB_STEP_SUMMARY
+            echo '```text' >> $GITHUB_STEP_SUMMARY
+            grep -E -C 4 "e: |error:|FAILED" build_output.txt | head -n 120 >> $GITHUB_STEP_SUMMARY || tail -n 60 build_output.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit $EXIT_CODE
+          fi
 
       - name: Upload Build Reports & Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: full-build-log
+          if-no-files-found: ignore
           path: |
             build_output.txt
             app/build/reports/

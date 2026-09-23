@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         StudyParcham Pure Liquid Glass Portal — Made by Dhyan
+// @name         StudyParcham Pure Liquid Glass Portal — Clean Edition (by Dhyan)
 // @namespace    https://studyparcham.in/
-// @version      2.2
-// @description  Masterpiece Pure Liquid Glass UI transformation for StudyParcham: ultra-transparent frosted glass cards, 32 customizable accent themes, zero telegram popups or external redirects, permanent "PW Mod" & "Made by Dhyan" branding, verified email and instagram support, and full admin unlock.
+// @version      2.3
+// @description  Masterpiece Pure Liquid Glass UI transformation for StudyParcham: ultra-transparent frosted glass cards, 32 customizable accent themes, complete removal of AI widget and Telegram popups/promos, verified email and instagram support, and persistent VIP access.
 // @match        https://studyparcham.in/*
 // @match        https://www.studyparcham.in/*
 // @match        https://pw.studyparcham.in/*
@@ -15,42 +15,39 @@
 (function () {
     'use strict';
 
-    // Strict Domain Restriction Guard: Exclusively executes on studyparcham.in and pw.studyparcham.in
+    // Strict Domain Restriction Guard
     const host = window.location.hostname.toLowerCase();
     const isAllowedHost = host === 'studyparcham.in' ||
-                          host === 'www.studyparcham.in' ||
-                          host === 'pw.studyparcham.in';
+        host === 'www.studyparcham.in' ||
+        host === 'pw.studyparcham.in';
 
     if (!isAllowedHost) {
-        return; // Silently exit on any other domain
+        return;
     }
 
     /* ==========================================================================
-       1. SECURITY & ANTI-REDIRECT / ANTI-POPUP GATEWAY (MADE BY DHYAN)
+       1. SECURITY & ANTI-REDIRECT / ANTI-POPUP GATEWAY
        ========================================================================== */
 
-    // 1.1 Block all annoying Telegram, subscriber, and donation alerts
+    // 1.1 Block Telegram, subscriber, and donation alerts
     const originalAlert = window.alert;
     window.alert = function (msg) {
         const str = String(msg).toLowerCase();
         if (str.includes('telegram') || str.includes('subscriber') || str.includes('community') || str.includes('donate')) {
-            console.log('[Made by Dhyan] Blocked annoying alert:', msg);
             return;
         }
         return originalAlert.apply(this, arguments);
     };
 
-    // 1.2 Prevent scripts from hijacking native window.open or forcing Telegram / spam redirects
+    // 1.2 Prevent external popups & Telegram redirects
     let nativeOpen = window.open;
     const safeWindowOpen = function (url, target, features) {
         const urlStr = String(url || '').toLowerCase();
 
-        // Allow Dhyan's Instagram profile to open cleanly
         if (urlStr.includes('instagram.com/dhyan._patel_')) {
             return nativeOpen.call(window, url, target || '_blank', features);
         }
 
-        // Completely block external spam / telegram redirects
         if (
             urlStr.includes('t.me') ||
             urlStr.includes('telegram') ||
@@ -58,34 +55,41 @@
             urlStr.includes('youtube.com') ||
             urlStr.includes('whatsapp')
         ) {
-            console.log('[Made by Dhyan] Blocked external/telegram popup redirect to:', url);
             return null;
         }
 
-        // Direct bypass for player and educational content: open immediately without verification screen
         return nativeOpen.call(window, url, target, features);
     };
 
     Object.defineProperty(window, 'open', {
         get: () => safeWindowOpen,
-        set: () => { /* Silently discard override attempts */ },
+        set: () => { },
         configurable: false
     });
 
-    // 1.3 Neutralize OneSignal push popups
+    // 1.3 Neutralize OneSignal push popups & notification prompts
     window.OneSignalDeferred = [];
     window.OneSignal = {
-        push: () => {},
-        init: () => {},
+        push: () => { },
+        init: () => { },
         isPushNotificationsSupported: () => false,
-        showSlidedownPrompt: () => {},
-        registerForPushNotifications: () => {}
+        showSlidedownPrompt: () => { },
+        registerForPushNotifications: () => { },
+        Slidedown: { promptPush: () => Promise.resolve() },
+        Notifications: { permission: 'denied', requestPermission: () => Promise.resolve('denied') },
+        User: { addTags: () => { }, removeTags: () => { } }
     };
 
     // 1.4 Intercept and approve authentication checks permanently
     const originalFetch = window.fetch;
     window.fetch = async function (resource, init) {
         const url = typeof resource === 'string' ? resource : resource?.url || '';
+
+        // Neutralize push notification endpoints
+        if (url.includes('/api/notify') || url.includes('onesignal')) {
+            return new Response(JSON.stringify({ success: true, bypassed: true }), { status: 200 });
+        }
+
         if (url.includes('/api/auth')) {
             try {
                 const body = init?.body ? JSON.parse(init.body) : {};
@@ -112,7 +116,7 @@
     });
 
     /* ==========================================================================
-       2. 32 CURATED LIQUID GLASS THEMES (SYNCHRONIZED WITH PLAYER)
+       2. 32 CURATED LIQUID GLASS THEMES
        ========================================================================== */
     const THEMES = [
         { id: 'platinum', name: 'Pure Platinum', accent: '#ffffff', accentB: '#cbd5e1', glow: 'rgba(255, 255, 255, 0.65)', text: '#0f172a', bg: 'linear-gradient(135deg, #ffffff, #cbd5e1)' },
@@ -172,7 +176,7 @@
     }
 
     /* ==========================================================================
-       3. PURE LIQUID GLASS CSS SUITE FOR CARDS, HEADER & PORTAL
+       3. PURE LIQUID GLASS CSS SUITE & PURGE STYLES (AI & TELEGRAM ERADICATION)
        ========================================================================== */
     const style = document.createElement('style');
     style.id = 'pure-liquid-glass-portal-styles';
@@ -192,10 +196,36 @@
             --border-color: rgba(255, 255, 255, 0.14) !important;
         }
 
-        /* 3.1 Ultra-Transparent Artistic Wallpaper Background (100% See-Through) */
+        /* 3.1 Hard Purge: Kill AI Widget, Telegram Popups, Notifications & Ad Banners */
+        #ai-fab-btn,
+        #ai-window,
+        .ai-fab,
+        .ai-window,
+        #tg-overlay,
+        #tg-box,
+        #donation-modal,
+        #bruno-peeking-bear,
+        .onesignal-slidedown-dialog,
+        #onesignal-slidedown-container,
+        iframe[src*="google"],
+        ins.adsbygoogle,
+        .fa-hand-holding-heart,
+        a[href*="t.me"],
+        a[href*="telegram"] {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            position: absolute !important;
+            z-index: -9999 !important;
+        }
+
+        /* 3.2 Ultra-Transparent Wallpaper */
         body, body.dark-mode {
             background-color: transparent !important;
-            background-image: 
+            background-image:
                 url("https://raw.githubusercontent.com/Dhyan2404/std10/main/japan-artistic-3840x2160-25406%20(1).jpg"),
                 url("https://github.com/Dhyan2404/std10/raw/main/japan-artistic-3840x2160-25406%20(1).jpg") !important;
             background-size: cover !important;
@@ -238,7 +268,7 @@
             color: #ffffff !important;
         }
 
-        /* 3.2 Ultra-Sheer Liquid Glass Header (~90-95% see-through) */
+        /* 3.3 Ultra-Sheer Liquid Glass Header */
         header {
             background: rgba(0, 0, 0, 0.14) !important;
             backdrop-filter: blur(3px) !important;
@@ -268,7 +298,7 @@
             white-space: nowrap !important;
         }
 
-        /* 3.3 Made by Dhyan - Ultra-Clear Liquid Glass Top Badge */
+        /* 3.4 Liquid Glass Top Badge */
         #key-timer-badge {
             background: rgba(255, 255, 255, 0.08) !important;
             backdrop-filter: blur(6px) !important;
@@ -298,27 +328,7 @@
             font-size: 0.85rem !important;
         }
 
-        /* 3.4 STUDY DASHBOARD (SELECT BATCH BAR) - 100% SEE-THROUGH GLASS */
-        .study-header-bg {
-            background: rgba(0, 0, 0, 0.12) !important;
-            backdrop-filter: blur(2px) !important;
-            -webkit-backdrop-filter: blur(2px) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
-            color: #ffffff !important;
-        }
-        .batch-dropdown {
-            background: transparent !important;
-            color: #ffffff !important;
-            border: none !important;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8) !important;
-        }
-        .batch-dropdown option {
-            background: #0f172a !important;
-            color: #ffffff !important;
-        }
-
-        /* 3.5 ULTRA-TRANSPARENT 100% SEE-THROUGH CARDS & OFFERING ITEMS */
+        /* 3.5 Liquid Glass Cards */
         .card-custom,
         .content-card,
         .offering-item,
@@ -353,20 +363,6 @@
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 16px var(--lq-accent-glow) !important;
         }
 
-        /* 3.6 Crystal Glass Offering Icons */
-        .offering-icon {
-            background: rgba(255, 255, 255, 0.08) !important;
-            border: 1px solid rgba(255, 255, 255, 0.22) !important;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
-            backdrop-filter: blur(3px) !important;
-            -webkit-backdrop-filter: blur(3px) !important;
-            border-radius: 12px !important;
-        }
-        .icon-blue { background: rgba(56, 189, 248, 0.18) !important; color: #38bdf8 !important; border-color: rgba(56, 189, 248, 0.4) !important; }
-        .icon-indigo { background: rgba(129, 140, 248, 0.18) !important; color: #818cf8 !important; border-color: rgba(129, 140, 248, 0.4) !important; }
-        .icon-community { background: rgba(244, 114, 182, 0.18) !important; color: #f472b6 !important; border-color: rgba(244, 114, 182, 0.4) !important; }
-
-        /* 3.7 Text Contrast & Sharpening on Transparent Glass */
         .offering-title,
         .title-text,
         .offering-item span,
@@ -377,41 +373,7 @@
             text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85) !important;
             color: #ffffff !important;
         }
-        #live-classes-scroll,
-        #live-classes-scroll h6,
-        #live-classes-scroll i {
-            color: #cbd5e1 !important;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85) !important;
-        }
 
-        /* 3.8 Card Thumbnails & Images with Clean Glass */
-        .batch-thumb, .lecture-thumb, .live-thumb-sm {
-            background: transparent !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            border-radius: 18px 18px 0 0 !important;
-        }
-
-        /* 3.9 Liquid Glass Search Bar */
-        .search-bar {
-            background: rgba(0, 0, 0, 0.14) !important;
-            backdrop-filter: blur(4px) !important;
-            -webkit-backdrop-filter: blur(4px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.18) !important;
-            border-top: 1.2px solid rgba(255, 255, 255, 0.45) !important;
-            border-radius: 9999px !important;
-            color: #ffffff !important;
-            padding: 12px 22px !important;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
-            transition: all 0.25s ease !important;
-        }
-        .search-bar:focus {
-            border-color: var(--lq-accent) !important;
-            box-shadow: 0 0 16px var(--lq-accent-glow), inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
-            outline: none !important;
-        }
-        .search-bar::placeholder { color: #cbd5e1 !important; }
-
-        /* 3.10 Ultra-Sheer Liquid Glass Sidebar (~80-85% see-through) */
         .sidebar {
             background: rgba(10, 15, 26, 0.18) !important;
             backdrop-filter: blur(8px) saturate(120%) !important;
@@ -419,61 +381,8 @@
             border-right: 1px solid rgba(255, 255, 255, 0.14) !important;
             box-shadow: 10px 0 35px rgba(0, 0, 0, 0.25) !important;
         }
-        .sidebar-header {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            background: transparent !important;
-        }
-        .sidebar-links a {
-            color: #f1f5f9 !important;
-            background: rgba(255, 255, 255, 0.02) !important;
-            border-bottom: none !important;
-            border-radius: 12px !important;
-            margin: 5px 12px !important;
-            transition: all 0.2s ease !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
-        .sidebar-links a:hover, .sidebar-links a.active {
-            background: rgba(255, 255, 255, 0.12) !important;
-            color: var(--lq-accent) !important;
-            border-color: rgba(255, 255, 255, 0.25) !important;
-            border-top-color: rgba(255, 255, 255, 0.55) !important;
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 0 12px var(--lq-accent-glow) !important;
-            transform: translateX(4px) !important;
-        }
 
-        /* 3.8 Ultra-Transparent Modals, Popups, and Overlays */
-        .popup-content, .modal-content, .notif-panel, .bottom-sheet {
-            background: rgba(10, 15, 26, 0.32) !important;
-            backdrop-filter: blur(16px) saturate(130%) !important;
-            -webkit-backdrop-filter: blur(16px) saturate(130%) !important;
-            border: 1px solid rgba(255, 255, 255, 0.18) !important;
-            border-top: 1.4px solid rgba(255, 255, 255, 0.55) !important;
-            border-radius: 24px !important;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35) !important;
-            color: #ffffff !important;
-        }
-
-        #notif-content-area,
-        .list-group-item {
-            background: transparent !important;
-            color: #ffffff !important;
-        }
-
-        /* 3.9 Hide Distracting External Popups / Bears / Ads / Support Donate */
-        #donation-modal,
-        #bruno-peeking-bear,
-        .onesignal-slidedown-dialog,
-        #onesignal-slidedown-container,
-        iframe[src*="google"],
-        ins.adsbygoogle,
-        .fa-hand-holding-heart {
-            display: none !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            visibility: hidden !important;
-        }
-
-        /* 3.10 Floating Liquid Glass Theme Switcher for Dhyan */
+        /* 3.6 Floating Theme Selector */
         #lq-portal-theme-fab {
             position: fixed;
             bottom: 24px;
@@ -534,7 +443,6 @@
         .lq-portal-swatch:hover { transform: scale(1.25); border-color: #ffffff; }
         .lq-portal-swatch.active { border-color: #ffffff; transform: scale(1.3); box-shadow: 0 0 10px #ffffff; }
 
-        /* 3.11 Made by Dhyan Watermark Chip */
         .lq-dhyan-credit-pill {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -554,16 +462,15 @@
     (document.head || document.documentElement).appendChild(style);
 
     /* ==========================================================================
-       4. DOM BRANDING ENGINE — PW MOD & MADE BY DHYAN
+       4. DOM PURGE & BRANDING ENGINE
        ========================================================================== */
-
     function applyDhyanBranding() {
-        // 4.1 Page Title
+        // 4.1 Force Page Title
         if (!document.title.includes('Made by Dhyan')) {
             document.title = 'PW Mod • Made by Dhyan';
         }
 
-        // 4.2 Top Bar Badge: Lock to "Made by Dhyan" with crown
+        // 4.2 Top Bar Badge Lock
         const badge = document.getElementById('key-timer-badge');
         const timerText = document.getElementById('key-timer-text');
         if (badge && timerText) {
@@ -572,41 +479,30 @@
             timerText.innerText = 'Made by Dhyan';
             timerText.dataset.locked = 'true';
 
-            // Replace icon with a glowing crown
             const icon = badge.querySelector('i');
             if (icon && !icon.classList.contains('fa-crown')) {
                 icon.className = 'fas fa-crown';
             }
 
-            // Lock setters
             if (!badge._dhyanLocked) {
                 badge._dhyanLocked = true;
-                Object.defineProperty(timerText, 'innerText', {
-                    get: () => 'Made by Dhyan',
-                    set: () => {},
-                    configurable: true
-                });
-                Object.defineProperty(timerText, 'textContent', {
-                    get: () => 'Made by Dhyan',
-                    set: () => {},
-                    configurable: true
-                });
+                Object.defineProperty(timerText, 'innerText', { get: () => 'Made by Dhyan', set: () => { }, configurable: true });
+                Object.defineProperty(timerText, 'textContent', { get: () => 'Made by Dhyan', set: () => { }, configurable: true });
             }
         }
 
-        // 4.3 Header & Sidebar Logo Text: Set to "PW Mod"
+        // 4.3 Logo Text Lock
         document.querySelectorAll('header .logo-text, .sidebar-header .logo-text, .logo-text').forEach(el => {
             if (el.innerText !== 'PW Mod') {
                 el.innerText = 'PW Mod';
             }
         });
 
-        // 4.4 Sidebar Branding & Clean-up (Remove "Support / Donate" completely)
+        // 4.4 Purge Sidebar "Support / Donate" & Promos
         const sidebar = document.getElementById('sidebar');
         if (sidebar) {
             const linksContainer = sidebar.querySelector('.sidebar-links');
             if (linksContainer) {
-                // Remove Support / Donate text node or icon
                 Array.from(linksContainer.childNodes).forEach(node => {
                     if (node.nodeType === Node.TEXT_NODE && node.textContent.includes('Support / Donate')) {
                         node.remove();
@@ -624,8 +520,6 @@
 
             if (!sidebar._dhyanBranded) {
                 sidebar._dhyanBranded = true;
-
-                // Add bottom credit badge
                 if (linksContainer) {
                     const creditBox = document.createElement('div');
                     creditBox.style.padding = '18px 16px 20px 16px';
@@ -643,7 +537,21 @@
             }
         }
 
-        // 4.5 Clean & Custom Contact & Support View (Strictly Email & Dhyan's Instagram only)
+        // 4.5 Purge the AI Floating Elements & Chat Windows
+        const aiFab = document.getElementById('ai-fab-btn');
+        if (aiFab) aiFab.remove();
+        const aiWin = document.getElementById('ai-window');
+        if (aiWin) aiWin.remove();
+
+        // 4.6 Purge Telegram Overlays & External Modals
+        const tgOverlay = document.getElementById('tg-overlay');
+        if (tgOverlay) tgOverlay.remove();
+        const bear = document.getElementById('bruno-peeking-bear');
+        if (bear) bear.remove();
+        const donationModal = document.getElementById('donation-modal');
+        if (donationModal) donationModal.remove();
+
+        // 4.7 Clean Contact View (Email & Instagram only)
         const contactContainer = document.querySelector('#contact-view .container');
         if (contactContainer && (!contactContainer._dhyanCustomized || contactContainer.querySelector('a[href*="youtube.com"], a[href*="t.me"]'))) {
             contactContainer._dhyanCustomized = true;
@@ -653,8 +561,7 @@
                 </h6>
                 <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: rgba(255, 255, 255, 0.04) !important; backdrop-filter: blur(12px) saturate(130%) !important; -webkit-backdrop-filter: blur(12px) saturate(130%) !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; border-top: 1.5px solid rgba(255, 255, 255, 0.55) !important; border-radius: 20px !important; overflow: hidden;">
                     <div class="list-group list-group-flush" style="background: transparent;">
-                        
-                        <!-- Email Support -->
+
                         <a href="mailto:dhyan20190@gmail.com" class="list-group-item list-group-item-action d-flex align-items-center p-3" style="background: transparent !important; border-color: rgba(255, 255, 255, 0.08) !important; text-decoration: none; transition: all 0.25s ease;">
                             <div class="d-flex align-items-center justify-content-center rounded-circle me-3" style="width: 48px; height: 48px; background: rgba(56, 189, 248, 0.16); color: #38bdf8; font-size: 1.3rem; border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);">
                                 <i class="fas fa-envelope"></i>
@@ -666,7 +573,6 @@
                             <i class="fas fa-arrow-right text-muted" style="font-size: 0.85rem;"></i>
                         </a>
 
-                        <!-- Instagram -->
                         <a href="https://www.instagram.com/dhyan._patel_/" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center p-3" style="background: transparent !important; border-color: transparent !important; text-decoration: none; transition: all 0.25s ease;">
                             <div class="d-flex align-items-center justify-content-center rounded-circle me-3" style="width: 48px; height: 48px; background: rgba(244, 63, 94, 0.16); color: #f43f5e; font-size: 1.3rem; border: 1px solid rgba(244, 63, 94, 0.35); box-shadow: 0 0 12px rgba(244, 63, 94, 0.25);">
                                 <i class="fab fa-instagram"></i>
@@ -683,27 +589,10 @@
             `;
         }
 
-        // 4.6 Clean out any other Telegram links & external promos
+        // 4.8 Nullify any stray Telegram links remaining in DOM
         document.querySelectorAll('a[href*="t.me"], a[href*="telegram"]').forEach(a => {
-            a.href = 'javascript:void(0)';
-            a.target = '_self';
-            a.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            };
-            const h6 = a.querySelector('h6');
-            if (h6) h6.innerText = 'Made by Dhyan (Verified)';
-            const small = a.querySelector('small');
-            if (small) small.innerText = 'All features unlocked by Dhyan';
-            const icon = a.querySelector('i');
-            if (icon) icon.className = 'fas fa-shield-alt text-warning';
+            a.remove();
         });
-
-        // 4.7 Kill the Peeking Bear and Donation Popup
-        const bear = document.getElementById('bruno-peeking-bear');
-        if (bear) bear.remove();
-        const donationModal = document.getElementById('donation-modal');
-        if (donationModal) donationModal.remove();
     }
 
     /* ==========================================================================
@@ -712,13 +601,11 @@
     function injectFloatingThemeSelector() {
         if (document.getElementById('lq-portal-theme-fab')) return;
 
-        // Floating Action Button
         const fab = document.createElement('div');
         fab.id = 'lq-portal-theme-fab';
         fab.title = 'Switch Liquid Glass Theme (Made by Dhyan)';
         fab.innerHTML = '<i class="fas fa-palette"></i>';
 
-        // Floating Palette Panel
         const panel = document.createElement('div');
         panel.id = 'lq-portal-theme-panel';
         panel.innerHTML = `
@@ -745,7 +632,6 @@
         (document.body || document.documentElement).appendChild(fab);
         (document.body || document.documentElement).appendChild(panel);
 
-        // Render Swatches
         const swatchesGrid = panel.querySelector('#lq-portal-swatches');
         THEMES.forEach(t => {
             const swatch = document.createElement('div');
@@ -761,7 +647,6 @@
             swatchesGrid.appendChild(swatch);
         });
 
-        // Set initial theme name
         const curThemeObj = THEMES.find(t => t.id === currentThemeId);
         if (curThemeObj) {
             document.getElementById('lq-theme-current-name').innerText = curThemeObj.name;
@@ -769,7 +654,7 @@
     }
 
     /* ==========================================================================
-       6. BOOTSTRAP & RESILIENT MUTATION OBSERVER
+       6. BOOTSTRAP & MUTATION ENGINE
        ========================================================================== */
     applyPortalTheme(currentThemeId);
 
@@ -786,17 +671,16 @@
 
     window.addEventListener('load', initPortalGlass);
 
-    // Continuous protection & branding guard
+    // Active MutationObserver to prevent dynamic re-injection of AI & Telegram components
     const observer = new MutationObserver(() => {
         applyDhyanBranding();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
 
-    // Periodic safety sweep (every 2.5s)
-    setInterval(applyDhyanBranding, 2500);
+    setInterval(applyDhyanBranding, 2000);
 
     /* ==========================================================================
-       7. DYNAMIC PHONE WALLPAPER ROTATOR ENGINE (30s ROTATION)
+       7. MOBILE WALLPAPER ROTATOR
        ========================================================================== */
     const PHONE_WALLPAPERS = [
         "https://i.pinimg.com/1200x/ac/48/a9/ac48a9af915de3fe560ed962a7efecdd.jpg",
@@ -805,7 +689,6 @@
         "https://i.pinimg.com/1200x/31/21/7c/31217c3ef0a7d58c6b494a9d5e84626b.jpg"
     ];
 
-    // Preload wallpapers into browser cache for instant transitions
     PHONE_WALLPAPERS.forEach(src => {
         try {
             const img = new Image();
@@ -824,6 +707,6 @@
     }
 
     cyclePhoneWallpaper();
-    setInterval(cyclePhoneWallpaper, 30000); // Rotates every 30 seconds
+    setInterval(cyclePhoneWallpaper, 30000);
 
 })();
