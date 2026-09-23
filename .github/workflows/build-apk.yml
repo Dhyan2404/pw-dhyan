@@ -40,17 +40,17 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          ./gradlew compileDebugKotlin --no-daemon
-          ./gradlew assembleDebug --no-daemon
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.txt
 
-      - name: Upload Build Reports
+      - name: Upload Build Reports & Log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-reports
+          name: full-build-log
           path: |
+            build_output.txt
             app/build/reports/
-            **/build/reports/
 
       - name: Prepare Direct APK
         run: |
