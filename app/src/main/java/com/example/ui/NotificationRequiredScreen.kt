@@ -160,7 +160,7 @@ fun NotificationRequiredScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterVertically,
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             // Glowing Bell Icon

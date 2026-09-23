@@ -182,6 +182,8 @@ class NotificationHelper(private val context: Context) {
                 delay(350)
             }
         }
+    }
+
     fun sendBurstNotification(
         title: String,
         message: String,
