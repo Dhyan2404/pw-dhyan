@@ -116,6 +116,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private fun isPlayerUrl(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lower = url.lowercase()
+    return lower.contains("/player") ||
+            lower.contains("player?") ||
+            lower.contains("videoid=") ||
+            lower.contains("vurl=") ||
+            lower.contains("lectureid=")
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun BrowserScreen(
@@ -215,16 +225,6 @@ fun BrowserScreen(
                 (context as? android.app.Activity)?.moveTaskToBack(true)
             }
         }
-    }
-
-    fun isPlayerUrl(url: String?): Boolean {
-        if (url.isNullOrBlank()) return false
-        val lower = url.lowercase()
-        return lower.contains("/player") ||
-                lower.contains("player?") ||
-                lower.contains("videoid=") ||
-                lower.contains("vurl=") ||
-                lower.contains("lectureid=")
     }
 
     fun handlePlayerOrientation(isPlayer: Boolean) {
