@@ -67,6 +67,18 @@ jobs:
             build_output.txt
             app/build/reports/
 
+      - name: Push Build Log to branch
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan build-log 2>/dev/null || git checkout -B build-log
+          git rm -rf . 2>/dev/null || true
+          cp build_output.txt log.txt 2>/dev/null || echo "No build output" > log.txt
+          git add log.txt
+          git commit -m "Build log for ${{ github.sha }}" || true
+          git push -f origin build-log || true
+
       - name: Prepare Direct APK & ZIP
         run: |
           mkdir -p release_apk
