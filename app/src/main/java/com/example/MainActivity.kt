@@ -69,9 +69,7 @@ class MainActivity : ComponentActivity() {
                 var isPermanentUnlocked by remember { mutableStateOf(alreadyPermanentlyUnlocked) }
 
                 Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                     color = DarkBackground
                 ) {
                     if (isUnlocked) {

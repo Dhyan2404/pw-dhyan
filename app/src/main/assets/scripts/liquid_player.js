@@ -1284,11 +1284,9 @@
                     if (xRatio < 0.35) {
                         video.currentTime = Math.max(0, video.currentTime - 10);
                         showOSD('<i class="fas fa-backward" style="color:var(--lq-accent, #38bdf8)"></i>', '-10s');
-                        showPlayPausePulse(false);
                     } else if (xRatio > 0.65) {
                         video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
                         showOSD('<i class="fas fa-forward" style="color:var(--lq-accent, #38bdf8)"></i>', '+10s');
-                        showPlayPausePulse(true);
                     } else {
                         // Center double-tap: toggle HUD visibility without stopping video
                         const isHubActive = hub.classList.contains('user-active');
