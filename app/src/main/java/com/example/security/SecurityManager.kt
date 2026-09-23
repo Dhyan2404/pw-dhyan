@@ -193,6 +193,14 @@ data class BroadcastAnnouncement(
     }
 }
 
+/**
+ * Maintenance & Emergency Lockdown state synced in Firestore.
+ */
+data class AppMaintenanceInfo(
+    val isActive: Boolean = false,
+    val message: String = "Server maintenance is underway. Please check back shortly!"
+)
+
 sealed class UnlockResult {
     data object PermanentUnlocked : UnlockResult()
     data class KeyUnlocked(val key: AccessKey) : UnlockResult()
@@ -224,10 +232,13 @@ class SecurityManager(private val context: Context) {
         private const val KEY_SESSION_IS_INFINITE = "session_is_infinite"
         const val HOME_URL = "https://pw.studyparcham.in/#home-view"
         const val ALLOWED_DOMAIN = "pw.studyparcham.in"
+        const val DIRECT_APK_DOWNLOAD_URL = "https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk"
         private const val FIRESTORE_COLLECTION_KEYS = "access_keys"
         private const val FIRESTORE_COLLECTION_SESSIONS = "user_sessions"
         private const val FIRESTORE_COLLECTION_ANNOUNCEMENTS = "announcements"
+        private const val FIRESTORE_COLLECTION_SYSTEM = "system_config"
         private const val ANNOUNCEMENT_DOC_ID = "latest_announcement"
+        private const val MAINTENANCE_DOC_ID = "maintenance_mode"
         private const val TAG = "FirestoreSecurity"
     }
 
@@ -768,6 +779,66 @@ class SecurityManager(private val context: Context) {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * Toggles system-wide maintenance mode / emergency lockdown in Firestore.
+     */
+    fun setMaintenanceMode(isActive: Boolean, message: String = "", onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore
+        if (fs == null) {
+            showToast("Firestore not connected!")
+            onComplete?.invoke(false)
+            return
+        }
+        val finalMsg = if (message.isNotBlank()) message.trim() else "Server maintenance is underway. Please check back shortly!"
+        val data = mapOf(
+            "isActive" to isActive,
+            "message" to finalMsg,
+            "updatedAt" to System.currentTimeMillis()
+        )
+        fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(MAINTENANCE_DOC_ID)
+            .set(data)
+            .addOnSuccessListener {
+                showToast(if (isActive) "Maintenance Mode ACTIVATED" else "Maintenance Mode DEACTIVATED")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed to update maintenance: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    /**
+     * Listens in real time for Maintenance Mode state changes.
+     */
+    fun listenToMaintenance(onUpdate: (AppMaintenanceInfo) -> Unit): ListenerRegistration? {
+        val fs = firestore ?: return null
+        return try {
+            fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(MAINTENANCE_DOC_ID)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    if (snapshot != null && snapshot.exists()) {
+                        val isActive = snapshot.getBoolean("isActive") ?: false
+                        val msg = snapshot.getString("message") ?: "Server maintenance is underway. Please check back shortly!"
+                        onUpdate(AppMaintenanceInfo(isActive = isActive, message = msg))
+                    } else {
+                        onUpdate(AppMaintenanceInfo(isActive = false))
+                    }
+                }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Formats all currently active (unused & unexpired) passkeys for 1-tap sharing.
+     */
+    fun getAllActiveKeysFormatted(): String {
+        val activeKeys = getAllKeys().filter { !it.isExpired && !it.isUsed }
+        if (activeKeys.isEmpty()) return "No active unused keys available. Tap '+ 1 Key' or 'Batch 10' to create new keys."
+        val lines = activeKeys.mapIndexed { i, k -> "${i + 1}. ${k.code} (${if (k.isInfinite) "Permanent Admin" else "24-Hour Passkey"})" }.joinToString("\n")
+        return "🔑 PW DHYAN ACTIVE PASSKEYS (${activeKeys.size} Available):\n$lines\n\nEnter any 6-digit code above on the lock screen for instant study access."
     }
 
     fun getCurrentAccessRemainingFormatted(): String {

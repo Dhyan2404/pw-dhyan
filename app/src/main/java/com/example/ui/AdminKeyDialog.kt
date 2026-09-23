@@ -31,17 +31,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -81,6 +85,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.security.AccessKey
+import com.example.security.AppMaintenanceInfo
 import com.example.security.BroadcastAnnouncement
 import com.example.security.SecurityManager
 import com.example.security.UserSession
@@ -115,12 +120,31 @@ fun AdminKeyDialog(
     var announcementText by remember { mutableStateOf("") }
     var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
     var isPublishingAnnouncement by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var filterType by remember { mutableIntStateOf(0) } // 0 = All, 1 = Active, 2 = Expired
+    var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
+    var maintenanceMessageInput by remember { mutableStateOf("") }
+    var isUpdatingMaintenance by remember { mutableStateOf(false) }
 
     fun refreshKeys() {
         keysList = securityManager.getAllKeys()
     }
 
-    // Real-time Firestore listeners for Keys, User Sessions, and Live Announcements
+    val filteredKeys = remember(keysList, searchQuery, filterType) {
+        keysList.filter { key ->
+            val matchesSearch = searchQuery.isBlank() ||
+                key.code.contains(searchQuery.trim()) ||
+                key.label.contains(searchQuery.trim(), ignoreCase = true)
+            val matchesFilter = when (filterType) {
+                1 -> !key.isExpired && !key.isUsed
+                2 -> key.isExpired
+                else -> true
+            }
+            matchesSearch && matchesFilter
+        }
+    }
+
+    // Real-time Firestore listeners for Keys, User Sessions, Announcements & Maintenance Mode
     DisposableEffect(securityManager) {
         val keysListener: (List<AccessKey>) -> Unit = { updated ->
             keysList = updated
@@ -135,10 +159,18 @@ fun AdminKeyDialog(
             activeAnnouncement = announcement
         }
 
+        val maintenanceRegistration = securityManager.listenToMaintenance { info ->
+            maintenanceInfo = info
+            if (maintenanceMessageInput.isBlank()) {
+                maintenanceMessageInput = info.message
+            }
+        }
+
         onDispose {
             securityManager.removeKeysUpdateListener(keysListener)
             sessionsRegistration?.remove()
             announcementRegistration?.remove()
+            maintenanceRegistration?.remove()
         }
     }
 
@@ -241,6 +273,26 @@ fun AdminKeyDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        IconButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("PW Dhyan Direct APK Link", SecurityManager.DIRECT_APK_DOWNLOAD_URL)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "Direct APK Link copied! Share with anyone to download without ZIP.", Toast.LENGTH_LONG).show()
+                            },
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(CyberCyan.copy(alpha = 0.15f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = "Direct APK Link",
+                                tint = CyberCyan,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
                         IconButton(
                             onClick = {
                                 isSyncing = true
@@ -553,70 +605,158 @@ fun AdminKeyDialog(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Keys Header Stats & Clean
+                    // Search & Filter Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search passkey code or student name...", fontSize = 11.5.sp, color = TextMuted) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = CyberCyan, modifier = Modifier.size(16.dp))
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(16.dp).clickable { searchQuery = "" }
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyberCyan,
+                            unfocusedBorderColor = DarkSurfaceVariant,
+                            focusedContainerColor = DarkBackground,
+                            unfocusedContainerColor = DarkBackground,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Filter Chips & Quick Share Active Keys
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val activeCount = keysList.count { !it.isExpired }
-                        val expiredCount = keysList.size - activeCount
+                        val activeCount = keysList.count { !it.isExpired && !it.isUsed }
+                        val expiredCount = keysList.count { it.isExpired }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = EmeraldSuccess.copy(alpha = 0.16f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.4f))
+                                color = if (filterType == 0) CyberCyan.copy(alpha = 0.25f) else DarkBackground,
+                                border = BorderStroke(1.dp, if (filterType == 0) CyberCyan else DarkSurfaceVariant),
+                                modifier = Modifier.clickable { filterType = 0 }
                             ) {
                                 Text(
-                                    text = "$activeCount Active",
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                    style = MaterialTheme.typography.labelSmall.copy(color = EmeraldSuccess, fontWeight = FontWeight.Bold)
+                                    text = "All (${keysList.size})",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (filterType == 0) CyberCyan else TextMuted,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (filterType == 1) EmeraldSuccess.copy(alpha = 0.25f) else DarkBackground,
+                                border = BorderStroke(1.dp, if (filterType == 1) EmeraldSuccess else DarkSurfaceVariant),
+                                modifier = Modifier.clickable { filterType = 1 }
+                            ) {
+                                Text(
+                                    text = "Active ($activeCount)",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (filterType == 1) EmeraldSuccess else TextMuted,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
                                 )
                             }
 
                             if (expiredCount > 0) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = CrimsonAlert.copy(alpha = 0.16f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, CrimsonAlert.copy(alpha = 0.4f))
+                                    color = if (filterType == 2) CrimsonAlert.copy(alpha = 0.25f) else DarkBackground,
+                                    border = BorderStroke(1.dp, if (filterType == 2) CrimsonAlert else DarkSurfaceVariant),
+                                    modifier = Modifier.clickable { filterType = 2 }
                                 ) {
                                     Text(
-                                        text = "$expiredCount Expired",
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                        style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold)
+                                        text = "Expired ($expiredCount)",
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (filterType == 2) CrimsonAlert else TextMuted,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
                                     )
                                 }
                             }
                         }
 
-                        if (expiredCount > 0) {
-                            Text(
-                                text = "Clear Expired",
-                                modifier = Modifier
-                                    .clickable {
-                                        val count = securityManager.clearExpiredKeys()
-                                        refreshKeys()
-                                        Toast.makeText(context, "$count expired keys cleared", Toast.LENGTH_SHORT).show()
-                                    }
-                                    .padding(4.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontWeight = FontWeight.SemiBold)
-                            )
+                        // Share / Export Active Keys
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (activeCount > 0) {
+                                Button(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clip = ClipData.newPlainText("PW Dhyan Active Passkeys", securityManager.getAllActiveKeysFormatted())
+                                        clipboard.setPrimaryClip(clip)
+                                        Toast.makeText(context, "$activeCount active passkeys copied for WhatsApp/Telegram!", Toast.LENGTH_LONG).show()
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent.copy(alpha = 0.2f)),
+                                    border = BorderStroke(1.dp, GoldenAccent.copy(alpha = 0.6f)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.height(26.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null, tint = GoldenAccent, modifier = Modifier.size(11.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Share Active", style = MaterialTheme.typography.labelSmall.copy(color = GoldenAccent, fontWeight = FontWeight.Bold, fontSize = 9.5.sp))
+                                }
+                            }
+
+                            if (expiredCount > 0) {
+                                Text(
+                                    text = "Clear Expired",
+                                    modifier = Modifier
+                                        .clickable {
+                                            val count = securityManager.clearExpiredKeys()
+                                            refreshKeys()
+                                            Toast.makeText(context, "$count expired keys cleared", Toast.LENGTH_SHORT).show()
+                                        }
+                                        .padding(4.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp)
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Keys List
-                    if (keysList.isEmpty()) {
-                        EmptyListPlaceholder("No Passkeys Created", "Tap '+ 6-Digit Key' above to generate access codes.")
+                    if (filteredKeys.isEmpty()) {
+                        EmptyListPlaceholder(
+                            if (keysList.isEmpty()) "No Passkeys Created" else "No Matching Keys Found",
+                            if (keysList.isEmpty()) "Tap '+ 1 Key' or 'Batch 10' above to generate access codes." else "No keys match '$searchQuery'. Clear search to see all."
+                        )
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth().weight(1f),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
-                            items(keysList, key = { it.id }) { key ->
+                            items(filteredKeys, key = { it.id }) { key ->
                                 KeyCard(
                                     key = key,
                                     isCopied = copiedKeyId == key.id,
@@ -825,6 +965,101 @@ fun AdminKeyDialog(
                                 text = if (isPublishingAnnouncement) "Broadcasting..." else "Broadcast to All Students",
                                 style = MaterialTheme.typography.labelLarge.copy(color = Color(0xFF030712), fontWeight = FontWeight.Bold)
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Emergency Maintenance Mode / App Lockdown
+                        Text(
+                            text = "Emergency Maintenance Lockdown",
+                            style = MaterialTheme.typography.labelMedium.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "When active, normal student access is paused. Admin code 240411 always bypasses.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 10.sp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (maintenanceInfo.isActive) CrimsonAlert.copy(alpha = 0.15f) else DarkBackground
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, if (maintenanceInfo.isActive) CrimsonAlert else DarkSurfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(if (maintenanceInfo.isActive) CrimsonAlert else EmeraldSuccess)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (maintenanceInfo.isActive) "LOCKDOWN ACTIVE" else "STUDENTS ACTIVE",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = if (maintenanceInfo.isActive) CrimsonAlert else EmeraldSuccess,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            isUpdatingMaintenance = true
+                                            securityManager.setMaintenanceMode(
+                                                isActive = !maintenanceInfo.isActive,
+                                                message = maintenanceMessageInput
+                                            ) {
+                                                isUpdatingMaintenance = false
+                                            }
+                                        },
+                                        enabled = !isUpdatingMaintenance,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (maintenanceInfo.isActive) EmeraldSuccess else CrimsonAlert
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.height(28.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp)
+                                    ) {
+                                        Text(
+                                            text = if (maintenanceInfo.isActive) "Disable Lockdown" else "Enable Lockdown",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                                OutlinedTextField(
+                                    value = maintenanceMessageInput,
+                                    onValueChange = { maintenanceMessageInput = it },
+                                    label = { Text("Lockdown Message for Students", fontSize = 10.sp) },
+                                    placeholder = { Text("e.g. Updating servers. Classes resume shortly!") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = GoldenAccent,
+                                        unfocusedBorderColor = DarkSurfaceVariant,
+                                        focusedTextColor = TextPrimary,
+                                        unfocusedTextColor = TextPrimary,
+                                        focusedContainerColor = DarkBackground,
+                                        unfocusedContainerColor = DarkBackground
+                                    )
+                                )
+                            }
                         }
                     }
                 }

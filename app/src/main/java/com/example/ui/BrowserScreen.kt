@@ -42,10 +42,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Home
@@ -87,6 +89,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.script.ScriptManager
+import com.example.security.AppMaintenanceInfo
 import com.example.security.BroadcastAnnouncement
 import com.example.security.SecurityManager
 import com.example.ui.theme.CrimsonAlert
@@ -129,14 +132,19 @@ fun BrowserScreen(
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
+    var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
 
-    // Listen for live broadcast announcements from Admin
+    // Listen for live announcements & maintenance mode from Admin
     DisposableEffect(securityManager) {
         val reg = securityManager.listenToAnnouncements { ann ->
             activeAnnouncement = ann
         }
+        val mReg = securityManager.listenToMaintenance { info ->
+            maintenanceInfo = info
+        }
         onDispose {
             reg?.remove()
+            mReg?.remove()
         }
     }
 
@@ -648,6 +656,24 @@ fun BrowserScreen(
                                 }
                             }
 
+                            // Direct APK Download / Share button
+                            IconButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("PW Dhyan Direct APK Link", SecurityManager.DIRECT_APK_DOWNLOAD_URL)
+                                    clipboard.setPrimaryClip(clip)
+                                    showToast("Direct APK Link copied! Share without ZIP.")
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Direct APK Link",
+                                    tint = CyberCyan,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+
                             // Lock Screen return button
                             IconButton(
                                 onClick = onLockRequested,
@@ -686,6 +712,78 @@ fun BrowserScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        // Emergency Maintenance Mode Lockdown Overlay
+        if (maintenanceInfo.isActive && !isPermanentUnlocked) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DarkBackground.copy(alpha = 0.98f))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(CrimsonAlert.copy(alpha = 0.2f))
+                            .border(1.5.dp, CrimsonAlert, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Build,
+                            contentDescription = "Maintenance",
+                            tint = CrimsonAlert,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = "SYSTEM MAINTENANCE",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp,
+                            color = TextPrimary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = maintenanceInfo.message,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = TextMuted,
+                            lineHeight = 20.sp
+                        ),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = { showAdminAuthDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(44.dp)
+                    ) {
+                        Text(
+                            text = "Admin Bypass (240411)",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                color = Color(0xFF030712),
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
                     }
                 }
             }

@@ -5,6 +5,9 @@ on:
     branches: [ "**" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,8 +41,31 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Ready APK
+      - name: Prepare Direct APK
+        run: |
+          mkdir -p release_apk
+          cp app/build/outputs/apk/debug/*.apk release_apk/PW-DHYAN.apk
+
+      - name: Upload Artifact (Backup)
         uses: actions/upload-artifact@v4
         with:
           name: PW-DHYAN-App-Debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: release_apk/PW-DHYAN.apk
+
+      - name: Publish Direct APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "PW DHYAN Official APK (Direct Download)"
+          body: |
+            ### 🚀 PW DHYAN Latest Android App
+            
+            **Direct Download link (No ZIP needed!)**:
+            Tap the `PW-DHYAN.apk` link below directly from your Android phone to download and install immediately!
+            
+            - Built from commit: `${{ github.sha }}`
+            - Features: Real-time Cloud Passkeys, Batch Generator, Native PDF/DPP Downloader, Live Notices & Screen WakeLock.
+          files: release_apk/PW-DHYAN.apk
+          prerelease: false
+          make_latest: true
