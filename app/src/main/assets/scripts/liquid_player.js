@@ -337,18 +337,19 @@
             #custom-player-hub {
                 bottom: 8px;
                 width: min(calc(100vw - 12px), 540px);
-                padding: 5px 8px;
-                gap: 5px;
-                border-radius: 18px;
+                padding: 4px 6px;
+                gap: 4px;
+                border-radius: 9999px;
                 backdrop-filter: blur(16px);
                 -webkit-backdrop-filter: blur(16px);
             }
-            .hub-btn { width: 32px; height: 32px; font-size: 0.95rem; }
-            #c-rwd, #c-fwd, #c-notes-btn { display: none; }
-            .hub-time { font-size: 0.68rem; min-width: 32px; }
-            .hub-speed-badge { height: 26px !important; padding: 0 6px !important; font-size: 0.72rem !important; }
-            .scrubber-track-container { height: 26px; }
-            .hub-slider::-webkit-slider-thumb { width: 17px; height: 17px; }
+            .hub-btn { width: 28px; height: 28px; font-size: 0.82rem; }
+            #c-rwd, #c-fwd { display: flex !important; width: 28px !important; height: 28px !important; }
+            #c-notes-btn { display: none; }
+            .hub-time { font-size: 0.65rem; min-width: 28px; }
+            .hub-speed-badge { height: 24px !important; padding: 0 5px !important; font-size: 0.68rem !important; }
+            .scrubber-track-container { height: 24px; }
+            .hub-slider::-webkit-slider-thumb { width: 15px; height: 15px; }
             .shortcuts-grid { grid-template-columns: 1fr; }
             #lq-top-lecture-hud {
                 top: 8px;
@@ -1352,14 +1353,28 @@
         playBtn.onclick = () => togglePlay();
         video.onclick = () => togglePlay();
 
-        hub.querySelector('#c-rwd').onclick = () => {
+        const rwdBtn = hub.querySelector('#c-rwd');
+        const fwdBtn = hub.querySelector('#c-fwd');
+        function handleSeekBack(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
             video.currentTime = Math.max(0, video.currentTime - 10);
             showOSD('<i class="fas fa-undo-alt" style="color:var(--lq-accent, #38bdf8)"></i>', '-10s');
-        };
-        hub.querySelector('#c-fwd').onclick = () => {
+            showPlayPausePulse(false);
+        }
+        function handleSeekFwd(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
             video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
             showOSD('<i class="fas fa-redo-alt" style="color:var(--lq-accent, #38bdf8)"></i>', '+10s');
-        };
+            showPlayPausePulse(true);
+        }
+        if (rwdBtn) {
+            rwdBtn.addEventListener('click', handleSeekBack);
+            rwdBtn.addEventListener('touchstart', handleSeekBack, { passive: false });
+        }
+        if (fwdBtn) {
+            fwdBtn.addEventListener('click', handleSeekFwd);
+            fwdBtn.addEventListener('touchstart', handleSeekFwd, { passive: false });
+        }
 
         function formatTime(s) {
             if (isNaN(s) || s < 0) return "00:00";

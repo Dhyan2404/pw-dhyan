@@ -239,24 +239,41 @@ fun BrowserScreen(
                         ): Boolean {
                             val url = request?.url?.toString() ?: return false
 
-                            // Handle direct PDF or study note downloads
-                            if (url.endsWith(".pdf", ignoreCase = true) ||
-                                url.contains(".pdf?", ignoreCase = true) ||
-                                url.endsWith(".zip", ignoreCase = true) ||
-                                url.endsWith(".docx", ignoreCase = true)
+                            // Handle direct PDF, notes, DPP or study document downloads
+                            val lowerUrl = url.lowercase()
+                            if (lowerUrl.endsWith(".pdf") ||
+                                lowerUrl.contains(".pdf?") ||
+                                lowerUrl.contains("/pdf/") ||
+                                lowerUrl.endsWith(".zip") ||
+                                lowerUrl.endsWith(".docx") ||
+                                lowerUrl.contains("content-disposition=attachment")
                             ) {
                                 try {
                                     val fileName = URLUtil.guessFileName(url, null, "application/pdf")
                                     val req = DownloadManager.Request(Uri.parse(url)).apply {
+                                        setMimeType("application/pdf")
+                                        val cookies = android.webkit.CookieManager.getInstance().getCookie(url)
+                                        if (cookies != null) {
+                                            addRequestHeader("Cookie", cookies)
+                                        }
+                                        addRequestHeader("User-Agent", settings.userAgentString)
                                         setTitle(fileName)
-                                        setDescription("Downloading Study Notes...")
+                                        setDescription("Downloading PW Notes / DPP...")
                                         setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                                         setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                                        setAllowedOverMetered(true)
+                                        setAllowedOverRoaming(true)
                                     }
                                     (context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager)?.enqueue(req)
-                                    toastMessage = "Downloading: $fileName"
-                                    return true
-                                } catch (_: Exception) {}
+                                    toastMessage = "Downloading PDF in background: $fileName"
+                                    return true // Screen never blocks!
+                                } catch (e: Exception) {
+                                    try {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                                        context.startActivity(intent)
+                                        return true
+                                    } catch (_: Exception) {}
+                                }
                             }
 
                             if (securityManager.isUrlAllowed(url)) {

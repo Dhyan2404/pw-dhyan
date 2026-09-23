@@ -67,6 +67,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.notification.NotificationHelper
 import com.example.security.AccessKey
 import com.example.security.AppMaintenanceInfo
 import com.example.security.BroadcastAnnouncement
@@ -123,6 +125,9 @@ fun AdminKeyDialog(
     var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
     var maintenanceMessageInput by remember { mutableStateOf("") }
     var isUpdatingMaintenance by remember { mutableStateOf(false) }
+    val notificationHelper = remember { NotificationHelper(context) }
+    val coroutineScope = rememberCoroutineScope()
+    var customNotificationInput by remember { mutableStateOf("") }
 
     fun refreshKeys() {
         keysList = securityManager.getAllKeys()
@@ -963,6 +968,78 @@ fun AdminKeyDialog(
                                 text = if (isPublishingAnnouncement) "Broadcasting..." else "Broadcast to All Students",
                                 style = MaterialTheme.typography.labelLarge.copy(color = Color(0xFF030712), fontWeight = FontWeight.Bold)
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Custom Notifications & Motivation Spam
+                        Text(
+                            text = "Push Notification Alerts",
+                            style = MaterialTheme.typography.labelMedium.copy(color = GoldenAccent, fontWeight = FontWeight.Bold)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Send custom alerts or a burst of motivational reminders to keep students on track.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 10.sp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = DarkBackground),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, DarkSurfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                OutlinedTextField(
+                                    value = customNotificationInput,
+                                    onValueChange = { customNotificationInput = it },
+                                    placeholder = { Text("e.g. Padh lo beta! Exam nazdeek hai!", fontSize = 11.sp, color = TextMuted) },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = GoldenAccent,
+                                        unfocusedBorderColor = DarkSurfaceVariant,
+                                        focusedTextColor = TextPrimary,
+                                        unfocusedTextColor = TextPrimary,
+                                        focusedContainerColor = DarkSurface,
+                                        unfocusedContainerColor = DarkSurface
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            if (customNotificationInput.isNotBlank()) {
+                                                notificationHelper.sendCustomNotification("PW DHYAN", customNotificationInput.trim())
+                                                Toast.makeText(context, "Notification sent!", Toast.LENGTH_SHORT).show()
+                                                customNotificationInput = ""
+                                            }
+                                        },
+                                        enabled = customNotificationInput.isNotBlank(),
+                                        modifier = Modifier.weight(1f).height(36.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = CyberCyan),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("Push Custom", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF030712), fontWeight = FontWeight.Bold))
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            notificationHelper.sendBatchMotivationSpam(coroutineScope, count = 10)
+                                            Toast.makeText(context, "Blasting 10 Motivation Notifications! 🔥", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.weight(1.3f).height(36.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("🔥 Spam 10 Alerts", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF030712), fontWeight = FontWeight.Bold))
+                                    }
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(14.dp))

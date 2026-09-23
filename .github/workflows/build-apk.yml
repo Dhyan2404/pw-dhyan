@@ -41,13 +41,15 @@ jobs:
       - name: Build Debug APK
         shell: bash
         run: |
+          set +e
           ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.txt
           EXIT_CODE=${PIPESTATUS[0]}
           if [ $EXIT_CODE -ne 0 ]; then
             echo "## ❌ Gradle Build Failed (Exit Code: $EXIT_CODE)" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
-            grep -E -C 4 "e: |error:|FAILED" build_output.txt | head -n 120 >> $GITHUB_STEP_SUMMARY || tail -n 60 build_output.txt >> $GITHUB_STEP_SUMMARY
+            grep -E -C 4 "e: |error:|FAILED" build_output.txt | head -n 120 >> $GITHUB_STEP_SUMMARY || tail -n 80 build_output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "::error::Gradle assembleDebug failed! Check Step Summary."
             exit $EXIT_CODE
           fi
 
@@ -61,31 +63,43 @@ jobs:
             build_output.txt
             app/build/reports/
 
-      - name: Prepare Direct APK
+      - name: Prepare Direct APK & ZIP
         run: |
           mkdir -p release_apk
           cp app/build/outputs/apk/debug/*.apk release_apk/PW-DHYAN.apk
+          cd release_apk
+          zip -9 PW-DHYAN-Direct.zip PW-DHYAN.apk
+          cd ..
 
-      - name: Upload Artifact (Backup)
+      - name: Upload Artifact (Backup APK & ZIP)
         uses: actions/upload-artifact@v4
         with:
-          name: PW-DHYAN-App-Debug
-          path: release_apk/PW-DHYAN.apk
+          name: PW-DHYAN-Package
+          path: |
+            release_apk/PW-DHYAN.apk
+            release_apk/PW-DHYAN-Direct.zip
 
-      - name: Publish Direct APK to GitHub Releases
+      - name: Publish Direct APK & ZIP to GitHub Releases
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
           tag_name: "v1.0.${{ github.run_number }}"
-          name: "PW DHYAN Official APK (Direct Download)"
+          name: "PW DHYAN Official Release (Direct APK & ZIP)"
           body: |
             ### 🚀 PW DHYAN Latest Android App
             
-            **Direct Download link (No ZIP needed!)**:
-            Tap the `PW-DHYAN.apk` link below directly from your Android phone to download and install immediately!
+            **Direct Download Links**:
+            - 📲 **Direct APK** (No unzipping required): [PW-DHYAN.apk](https://github.com/Dhyan2404/pw-dhyan/releases/download/v1.0.${{ github.run_number }}/PW-DHYAN.apk)
+            - 📦 **Direct ZIP**: [PW-DHYAN-Direct.zip](https://github.com/Dhyan2404/pw-dhyan/releases/download/v1.0.${{ github.run_number }}/PW-DHYAN-Direct.zip)
             
             - Built from commit: `${{ github.sha }}`
-            - Features: Real-time Cloud Passkeys, Batch Generator, Native PDF/DPP Downloader, Live Notices & Screen WakeLock.
-          files: release_apk/PW-DHYAN.apk
+            - Mobile-optimized Liquid Player with responsive 10s skip & slim layout
+            - Sensor Landscape mode enabled by default for widescreen lectures
+            - Non-blocking Background PDF & DPP downloader
+            - Master passcode `240411` + Admin-only generated Passkeys (Phone time bypass removed)
+            - Admin Push Notifications & 10x Motivation Spam
+          files: |
+            release_apk/PW-DHYAN.apk
+            release_apk/PW-DHYAN-Direct.zip
           prerelease: false
           make_latest: true

@@ -69,6 +69,55 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+    fun sendCustomNotification(title: String, message: String, notificationId: Int = NOTIFICATION_ID + (0..999).random()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return
+            }
+        }
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(notificationId, builder.build())
+        }
+    }
+
+    fun sendBatchMotivationSpam(scope: CoroutineScope, count: Int = 10) {
+        val quotes = listOf(
+            "Padh lo beta mauka hai, baki sab dhokha hai! 📚",
+            "IAS / IIT banoge ya reels scroll karoge? Utho aur padho! 🔥",
+            "IIT Bombay CSE bula raha hai! Consistency is Selection! 🎯",
+            "Dhyan Sir is watching your progress! Eyes on the goal! 👀",
+            "Selection chahiye ya excuses? Lecture complete karo abhi! ⚡",
+            "Notification band kar, book khol! Target pura karo! 📖",
+            "Ek aur DPP solve karo, rank 1 tumhari hogi! 🏆",
+            "Aaj ki mehnat, kal ka result! Revision chalu karo! ⏰",
+            "Mummy Papa ka sapna pura karna hai ya nahi? Focus! 💯",
+            "PW Dhyan Study Power Mode: Stay relentless! 🚀"
+        )
+        scope.launch(Dispatchers.Main) {
+            for (i in 0 until count.coerceAtMost(quotes.size)) {
+                sendCustomNotification(
+                    title = "🔥 Study Alert #${i + 1}",
+                    message = quotes[i],
+                    notificationId = 3000 + i
+                )
+                delay(350)
+            }
+        }
+    }
+
     fun startPeriodicNotification(scope: CoroutineScope, securityManager: SecurityManager) {
         stopPeriodicNotification()
         job = scope.launch(Dispatchers.Default) {

@@ -220,6 +220,8 @@ class SecurityManager(private val context: Context) {
     private var cloudKeysList = mutableListOf<AccessKey>()
     private val updateListeners = mutableListOf<(List<AccessKey>) -> Unit>()
     private var currentActiveKey: AccessKey? = null
+    private var lastBroadcastAnnouncement: BroadcastAnnouncement? = null
+    private val broadcastListeners = mutableListOf<(BroadcastAnnouncement?) -> Unit>()
 
     companion object {
         const val MASTER_PERMANENT_CODE = "240411"
@@ -647,18 +649,9 @@ class SecurityManager(private val context: Context) {
             return UnlockResult.KeyUnlocked(boundKey)
         }
 
-        // 3. Check Phone Time (Only allowed when connected to cloud)
-        val validTimeCodes = getValidPhoneTimeCodes()
-        if (validTimeCodes.contains(cleaned)) {
-            currentActiveKey = null
-            saveSession(cleaned, "Time Pass", 24 * 60 * 60 * 1000L, false)
-            recordUserSession(thisDeviceId, thisDeviceModel, "Phone Time ($cleaned)", "Time Pass")
-            return UnlockResult.SessionUnlocked
-        }
-
-        // SANITIZED ERROR: Does NOT expose 240411!
+        // SANITIZED ERROR: Only Admin passkeys and master code accepted
         return UnlockResult.Invalid(
-            "Incorrect passkey. Please check your 6-digit key or enter the current phone time."
+            "Invalid passkey. Access requires an Admin-issued passkey or 240411."
         )
     }
 
@@ -727,16 +720,22 @@ class SecurityManager(private val context: Context) {
     }
 
     fun publishAnnouncement(message: String, author: String = "Admin Dhyan", onComplete: ((Boolean) -> Unit)? = null) {
-        val fs = firestore ?: run {
-            onComplete?.invoke(false)
-            return
-        }
         val announcement = BroadcastAnnouncement(
             message = message.trim(),
             author = author,
             timestamp = System.currentTimeMillis(),
             isActive = true
         )
+        // Store locally so it displays immediately on this device regardless of network latency
+        lastBroadcastAnnouncement = announcement
+        broadcastListeners.forEach { it.invoke(announcement) }
+
+        val fs = firestore
+        if (fs == null) {
+            showToast("Broadcast active locally (Cloud offline)")
+            onComplete?.invoke(true)
+            return
+        }
         fs.collection(FIRESTORE_COLLECTION_ANNOUNCEMENTS).document(ANNOUNCEMENT_DOC_ID)
             .set(announcement.toFirestoreMap())
             .addOnSuccessListener {
@@ -744,19 +743,28 @@ class SecurityManager(private val context: Context) {
                 onComplete?.invoke(true)
             }
             .addOnFailureListener { e ->
-                showToast("Failed to broadcast: ${e.message}")
-                onComplete?.invoke(false)
+                showToast("Cloud sync failed, active locally: ${e.message}")
+                onComplete?.invoke(true)
             }
     }
 
     fun clearAnnouncement(onComplete: ((Boolean) -> Unit)? = null) {
-        val fs = firestore ?: return
+        lastBroadcastAnnouncement = null
+        broadcastListeners.forEach { it.invoke(null) }
+        val fs = firestore ?: run {
+            onComplete?.invoke(true)
+            return
+        }
         fs.collection(FIRESTORE_COLLECTION_ANNOUNCEMENTS).document(ANNOUNCEMENT_DOC_ID)
             .update("isActive", false)
             .addOnCompleteListener { onComplete?.invoke(true) }
     }
 
     fun listenToAnnouncements(onUpdate: (BroadcastAnnouncement?) -> Unit): ListenerRegistration? {
+        broadcastListeners.add(onUpdate)
+        if (lastBroadcastAnnouncement != null && lastBroadcastAnnouncement?.isActive == true) {
+            onUpdate(lastBroadcastAnnouncement)
+        }
         val fs = firestore ?: return null
         return try {
             fs.collection(FIRESTORE_COLLECTION_ANNOUNCEMENTS).document(ANNOUNCEMENT_DOC_ID)
@@ -768,12 +776,14 @@ class SecurityManager(private val context: Context) {
                     if (snapshot != null && snapshot.exists()) {
                         val ann = snapshot.data?.let { BroadcastAnnouncement.fromFirestoreMap(it) }
                         if (ann != null && ann.isActive && ann.message.isNotBlank()) {
+                            lastBroadcastAnnouncement = ann
                             onUpdate(ann)
                         } else {
+                            lastBroadcastAnnouncement = null
                             onUpdate(null)
                         }
                     } else {
-                        onUpdate(null)
+                        onUpdate(lastBroadcastAnnouncement)
                     }
                 }
         } catch (e: Exception) {
@@ -850,35 +860,6 @@ class SecurityManager(private val context: Context) {
         return "⏱️ Session Active"
     }
 
-    fun getValidPhoneTimeCodes(): Set<String> {
-        val codes = mutableSetOf<String>()
-        val cal = Calendar.getInstance()
-
-        for (offset in listOf(0, -1, 1)) {
-            val c = cal.clone() as Calendar
-            c.add(Calendar.MINUTE, offset)
-            val date = c.time
-
-            val format24 = SimpleDateFormat("HHmm", Locale.getDefault()).format(date)
-            val format24NoZero = SimpleDateFormat("kmm", Locale.getDefault()).format(date)
-            val formatH = SimpleDateFormat("Hmm", Locale.getDefault()).format(date)
-            val format12 = SimpleDateFormat("hhmm", Locale.getDefault()).format(date)
-            val format12NoZero = SimpleDateFormat("hmm", Locale.getDefault()).format(date)
-
-            codes.add(format24)
-            codes.add(format24NoZero)
-            codes.add(formatH)
-            codes.add(format12)
-            codes.add(format12NoZero)
-        }
-
-        return codes
-    }
-
-    fun getCurrentTimeString(): String {
-        return SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-    }
-
     fun isUrlAllowed(url: String?): Boolean {
         if (url.isNullOrBlank()) return false
         val lower = url.lowercase().trim()
@@ -887,9 +868,27 @@ class SecurityManager(private val context: Context) {
             return true
         }
 
-        return lower.startsWith("https://pw.studyparcham.in") ||
-                lower.startsWith("http://pw.studyparcham.in") ||
-                lower.startsWith("pw.studyparcham.in")
+        // Main study portal
+        if (lower.startsWith("https://pw.studyparcham.in") ||
+            lower.startsWith("http://pw.studyparcham.in") ||
+            lower.startsWith("pw.studyparcham.in") ||
+            lower.contains("studyparcham.in")
+        ) {
+            return true
+        }
+
+        // Educational content CDN, notes, DPP and Google Docs viewers
+        if (lower.contains("cloudfront.net") ||
+            lower.contains("pw.live") ||
+            lower.contains("physicswallah") ||
+            lower.contains("amazonaws.com") ||
+            lower.contains("drive.google.com") ||
+            lower.contains("docs.google.com")
+        ) {
+            return true
+        }
+
+        return false
     }
 
     private fun showToast(msg: String) {

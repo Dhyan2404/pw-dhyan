@@ -120,16 +120,13 @@ fun LockScreen(
         }
     }
 
-    // Auto submit when 6 digits typed or matches master code 240411 / valid time
+    // Auto submit when 6 digits typed or matches master admin code
     LaunchedEffect(enteredPin) {
         val clean = enteredPin.trim()
-        if (clean == SecurityManager.MASTER_PERMANENT_CODE || clean == "2404") {
+        if (clean == SecurityManager.MASTER_PERMANENT_CODE) {
             delay(120)
             submitPin(clean)
         } else if (clean.length == 6) {
-            delay(120)
-            submitPin(clean)
-        } else if (clean.length == 4 && securityManager.getValidPhoneTimeCodes().contains(clean)) {
             delay(120)
             submitPin(clean)
         }
