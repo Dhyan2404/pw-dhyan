@@ -109,7 +109,7 @@ class PushNotificationService : Service() {
         val notification: Notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setContentTitle("PW DHYAN Study Sync")
             .setContentText("Cloud alerts and study notifications active")
-            .setSmallIcon(R.drawable.ic_notification)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
