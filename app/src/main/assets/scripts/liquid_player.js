@@ -156,10 +156,8 @@
         #controls, .controls-overlay, .settings-float, .loader-overlay, .error-box,
         #sheet-overlay, #menu-panel, #timeline-panel, #chat-panel { display: none !important; opacity: 0 !important; pointer-events: none !important; }
         #video-wrapper video { width: 100vw !important; height: 100vh !important; object-fit: contain !important; background: transparent; }
-        #hover-detection-zone { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: min(1280px, calc(100vw - 32px)); height: 60px; z-index: 999990; pointer-events: auto; }
-        #top-hover-detection-zone { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: min(850px, 95vw); height: 50px; z-index: 999998; pointer-events: auto; }
         #lq-top-lecture-hud { position: fixed; top: 18px; left: 50%; transform: translateX(-50%) translateY(-70px); z-index: 999999; max-width: min(800px, calc(100vw - 32px)); background: transparent !important; border-radius: 9999px; padding: 7px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 6px 6px rgba(0,0,0,0.2), 0 0 20px rgba(0,0,0,0.1); user-select: none; opacity: 0; pointer-events: none; transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.35s ease, box-shadow 0.3s ease; }
-        #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #top-hover-detection-zone:hover ~ #lq-top-lecture-hud, #lq-top-lecture-hud:hover, #lq-top-lecture-hud.active-dropdown { opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 8px 14px rgba(0,0,0,0.3), 0 0 25px rgba(0,0,0,0.15); }
+        #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud.active-dropdown { opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 8px 14px rgba(0,0,0,0.3), 0 0 25px rgba(0,0,0,0.15); }
         .top-hud-chip { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 700; color: var(--lq-accent, #38bdf8); background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 100%); border: 1px solid rgba(255,255,255,0.25); border-top: 1.2px solid rgba(255,255,255,0.55); border-radius: 999px; padding: 3px 10px; flex-shrink: 0; white-space: nowrap; box-shadow: inset 0 1px 1px rgba(255,255,255,0.35); }
         .top-hud-title { font-size: 0.84rem; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 440px; min-width: 0; flex: 1 1 auto; letter-spacing: 0.01em; text-shadow: 0 1px 3px rgba(0,0,0,0.85); }
         .top-hud-btn { background: transparent; border: 1px solid transparent; color: #ffffff; font-size: 0.95rem; cursor: pointer; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; outline: none; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)); }
@@ -248,7 +246,7 @@
         #next-prompt-fill { height: 100%; background: var(--lq-accent, #38bdf8); border-radius: 999px; transition: width 0.1s linear; box-shadow: 0 0 8px var(--lq-accent-glow); }
 
         #custom-player-hub { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(70px); z-index: 999999; width: min(1280px, calc(100vw - 32px)); background: transparent !important; border-radius: 9999px; padding: 8px 18px; display: flex; align-items: center; gap: 12px; box-shadow: 0 6px 6px rgba(0,0,0,0.2), 0 0 20px rgba(0,0,0,0.1); user-select: none; opacity: 0; pointer-events: none; transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.35s ease, box-shadow 0.3s ease; }
-        #hover-detection-zone:hover ~ #custom-player-hub, #custom-player-hub:hover, #custom-player-hub.user-active, #custom-player-hub.keep-active { opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 8px 14px rgba(0,0,0,0.3), 0 0 25px rgba(0,0,0,0.15); }
+        #custom-player-hub.user-active, #custom-player-hub.keep-active { opacity: 1 !important; pointer-events: auto !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 8px 14px rgba(0,0,0,0.3), 0 0 25px rgba(0,0,0,0.15); }
         .hub-btn { background: transparent; border: 1px solid transparent; color: #ffffff; font-size: 1.1rem; cursor: pointer; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); outline: none; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)); }
         .hub-btn:hover { color: var(--lq-accent, #38bdf8); background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.05) 100%); border-color: rgba(255,255,255,0.35); box-shadow: inset 0 1px 1px rgba(255,255,255,0.6), 0 0 12px var(--lq-accent-glow); transform: scale(1.15); }
         .hub-speed-badge { border-radius: 999px !important; width: auto !important; height: 30px !important; }
@@ -284,8 +282,9 @@
         .slide-badge-time { font-family: 'JetBrains Mono', monospace; opacity: 0.85; }
         .slide-transition-separator { color: rgba(255,255,255,0.4); font-size: 0.8rem; flex-shrink: 0; }
 
-        #c-settings-menu { position: absolute; bottom: 50px; right: 0; width: 300px; background: transparent !important; border-radius: 22px; padding: 14px 16px; display: none; flex-direction: column; gap: 10px; z-index: 9999999; box-shadow: 0 10px 30px rgba(0,0,0,0.35), 0 0 20px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; transform: translateY(10px) scale(0.97); transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease; }
+        #c-settings-menu { position: absolute; bottom: 50px; right: 0; width: 320px; background: transparent !important; border-radius: 22px; padding: 14px 16px; display: none; flex-direction: column; gap: 10px; z-index: 9999999; box-shadow: 0 10px 30px rgba(0,0,0,0.35), 0 0 20px rgba(0,0,0,0.15); opacity: 0; pointer-events: none; transform: translateY(10px) scale(0.97); transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease; }
         #c-settings-menu.show { display: flex; opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+        .settings-drawer-pill { width: 38px; height: 4px; background: rgba(255,255,255,0.35); border-radius: 999px; margin: 0 auto 4px auto; display: none; }
         .settings-header { font-size: 0.85rem; font-weight: 800; color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; display: flex; align-items: center; gap: 6px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         .settings-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         .settings-theme-section { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -295,11 +294,19 @@
         .lq-swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.45); box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: all 0.2s cubic-bezier(0.16,1,0.3,1); position: relative; box-sizing: border-box; }
         .lq-swatch:hover { transform: scale(1.22); border-color: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.6); z-index: 2; }
         .lq-swatch.active { border-color: #ffffff; transform: scale(1.25); box-shadow: 0 0 10px #ffffff, inset 0 0 3px rgba(255,255,255,0.8); z-index: 3; }
+        
+        /* Mobile Quick Chips */
+        .mobile-chips-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+        .mobile-chips-row::-webkit-scrollbar { display: none; }
+        .mobile-chip { background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid rgba(255,255,255,0.22); border-top: 1.2px solid rgba(255,255,255,0.5); border-radius: 10px; color: #ffffff; font-size: 0.74rem; font-family: 'JetBrains Mono', monospace; font-weight: 700; padding: 5px 10px; cursor: pointer; white-space: nowrap; transition: all 0.18s; outline: none; flex-shrink: 0; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 1px 1px rgba(255,255,255,0.25); }
+        .mobile-chip:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); transform: translateY(-1px); }
+        .mobile-chip.active { background: var(--lq-accent, #38bdf8) !important; color: var(--lq-accent-text, #0f172a) !important; font-weight: 800; border-color: var(--lq-accent, #38bdf8) !important; box-shadow: 0 2px 10px var(--lq-accent-glow), inset 0 1px 1px rgba(255,255,255,0.6); }
+
         .settings-select { background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%); border: 1px solid rgba(255,255,255,0.25); border-top: 1.2px solid rgba(255,255,255,0.55); border-radius: 10px; color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 3px 8px; outline: none; cursor: pointer; box-shadow: inset 0 1px 1px rgba(255,255,255,0.35); }
         .settings-select option { background: #0f172a; color: #ffffff; }
         .settings-vol-slider { -webkit-appearance: none; appearance: none; width: 100px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 999px; outline: none; cursor: pointer; }
         .settings-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #ffffff; border: 2px solid var(--lq-accent, #38bdf8); box-shadow: 0 0 8px var(--lq-accent-glow); cursor: pointer; }
-        .settings-toggle-btn { background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 100%); border: 1px solid rgba(255,255,255,0.25); border-top: 1.2px solid rgba(255,255,255,0.55); border-radius: 10px; color: #ffffff; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; cursor: pointer; transition: all 0.2s; outline: none; box-shadow: inset 0 1px 1px rgba(255,255,255,0.35); }
+        .settings-toggle-btn { background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.04) 100%); border: 1px solid rgba(255,255,255,0.25); border-top: 1.2px solid rgba(255,255,255,0.55); border-radius: 10px; color: #ffffff; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; cursor: pointer; transition: all 0.2s; outline: none; box-shadow: inset 0 1px 1px rgba(255,255,255,0.35); min-height: 28px; }
         .settings-toggle-btn:hover, .settings-toggle-btn.active { background: var(--lq-accent, #38bdf8); color: var(--lq-accent-text, #0f172a); border-color: var(--lq-accent, #38bdf8); box-shadow: 0 0 10px var(--lq-accent-glow); }
         .settings-speed-section { display: flex; flex-direction: column; gap: 6px; padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); }
         .settings-custom-speed-row { display: flex; align-items: center; gap: 6px; }
@@ -313,6 +320,37 @@
         .pinned-speed-chip:hover, .pinned-speed-chip.active { background: var(--lq-accent, #38bdf8); color: var(--lq-accent-text, #0f172a); border-color: var(--lq-accent, #38bdf8); box-shadow: 0 0 8px var(--lq-accent-glow); }
         .pinned-speed-remove { font-size: 0.75rem; margin-left: 2px; opacity: 0.7; }
         .pinned-speed-remove:hover { opacity: 1; color: #ef4444; }
+
+        /* 2X Hold HUD */
+        #lq-2x-hold-hud {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-25px) scale(0.9);
+            z-index: 99999999;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--lq-accent, #38bdf8);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px var(--lq-accent-glow);
+            border-radius: 9999px;
+            padding: 6px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.22s cubic-bezier(0.16,1,0.3,1), opacity 0.2s ease;
+        }
+        #lq-2x-hold-hud.active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
+        }
 
         #lq-center-play-pulse { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5); width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.06) 100%); border: 1px solid rgba(255,255,255,0.4); border-top: 1.5px solid rgba(255,255,255,0.7); box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #ffffff; opacity: 0; pointer-events: none; z-index: 9999999; }
         #lq-center-play-pulse.pulse-anim { animation: lq-pulse-grow 0.65s cubic-bezier(0.16,1,0.3,1) forwards; }
@@ -349,7 +387,7 @@
             position: fixed;
             top: 0;
             bottom: 0;
-            width: 32vw;
+            width: 35vw;
             pointer-events: none;
             z-index: 9999998;
             display: flex;
@@ -377,7 +415,7 @@
             align-items: center;
             gap: 4px;
             color: #ffffff;
-            font-size: 1.25rem;
+            font-size: 1.3rem;
             font-weight: 800;
             text-shadow: 0 2px 10px rgba(0,0,0,0.85);
             transform: scale(0.8);
@@ -387,88 +425,67 @@
 
         @media (max-width: 900px), (max-height: 520px) {
             #custom-player-hub {
-                bottom: 8px;
-                width: min(calc(100vw - 16px), 520px);
-                height: 34px;
-                padding: 3px 10px;
-                gap: 6px;
-                border-radius: 9999px;
-                background: linear-gradient(135deg, rgba(13, 20, 38, 0.88) 0%, rgba(6, 10, 22, 0.94) 100%) !important;
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
-                border: 1px solid rgba(56, 189, 248, 0.28);
-                border-top: 1.2px solid rgba(255, 255, 255, 0.5);
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 14px rgba(56, 189, 248, 0.2);
+                bottom: 12px;
+                padding: 7px 16px;
+                gap: 10px;
+                width: min(1200px, calc(100vw - 20px));
             }
-            .hub-btn { width: 26px; height: 26px; font-size: 0.78rem; }
-            #c-play-btn { width: 28px; height: 28px; font-size: 0.85rem; color: var(--lq-accent, #38bdf8); }
-            #c-rwd, #c-fwd { display: flex !important; width: 26px !important; height: 26px !important; font-size: 0.72rem; }
-            #c-notes-btn, #c-shortcuts-btn { display: none !important; }
-            .hub-time { font-size: 0.65rem; min-width: 28px; font-family: monospace; font-weight: 700; color: #e2e8f0; }
-            .hub-speed-badge { height: 22px !important; padding: 0 6px !important; font-size: 0.65rem !important; border-radius: 8px; background: rgba(56, 189, 248, 0.15) !important; border: 1px solid rgba(56, 189, 248, 0.4) !important; color: var(--lq-accent, #38bdf8) !important; font-weight: 800; }
-            .scrubber-track-container { height: 20px; }
-            .hub-track-bg { height: 4px; background: rgba(255, 255, 255, 0.18); border-radius: 999px; }
-            .hub-fill-bar { height: 4px; background: linear-gradient(90deg, #0284c7 0%, var(--lq-accent, #38bdf8) 100%); box-shadow: 0 0 8px var(--lq-accent-glow, rgba(56, 189, 248, 0.8)); }
-            .hub-slider::-webkit-slider-thumb { width: 13px; height: 13px; background: #ffffff; border: 2px solid var(--lq-accent, #38bdf8); box-shadow: 0 0 10px var(--lq-accent, #38bdf8), 0 2px 4px rgba(0,0,0,0.5); }
+            .hub-btn { width: 34px; height: 34px; font-size: 1.05rem; }
+            #c-play-btn { width: 36px; height: 36px; font-size: 1.15rem; color: #ffffff; }
+            #c-rwd, #c-fwd { display: flex !important; width: 34px !important; height: 34px !important; font-size: 0.95rem; }
+            .hub-time { font-size: 0.76rem; min-width: 38px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #ffffff; }
+            .hub-speed-badge { height: 28px !important; padding: 0 10px !important; font-size: 0.78rem !important; border-radius: 999px !important; }
+            .scrubber-track-container { height: 28px; }
+            .hub-track-bg { height: 5px; background: rgba(255, 255, 255, 0.15); border-radius: 999px; }
+            .hub-fill-bar { height: 5px; }
+            .hub-slider::-webkit-slider-thumb { width: 16px; height: 16px; background: #ffffff; border: 2px solid var(--lq-accent, #38bdf8); }
             .shortcuts-grid { grid-template-columns: 1fr; }
             #lq-top-lecture-hud {
-                top: 6px;
+                top: 12px;
                 left: 50%;
-                right: auto;
-                transform: translateX(-50%) translateY(-60px);
-                max-width: calc(100vw - 14px);
-                height: 28px;
-                padding: 2px 8px;
-                gap: 6px;
-                border-radius: 14px;
-                background: rgba(10, 15, 30, 0.7) !important;
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
+                transform: translateX(-50%) translateY(-70px);
+                max-width: min(800px, calc(100vw - 20px));
+                padding: 6px 14px;
+                gap: 8px;
             }
-            #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud:hover, #lq-top-lecture-hud.active-dropdown {
+            #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud.active-dropdown {
                 transform: translateX(-50%) translateY(0) !important;
             }
-            .top-hud-title { max-width: 140px; font-size: 0.7rem; }
-            .top-hud-chip { font-size: 0.62rem; padding: 1px 6px; }
-            .top-hud-btn { width: 24px; height: 24px; font-size: 0.75rem; }
-            .top-hud-badge { font-size: 0.68rem; padding: 2px 8px; }
+            .top-hud-title { max-width: 260px; font-size: 0.8rem; }
+            .top-hud-chip { font-size: 0.68rem; padding: 2px 8px; }
+            .top-hud-btn { width: 28px; height: 28px; font-size: 0.88rem; }
+            .top-hud-badge { font-size: 0.76rem; padding: 4px 10px; }
             #lq-top-playlist-dropdown {
-                width: min(320px, calc(100vw - 16px));
-                left: 50%;
-                right: auto;
-                transform: translateX(-50%) translateY(-8px) scale(0.96);
+                width: 340px;
                 max-height: 60vh;
                 overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
             }
             #c-settings-menu {
-                width: min(290px, calc(100vw - 16px));
-                right: -6px;
-                bottom: 42px;
-                max-height: 60vh;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-                padding: 8px 10px;
-                gap: 6px;
+                position: absolute !important;
+                bottom: 54px !important;
+                right: 0 !important;
+                width: 300px !important;
+                max-height: 75vh !important;
+                overflow-y: auto !important;
+                border-radius: 22px !important;
+                padding: 14px 16px !important;
             }
-            .lq-swatches-grid { grid-template-columns: repeat(6, 1fr); max-height: 85px; }
             #custom-timeline-tray {
-                width: calc(100vw - 16px);
-                bottom: 46px;
-                padding: 8px 10px;
-                max-height: 260px;
-                border-radius: 16px;
+                width: min(900px, calc(100vw - 20px));
+                bottom: 64px;
+                padding: 12px 16px;
+                max-height: 320px;
+                border-radius: 22px;
             }
-            .tray-card { width: 110px; }
-            .tray-card img { height: 65px; }
+            .tray-card { width: 130px; }
+            .tray-card img { height: 80px; }
             #lq-next-lecture-prompt {
-                min-width: 240px;
-                max-width: calc(100vw - 20px);
-                bottom: 46px;
-                right: 10px;
-                padding: 8px 12px;
+                min-width: 280px;
+                max-width: calc(100vw - 24px);
+                bottom: 64px;
+                right: 14px;
             }
-            #lq-osd-hud { top: 46px; font-size: 0.75rem; padding: 4px 12px; }
+            #lq-osd-hud { top: 54px; font-size: 0.82rem; padding: 6px 14px; }
         }
     `;
     (document.head || document.documentElement).appendChild(style);
@@ -648,6 +665,21 @@
         }
     }
 
+    function show2xHoldHUD(show) {
+        let holdEl = document.getElementById('lq-2x-hold-hud');
+        if (!holdEl) {
+            holdEl = document.createElement('div');
+            holdEl.id = 'lq-2x-hold-hud';
+            holdEl.innerHTML = `<i class="fas fa-bolt" style="color:#f59e0b"></i><span>2X SPEED ⚡</span>`;
+            (document.body || document.documentElement).appendChild(holdEl);
+        }
+        if (show) {
+            holdEl.classList.add('active');
+        } else {
+            holdEl.classList.remove('active');
+        }
+    }
+
     /* 4. AUDIO VOCAL CLARIFIER (Web Audio API) */
     let audioCtx = null, audioSource = null, vocalFilter = null, gainNode = null, isVocalBoostActive = false;
     function toggleVocalClarifier(videoEl) {
@@ -767,15 +799,6 @@
         let idleTimer = null, mouseAwayTimer = null, isScrubbing = false;
         let lastStatsHubUpdateTime = 0;
         let hasResumedPlayback = false, lastSaveTime = 0;
-
-        // Hover Detection Zones
-        const hoverZone = document.createElement('div');
-        hoverZone.id = 'hover-detection-zone';
-        (document.body || document.documentElement).appendChild(hoverZone);
-
-        const topHoverZone = document.createElement('div');
-        topHoverZone.id = 'top-hover-detection-zone';
-        (document.body || document.documentElement).appendChild(topHoverZone);
 
         // Top Lecture HUD
         const topHud = document.createElement('div');
@@ -967,7 +990,8 @@
                 <button class="hub-btn" id="c-settings-btn" title="Settings (Speed, Quality, Volume, Audio, Accent)"><i class="fas fa-cog"></i></button>
                 <div id="c-settings-menu">
                     ${GLASS_HTML}
-                    <div class="settings-header"><i class="fas fa-sliders-h"></i> Player Settings</div>
+                    <div class="settings-drawer-pill"></div>
+                    <div class="settings-header"><i class="fas fa-sliders-h"></i> Mobile Player Settings</div>
                     
                     <div class="settings-theme-section">
                         <div class="settings-row" style="margin-bottom:4px;">
@@ -978,7 +1002,7 @@
                     </div>
 
                     <div class="settings-speed-section">
-                        <div class="settings-row">
+                        <div class="settings-row" style="margin-bottom:2px;">
                             <span><i class="fas fa-tachometer-alt me-1" style="color:var(--lq-accent, #38bdf8)"></i> Speed</span>
                             <select class="settings-select" id="c-settings-speed">
                                 <option value="0.5">0.5x</option>
@@ -1002,6 +1026,16 @@
                                 <option value="6.0">6.0x</option>
                             </select>
                         </div>
+                        <div class="mobile-chips-row" id="lq-quick-speed-chips">
+                            <button type="button" class="mobile-chip" data-speed="0.75">0.75x</button>
+                            <button type="button" class="mobile-chip active" data-speed="1.0">1x</button>
+                            <button type="button" class="mobile-chip" data-speed="1.25">1.25x</button>
+                            <button type="button" class="mobile-chip" data-speed="1.5">1.5x</button>
+                            <button type="button" class="mobile-chip" data-speed="1.75">1.75x</button>
+                            <button type="button" class="mobile-chip" data-speed="2.0">2x</button>
+                            <button type="button" class="mobile-chip" data-speed="2.5">2.5x</button>
+                            <button type="button" class="mobile-chip" data-speed="3.0">3x</button>
+                        </div>
                         <div class="settings-custom-speed-row">
                             <input type="number" id="c-custom-speed-input" min="0.25" max="6" step="0.05" placeholder="Custom (0.25-6x)" class="settings-speed-input" />
                             <button type="button" id="c-custom-speed-set" class="settings-speed-btn" title="Apply Custom Speed">Set</button>
@@ -1013,16 +1047,25 @@
                         </div>
                     </div>
 
-                    <div class="settings-row">
-                        <span><i class="fas fa-film me-1" style="color:var(--lq-accent, #38bdf8)"></i> Quality</span>
-                        <select class="settings-select" id="c-settings-quality">
-                            <option value="auto" selected>Auto</option>
-                            <option value="1080">1080p FHD</option>
-                            <option value="720">720p HD</option>
-                            <option value="480">480p</option>
-                            <option value="360">360p</option>
-                            <option value="240">240p</option>
-                        </select>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="settings-row">
+                            <span><i class="fas fa-film me-1" style="color:var(--lq-accent, #38bdf8)"></i> Quality</span>
+                            <select class="settings-select" id="c-settings-quality">
+                                <option value="auto" selected>Auto</option>
+                                <option value="1080">1080p FHD</option>
+                                <option value="720">720p HD</option>
+                                <option value="480">480p</option>
+                                <option value="360">360p</option>
+                                <option value="240">240p</option>
+                            </select>
+                        </div>
+                        <div class="mobile-chips-row" id="lq-quick-quality-chips">
+                            <button type="button" class="mobile-chip active" data-quality="auto">Auto</button>
+                            <button type="button" class="mobile-chip" data-quality="1080">1080p</button>
+                            <button type="button" class="mobile-chip" data-quality="720">720p</button>
+                            <button type="button" class="mobile-chip" data-quality="480">480p</button>
+                            <button type="button" class="mobile-chip" data-quality="360">360p</button>
+                        </div>
                     </div>
 
                     <div class="settings-row">
@@ -1124,6 +1167,8 @@
         const customSpeedSetBtn = hub.querySelector('#c-custom-speed-set');
         const customSpeedPinBtn = hub.querySelector('#c-custom-speed-pin');
         const pinnedSpeedsContainer = hub.querySelector('#c-pinned-speeds-container');
+        const quickSpeedContainer = settingsMenu.querySelector('#lq-quick-speed-chips');
+        const quickQualityContainer = settingsMenu.querySelector('#lq-quick-quality-chips');
         const settingsQuality = hub.querySelector('#c-settings-quality');
         const settingsVol = hub.querySelector('#c-settings-vol');
         const volPercent = hub.querySelector('#c-vol-percent');
@@ -1308,26 +1353,97 @@
             }
         });
 
-        // Mobile Touch & Gesture Engine
-        let lastTouchEndTime = 0;
-        let lastTouchPos = { x: 0, y: 0 };
-        let touchStartTime = 0;
+        // Mobile Touch & Gesture Engine (Phones / Touchscreens)
+        let lastTapTime = 0;
+        let lastTapPos = { x: 0, y: 0 };
         let touchStartPos = { x: 0, y: 0 };
+        let touchStartTime = 0;
+        let hold2xTimer = null;
+        let isHolding2x = false;
+        let speedBeforeHold = 1.0;
+        let singleTapTimer = null;
+
+        function cancelHold2x() {
+            if (hold2xTimer) {
+                clearTimeout(hold2xTimer);
+                hold2xTimer = null;
+            }
+            if (isHolding2x) {
+                isHolding2x = false;
+                try {
+                    video.playbackRate = speedBeforeHold;
+                } catch (e) { }
+                show2xHoldHUD(false);
+                if (speedBadge) speedBadge.innerText = `${speedBeforeHold}x`;
+            }
+        }
 
         window.addEventListener('touchstart', (e) => {
             if (e.touches && e.touches.length === 1) {
+                const touch = e.touches[0];
                 touchStartTime = Date.now();
-                touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                touchStartPos = { x: touch.clientX, y: touch.clientY };
+
+                const target = e.target;
+                const isControlElement = target && target.closest && target.closest(
+                    '#custom-player-hub, #lq-top-lecture-hud, #custom-timeline-tray, #custom-shortcuts-modal, #c-settings-menu, #lq-next-lecture-prompt, .lq-chapter-item, .playlist-item, button, input, select'
+                );
+
+                if (!isControlElement && !isAnyOverlayOpen()) {
+                    // Start Hold-for-2X Speed Timer (fires after 360ms of holding)
+                    cancelHold2x();
+                    hold2xTimer = setTimeout(() => {
+                        if (!video.paused) {
+                            isHolding2x = true;
+                            speedBeforeHold = currentSpeed || video.playbackRate || 1.0;
+                            try {
+                                video.playbackRate = 2.0;
+                            } catch (err) { }
+                            show2xHoldHUD(true);
+                            if (navigator.vibrate) {
+                                try { navigator.vibrate(35); } catch (err) { }
+                            }
+                        }
+                    }, 360);
+                }
+            } else {
+                cancelHold2x();
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches && e.touches.length === 1) {
+                const touch = e.touches[0];
+                const dx = Math.abs(touch.clientX - touchStartPos.x);
+                const dy = Math.abs(touch.clientY - touchStartPos.y);
+                // If finger moves more than 20px before 2x engaged, cancel hold timer
+                if ((dx > 20 || dy > 20) && !isHolding2x) {
+                    cancelHold2x();
+                }
             }
         }, { passive: true });
 
         window.addEventListener('touchend', (e) => {
+            if (isHolding2x) {
+                cancelHold2x();
+                // If user was holding for 2x, release does NOT trigger play/pause or tap seek
+                if (e.cancelable) e.preventDefault();
+                return;
+            }
+            if (hold2xTimer) {
+                clearTimeout(hold2xTimer);
+                hold2xTimer = null;
+            }
+
             if (isAnyOverlayOpen()) return;
+
             const touch = e.changedTouches ? e.changedTouches[0] : null;
             if (!touch) return;
 
             const target = e.target;
-            if (target && target.closest && target.closest('#custom-player-hub, #lq-top-lecture-hud, #custom-timeline-tray, #custom-shortcuts-modal, #c-settings-menu, #lq-next-lecture-prompt, .lq-chapter-item, .playlist-item')) {
+            if (target && target.closest && target.closest(
+                '#custom-player-hub, #lq-top-lecture-hud, #custom-timeline-tray, #custom-shortcuts-modal, #c-settings-menu, #lq-next-lecture-prompt, .lq-chapter-item, .playlist-item, button, input, select'
+            )) {
                 return;
             }
 
@@ -1335,43 +1451,49 @@
             const dy = Math.abs(touch.clientY - touchStartPos.y);
             const dt = Date.now() - touchStartTime;
 
-            if (dx < 15 && dy < 15 && dt < 400) {
+            // Only recognize as tap if finger didn't move much and duration was short (<380ms)
+            if (dx < 22 && dy < 22 && dt < 380) {
                 const now = Date.now();
-                const timeSinceLastTouch = now - lastTouchEndTime;
-                const distFromLastTouch = Math.hypot(touch.clientX - lastTouchPos.x, touch.clientY - lastTouchPos.y);
+                const timeSinceLastTouch = now - lastTapTime;
+                const distFromLastTouch = Math.hypot(touch.clientX - lastTapPos.x, touch.clientY - lastTapPos.y);
+                const screenWidth = window.innerWidth || window.screen?.width || 360;
+                const xRatio = touch.clientX / screenWidth;
 
-                if (timeSinceLastTouch < 320 && distFromLastTouch < 45) {
-                    lastTouchEndTime = 0;
-                    const screenWidth = window.innerWidth;
-                    const xRatio = touch.clientX / screenWidth;
+                if (timeSinceLastTouch < 340 && distFromLastTouch < 60) {
+                    // Double Tap Gesture
+                    if (singleTapTimer) {
+                        clearTimeout(singleTapTimer);
+                        singleTapTimer = null;
+                    }
+                    lastTapTime = 0;
 
-                    if (xRatio < 0.35) {
+                    if (xRatio < 0.38) {
+                        // Double tap LEFT: Rewind 10s
                         video.currentTime = Math.max(0, video.currentTime - 10);
-                        showOSD('<i class="fas fa-backward" style="color:var(--lq-accent, #38bdf8)"></i>', '-10s');
+                        showOSD('<i class="fas fa-undo-alt" style="color:var(--lq-accent, #38bdf8)"></i>', '-10s');
                         showSeekRipple(false);
-                    } else if (xRatio > 0.65) {
+                    } else if (xRatio > 0.62) {
+                        // Double tap RIGHT: Forward 10s
                         video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
-                        showOSD('<i class="fas fa-forward" style="color:var(--lq-accent, #38bdf8)"></i>', '+10s');
+                        showOSD('<i class="fas fa-redo-alt" style="color:var(--lq-accent, #38bdf8)"></i>', '+10s');
                         showSeekRipple(true);
                     } else {
-                        // Center double-tap: toggle HUD visibility without stopping video
-                        const isHubActive = hub.classList.contains('user-active');
-                        if (isHubActive) {
-                            hub.classList.remove('user-active');
-                            topHud.classList.remove('user-active');
-                        } else {
-                            hub.classList.add('user-active');
-                            topHud.classList.add('user-active');
-                            scheduleIdleHide(3500);
-                            scheduleTopHudIdleHide(3500);
-                        }
+                        // Double tap CENTER: Toggle Play / Pause
+                        togglePlay();
                     }
                 } else {
-                    lastTouchEndTime = now;
-                    lastTouchPos = { x: touch.clientX, y: touch.clientY };
+                    // Single Tap Candidate
+                    lastTapTime = now;
+                    lastTapPos = { x: touch.clientX, y: touch.clientY };
 
-                    setTimeout(() => {
-                        if (Date.now() - lastTouchEndTime >= 280) {
+                    singleTapTimer = setTimeout(() => {
+                        singleTapTimer = null;
+                        // Single tap behavior:
+                        // Center 50% screen -> Toggle Play/Pause directly
+                        // Side zones (left/right 25%) -> Toggle UI HUD visibility
+                        if (xRatio >= 0.25 && xRatio <= 0.75) {
+                            togglePlay();
+                        } else {
                             const isHubActive = hub.classList.contains('user-active');
                             if (isHubActive) {
                                 hub.classList.remove('user-active');
@@ -1383,8 +1505,16 @@
                                 scheduleTopHudIdleHide(3500);
                             }
                         }
-                    }, 290);
+                    }, 280);
                 }
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchcancel', () => {
+            cancelHold2x();
+            if (singleTapTimer) {
+                clearTimeout(singleTapTimer);
+                singleTapTimer = null;
             }
         }, { passive: true });
 
@@ -1399,7 +1529,7 @@
             }, 300);
         });
 
-        [hub, hoverZone].forEach(el => {
+        [hub].forEach(el => {
             if (!el) return;
             el.addEventListener('mouseenter', () => {
                 hub.classList.add('user-active');
@@ -1411,7 +1541,7 @@
             });
         });
 
-        [topHud, topHoverZone].forEach(el => {
+        [topHud].forEach(el => {
             if (!el) return;
             el.addEventListener('mouseenter', () => {
                 topHud.classList.add('user-active');
@@ -1452,22 +1582,13 @@
             if (e) e.stopPropagation();
             togglePlay();
         };
-        // Tapping/clicking video ONLY toggles HUD controls visibility — NEVER pauses or stops playback!
+        // Desktop / Click fallback: Center click toggles Play/Pause directly
         video.onclick = (e) => {
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            const isHubActive = hub.classList.contains('user-active');
-            if (isHubActive) {
-                hub.classList.remove('user-active');
-                topHud.classList.remove('user-active');
-            } else {
-                hub.classList.add('user-active');
-                topHud.classList.add('user-active');
-                scheduleIdleHide(3500);
-                scheduleTopHudIdleHide(3500);
-            }
+            togglePlay();
         };
 
         const rwdBtn = hub.querySelector('#c-rwd');
@@ -2156,6 +2277,9 @@
             } catch (e) { }
         }
 
+        let lastStatsHubUpdateTime = 0;
+        let lastCloudWatchLogTime = 0;
+
         video.addEventListener('timeupdate', () => {
             if (isBuffering && Math.abs(video.currentTime - lastObservedPlaybackTime) > 0.05) showBuffering(false);
             if (video.duration) {
@@ -2172,6 +2296,22 @@
                 if (nowTime - lastStatsHubUpdateTime >= 1000) {
                     lastStatsHubUpdateTime = nowTime;
                     updateChapterStatsHub();
+                }
+
+                if (nowTime - lastCloudWatchLogTime >= 10000) {
+                    lastCloudWatchLogTime = nowTime;
+                    try {
+                        if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.logWatchProgress) {
+                            window.AndroidPlayerBridge.logWatchProgress(
+                                lectureTitle || document.title || 'Lecture',
+                                batchName || '',
+                                chapterName || '',
+                                video.currentTime,
+                                video.duration,
+                                progressPercent
+                            );
+                        }
+                    } catch (e) { }
                 }
 
                 if (!hasDismissedNextPrompt && currentLectureIndex < chapterLectures.length - 1 && autoNextMode !== 'off') {
@@ -2249,6 +2389,13 @@
                 }
             }
 
+            if (quickSpeedContainer) {
+                quickSpeedContainer.querySelectorAll('.mobile-chip').forEach(chip => {
+                    const spd = parseFloat(chip.dataset.speed);
+                    chip.classList.toggle('active', Math.abs(spd - clamped) < 0.01);
+                });
+            }
+
             if (speedBadge) speedBadge.innerText = `${clamped}x`;
             if (customSpeedInput) customSpeedInput.value = clamped;
             updatePinnedChipsUI();
@@ -2317,6 +2464,16 @@
         renderPinnedSpeeds();
         applySpeed(currentSpeed, false, false);
 
+        if (quickSpeedContainer) {
+            quickSpeedContainer.querySelectorAll('.mobile-chip').forEach(chip => {
+                chip.onclick = (e) => {
+                    e.stopPropagation();
+                    const spd = parseFloat(chip.dataset.speed);
+                    if (!isNaN(spd)) applySpeed(spd, true, true);
+                };
+            });
+        }
+
         if (speedBadge) speedBadge.onclick = (e) => { e.stopPropagation(); toggleSettingsMenu(); };
         if (settingsSpeed) settingsSpeed.onchange = (e) => applySpeed(parseFloat(e.target.value), true, true);
 
@@ -2361,12 +2518,17 @@
                         }
                     }
                 }
+                if (quickSpeedContainer) {
+                    quickSpeedContainer.querySelectorAll('.mobile-chip').forEach(chip => {
+                        const spd = parseFloat(chip.dataset.speed);
+                        chip.classList.toggle('active', Math.abs(spd - r) < 0.01);
+                    });
+                }
             }
         });
 
-        // Quality inside Settings
-        settingsQuality.onchange = (e) => {
-            const res = e.target.value;
+        // Quality inside Settings & Mobile Drawer
+        function applyQuality(res) {
             const p = window.player || window.shakaPlayer;
             if (p?.configure) {
                 if (res === 'auto') {
@@ -2378,8 +2540,28 @@
                     if (match) p.selectVariantTrack(match, true);
                 }
             }
+            if (settingsQuality) settingsQuality.value = res;
+            if (quickQualityContainer) {
+                quickQualityContainer.querySelectorAll('.mobile-chip').forEach(chip => {
+                    chip.classList.toggle('active', chip.dataset.quality === res);
+                });
+            }
             showOSD('<i class="fas fa-film" style="color:var(--lq-accent, #38bdf8)"></i>', res === 'auto' ? 'Auto Quality' : `${res}p`);
-        };
+        }
+
+        if (settingsQuality) {
+            settingsQuality.onchange = (e) => applyQuality(e.target.value);
+        }
+
+        if (quickQualityContainer) {
+            quickQualityContainer.querySelectorAll('.mobile-chip').forEach(chip => {
+                chip.onclick = (e) => {
+                    e.stopPropagation();
+                    const q = chip.dataset.quality;
+                    if (q) applyQuality(q);
+                };
+            });
+        }
 
         // Volume inside Settings
         function updateVolumeDisplay(vol, isMuted) {

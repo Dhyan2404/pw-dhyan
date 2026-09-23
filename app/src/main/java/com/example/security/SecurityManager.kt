@@ -98,7 +98,10 @@ data class UserSession(
     val loginTime: Long = System.currentTimeMillis(),
     val lastActiveTime: Long = System.currentTimeMillis(),
     val suspendedUntil: Long = 0L,
-    val isRevoked: Boolean = false
+    val isRevoked: Boolean = false,
+    val currentLecture: String? = null,
+    val currentSubject: String? = null,
+    val currentProgressPercent: Int = 0
 ) {
     fun getFormattedLoginTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(loginTime))
@@ -126,7 +129,7 @@ data class UserSession(
     }
 
     fun toFirestoreMap(): Map<String, Any> {
-        return mapOf(
+        val map = mutableMapOf<String, Any>(
             "deviceId" to deviceId,
             "deviceModel" to deviceModel,
             "androidVersion" to androidVersion,
@@ -135,8 +138,12 @@ data class UserSession(
             "loginTime" to loginTime,
             "lastActiveTime" to System.currentTimeMillis(),
             "suspendedUntil" to suspendedUntil,
-            "isRevoked" to isRevoked
+            "isRevoked" to isRevoked,
+            "currentProgressPercent" to currentProgressPercent
         )
+        currentLecture?.let { map["currentLecture"] = it }
+        currentSubject?.let { map["currentSubject"] = it }
+        return map
     }
 
     companion object {
@@ -150,7 +157,157 @@ data class UserSession(
                 loginTime = (map["loginTime"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 lastActiveTime = (map["lastActiveTime"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 suspendedUntil = (map["suspendedUntil"] as? Number)?.toLong() ?: 0L,
-                isRevoked = (map["isRevoked"] as? Boolean) ?: false
+                isRevoked = (map["isRevoked"] as? Boolean) ?: false,
+                currentLecture = map["currentLecture"] as? String,
+                currentSubject = map["currentSubject"] as? String,
+                currentProgressPercent = (map["currentProgressPercent"] as? Number)?.toInt() ?: 0
+            )
+        }
+    }
+}
+
+/**
+ * Tracks real-time lecture watch activity.
+ */
+data class WatchLog(
+    val id: String = UUID.randomUUID().toString(),
+    val deviceId: String,
+    val deviceModel: String,
+    val passkey: String,
+    val lectureTitle: String,
+    val subjectName: String = "",
+    val chapterName: String = "",
+    val currentTime: Long = 0L,
+    val duration: Long = 0L,
+    val progressPercent: Int = 0,
+    val timestamp: Long = System.currentTimeMillis()
+) {
+    fun getFormattedTime(): String {
+        return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp))
+    }
+
+    fun toFirestoreMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "deviceId" to deviceId,
+            "deviceModel" to deviceModel,
+            "passkey" to passkey,
+            "lectureTitle" to lectureTitle,
+            "subjectName" to subjectName,
+            "chapterName" to chapterName,
+            "currentTime" to currentTime,
+            "duration" to duration,
+            "progressPercent" to progressPercent,
+            "timestamp" to timestamp
+        )
+    }
+
+    companion object {
+        fun fromFirestoreMap(map: Map<String, Any?>): WatchLog {
+            return WatchLog(
+                id = (map["id"] as? String) ?: UUID.randomUUID().toString(),
+                deviceId = (map["deviceId"] as? String) ?: "",
+                deviceModel = (map["deviceModel"] as? String) ?: "Android",
+                passkey = (map["passkey"] as? String) ?: "",
+                lectureTitle = (map["lectureTitle"] as? String) ?: "Lecture",
+                subjectName = (map["subjectName"] as? String) ?: "",
+                chapterName = (map["chapterName"] as? String) ?: "",
+                currentTime = (map["currentTime"] as? Number)?.toLong() ?: 0L,
+                duration = (map["duration"] as? Number)?.toLong() ?: 0L,
+                progressPercent = (map["progressPercent"] as? Number)?.toInt() ?: 0,
+                timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
+            )
+        }
+    }
+}
+
+/**
+ * Tracks login history & authentication audit log.
+ */
+data class LoginLog(
+    val id: String = UUID.randomUUID().toString(),
+    val deviceId: String,
+    val deviceModel: String,
+    val androidVersion: String,
+    val passkey: String,
+    val label: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val status: String = "SUCCESS"
+) {
+    fun getFormattedTime(): String {
+        return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp))
+    }
+
+    fun toFirestoreMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "deviceId" to deviceId,
+            "deviceModel" to deviceModel,
+            "androidVersion" to androidVersion,
+            "passkey" to passkey,
+            "label" to label,
+            "timestamp" to timestamp,
+            "status" to status
+        )
+    }
+
+    companion object {
+        fun fromFirestoreMap(map: Map<String, Any?>): LoginLog {
+            return LoginLog(
+                id = (map["id"] as? String) ?: UUID.randomUUID().toString(),
+                deviceId = (map["deviceId"] as? String) ?: "",
+                deviceModel = (map["deviceModel"] as? String) ?: "Android",
+                androidVersion = (map["androidVersion"] as? String) ?: "Android",
+                passkey = (map["passkey"] as? String) ?: "",
+                label = (map["label"] as? String) ?: "Student",
+                timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                status = (map["status"] as? String) ?: "SUCCESS"
+            )
+        }
+    }
+}
+
+/**
+ * Targeted & Global Push Notifications.
+ */
+data class PushNotificationItem(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String,
+    val message: String,
+    val targetType: String = "ALL", // "ALL", "DEVICE", "PASSKEY"
+    val targetValue: String = "ALL",
+    val author: String = "Admin Dhyan",
+    val timestamp: Long = System.currentTimeMillis(),
+    val isActive: Boolean = true
+) {
+    fun getFormattedTime(): String {
+        return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp))
+    }
+
+    fun toFirestoreMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "title" to title,
+            "message" to message,
+            "targetType" to targetType,
+            "targetValue" to targetValue,
+            "author" to author,
+            "timestamp" to timestamp,
+            "isActive" to isActive
+        )
+    }
+
+    companion object {
+        fun fromFirestoreMap(map: Map<String, Any?>): PushNotificationItem {
+            return PushNotificationItem(
+                id = (map["id"] as? String) ?: UUID.randomUUID().toString(),
+                title = (map["title"] as? String) ?: "Notification",
+                message = (map["message"] as? String) ?: "",
+                targetType = (map["targetType"] as? String) ?: "ALL",
+                targetValue = (map["targetValue"] as? String) ?: "ALL",
+                author = (map["author"] as? String) ?: "Admin",
+                timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                isActive = (map["isActive"] as? Boolean) ?: true
             )
         }
     }
@@ -222,6 +379,7 @@ class SecurityManager(private val context: Context) {
     private var currentActiveKey: AccessKey? = null
     private var lastBroadcastAnnouncement: BroadcastAnnouncement? = null
     private val broadcastListeners = mutableListOf<(BroadcastAnnouncement?) -> Unit>()
+    private val processedNotificationIds = mutableSetOf<String>()
 
     companion object {
         const val MASTER_PERMANENT_CODE = "240411"
@@ -239,6 +397,9 @@ class SecurityManager(private val context: Context) {
         private const val FIRESTORE_COLLECTION_SESSIONS = "user_sessions"
         private const val FIRESTORE_COLLECTION_ANNOUNCEMENTS = "announcements"
         private const val FIRESTORE_COLLECTION_SYSTEM = "system_config"
+        private const val FIRESTORE_COLLECTION_WATCH_LOGS = "watch_logs"
+        private const val FIRESTORE_COLLECTION_LOGIN_LOGS = "login_logs"
+        private const val FIRESTORE_COLLECTION_NOTIFICATIONS = "push_notifications"
         private const val ANNOUNCEMENT_DOC_ID = "latest_announcement"
         private const val MAINTENANCE_DOC_ID = "maintenance_mode"
         private const val TAG = "FirestoreSecurity"
@@ -347,6 +508,8 @@ class SecurityManager(private val context: Context) {
         }
     }
 
+    private var cloudAdminPin: String? = null
+
     private fun listenToFirestore() {
         val fs = firestore ?: return
         try {
@@ -364,6 +527,14 @@ class SecurityManager(private val context: Context) {
                         }
                         cloudKeysList = remoteKeys.toMutableList()
                         notifyListeners(cloudKeysList.sortedByDescending { it.createdAt })
+                    }
+                }
+
+            // Sync Cloud Admin PIN
+            fs.collection(FIRESTORE_COLLECTION_SYSTEM).document("admin_auth")
+                .addSnapshotListener { doc, _ ->
+                    if (doc != null && doc.exists()) {
+                        cloudAdminPin = doc.getString("pin")
                     }
                 }
         } catch (e: Exception) {
@@ -402,7 +573,8 @@ class SecurityManager(private val context: Context) {
 
     fun verifyAdminPassword(password: String): Boolean {
         val clean = password.trim()
-        return clean == MASTER_PERMANENT_CODE || clean == "2404"
+        val cloudPin = cloudAdminPin
+        return clean == MASTER_PERMANENT_CODE || clean == "2404" || (!cloudPin.isNullOrBlank() && clean == cloudPin)
     }
 
     fun getDeviceId(): String {
@@ -598,6 +770,7 @@ class SecurityManager(private val context: Context) {
             setPermanentUnlocked(true)
             saveSession(MASTER_PERMANENT_CODE, "Administrator", Long.MAX_VALUE, true)
             recordUserSession(thisDeviceId, thisDeviceModel, "Admin Master Code (240411)", "Administrator")
+            recordLoginLog(MASTER_PERMANENT_CODE, "Administrator", "ADMIN_UNLOCK")
             return UnlockResult.PermanentUnlocked
         }
 
@@ -612,6 +785,7 @@ class SecurityManager(private val context: Context) {
         // Check if device was revoked by Admin
         val revokedDevices = prefs.getStringSet(KEY_REVOKED_DEVICES, emptySet()) ?: emptySet()
         if (revokedDevices.contains(thisDeviceId)) {
+            recordLoginLog(cleaned, "Revoked Device Attempt", "BLOCKED_REVOKED")
             return UnlockResult.Invalid("Access Revoked: Your device has been restricted by Admin.")
         }
 
@@ -619,6 +793,7 @@ class SecurityManager(private val context: Context) {
         val suspendedUntil = prefs.getLong("suspended_until_$thisDeviceId", 0L)
         if (suspendedUntil > System.currentTimeMillis()) {
             val remMins = ((suspendedUntil - System.currentTimeMillis()) / 60000) + 1
+            recordLoginLog(cleaned, "Timeout Device Attempt", "BLOCKED_TIMEOUT")
             return UnlockResult.Invalid("Session Cooldown: Admin placed your device on a $remMins min timeout.")
         }
 
@@ -627,11 +802,13 @@ class SecurityManager(private val context: Context) {
         val matchedKey = allKeys.firstOrNull { it.code == cleaned }
         if (matchedKey != null) {
             if (matchedKey.isExpired) {
+                recordLoginLog(cleaned, matchedKey.label, "FAILED_EXPIRED")
                 return UnlockResult.Invalid("Passkey Expired: This access key has concluded.")
             }
 
             // 1-Key 1-Time Device Binding:
             if (matchedKey.isUsed && matchedKey.deviceId != null && matchedKey.deviceId != thisDeviceId) {
+                recordLoginLog(cleaned, matchedKey.label, "FAILED_DEVICE_MISMATCH")
                 return UnlockResult.Invalid("Key Already Used: This passkey was claimed on another device (${matchedKey.deviceModel ?: "Other Device"}). 1 key is valid on 1 device only.")
             }
 
@@ -655,6 +832,7 @@ class SecurityManager(private val context: Context) {
 
             currentActiveKey = boundKey
             recordUserSession(thisDeviceId, thisDeviceModel, boundKey.code, boundKey.label)
+            recordLoginLog(boundKey.code, boundKey.label, "SUCCESS")
 
             if (boundKey.isInfinite) {
                 setPermanentUnlocked(true)
@@ -664,6 +842,7 @@ class SecurityManager(private val context: Context) {
         }
 
         // SANITIZED ERROR: Only Admin passkeys and master code accepted
+        recordLoginLog(cleaned, "Unknown Key", "INVALID_CODE")
         return UnlockResult.Invalid(
             "Invalid passkey. Access requires an Admin-issued passkey or 240411."
         )
@@ -919,6 +1098,182 @@ class SecurityManager(private val context: Context) {
             return if (key.isInfinite) "🌟 Admin (Infinite)" else "⏱️ ${key.getRemainingTimeFormatted()}"
         }
         return "⏱️ Session Active"
+    }
+
+    // Cloud Watch Logging Engine
+    fun recordWatchProgress(
+        lectureTitle: String,
+        subjectName: String = "",
+        chapterName: String = "",
+        currentTime: Long = 0L,
+        duration: Long = 0L,
+        progressPercent: Int = 0
+    ) {
+        val thisDeviceId = getDeviceId()
+        val thisDeviceModel = getDeviceModelName()
+        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Admin (240411)" else "Student") ?: "Student"
+
+        // Update live user session doc in Firestore with current watch status
+        val sessionUpdate = mutableMapOf<String, Any>(
+            "lastActiveTime" to System.currentTimeMillis(),
+            "currentProgressPercent" to progressPercent
+        )
+        if (lectureTitle.isNotBlank()) sessionUpdate["currentLecture"] = lectureTitle
+        if (subjectName.isNotBlank()) sessionUpdate["currentSubject"] = subjectName
+
+        try {
+            firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(thisDeviceId)
+                ?.update(sessionUpdate)
+        } catch (_: Exception) {}
+
+        // Save detailed record in watch_logs collection
+        val safeKey = "${thisDeviceId}_${lectureTitle.hashCode()}"
+        val watchLog = WatchLog(
+            id = safeKey,
+            deviceId = thisDeviceId,
+            deviceModel = thisDeviceModel,
+            passkey = passkey,
+            lectureTitle = lectureTitle,
+            subjectName = subjectName,
+            chapterName = chapterName,
+            currentTime = currentTime,
+            duration = duration,
+            progressPercent = progressPercent,
+            timestamp = System.currentTimeMillis()
+        )
+        try {
+            firestore?.collection(FIRESTORE_COLLECTION_WATCH_LOGS)?.document(safeKey)
+                ?.set(watchLog.toFirestoreMap())
+        } catch (_: Exception) {}
+    }
+
+    // Cloud Login Audit Logging
+    fun recordLoginLog(passkey: String, label: String, status: String = "SUCCESS") {
+        val thisDeviceId = getDeviceId()
+        val thisDeviceModel = getDeviceModelName()
+        val log = LoginLog(
+            deviceId = thisDeviceId,
+            deviceModel = thisDeviceModel,
+            androidVersion = "Android ${Build.VERSION.RELEASE}",
+            passkey = passkey,
+            label = label,
+            timestamp = System.currentTimeMillis(),
+            status = status
+        )
+        try {
+            firestore?.collection(FIRESTORE_COLLECTION_LOGIN_LOGS)?.document(log.id)
+                ?.set(log.toFirestoreMap())
+        } catch (_: Exception) {}
+    }
+
+    // Cloud Push Notification Sender (Target All, Device ID, or Passkey)
+    fun sendPushNotification(
+        title: String,
+        message: String,
+        targetType: String = "ALL",
+        targetValue: String = "ALL",
+        author: String = "Admin Dhyan",
+        onComplete: ((Boolean) -> Unit)? = null
+    ) {
+        val item = PushNotificationItem(
+            title = title.trim(),
+            message = message.trim(),
+            targetType = targetType,
+            targetValue = targetValue.trim(),
+            author = author,
+            timestamp = System.currentTimeMillis(),
+            isActive = true
+        )
+        val fs = firestore
+        if (fs == null) {
+            showToast("Cloud Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        fs.collection(FIRESTORE_COLLECTION_NOTIFICATIONS).document(item.id)
+            .set(item.toFirestoreMap())
+            .addOnSuccessListener {
+                showToast("Notification sent to $targetType ($targetValue)!")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed to send notification: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    // Real-Time Push Notification Listener for Devices
+    fun listenToPushNotifications(onNotification: (PushNotificationItem) -> Unit): ListenerRegistration? {
+        val fs = firestore ?: return null
+        val myDeviceId = getDeviceId()
+        val myPasskey = prefs.getString(KEY_SESSION_CODE, "") ?: ""
+
+        return try {
+            fs.collection(FIRESTORE_COLLECTION_NOTIFICATIONS)
+                .whereEqualTo("isActive", true)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    val items = snapshot.documents.mapNotNull { doc ->
+                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it) }
+                    }
+                    items.forEach { item ->
+                        val isForMe = when (item.targetType) {
+                            "DEVICE" -> item.targetValue == myDeviceId
+                            "PASSKEY" -> item.targetValue == myPasskey
+                            else -> true // "ALL"
+                        }
+                        if (isForMe && !processedNotificationIds.contains(item.id)) {
+                            // Check if notification is recent (created within last 24 hours)
+                            if (System.currentTimeMillis() - item.timestamp < 24 * 60 * 60 * 1000L) {
+                                processedNotificationIds.add(item.id)
+                                onNotification(item)
+                                if (!isPermanentUnlocked()) {
+                                    try {
+                                        com.example.notification.NotificationHelper(context)
+                                            .sendCustomNotification(item.title, item.message)
+                                    } catch (_: Exception) {}
+                                }
+                            }
+                        }
+                    }
+                }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // Listen to real-time Watch Logs for Admin
+    fun listenToWatchLogs(onLogsUpdated: (List<WatchLog>) -> Unit): ListenerRegistration? {
+        val fs = firestore ?: return null
+        return try {
+            fs.collection(FIRESTORE_COLLECTION_WATCH_LOGS)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    val logs = snapshot.documents.mapNotNull { doc ->
+                        doc.data?.let { WatchLog.fromFirestoreMap(it) }
+                    }
+                    onLogsUpdated(logs.sortedByDescending { it.timestamp })
+                }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // Listen to real-time Login Logs for Admin
+    fun listenToLoginLogs(onLogsUpdated: (List<LoginLog>) -> Unit): ListenerRegistration? {
+        val fs = firestore ?: return null
+        return try {
+            fs.collection(FIRESTORE_COLLECTION_LOGIN_LOGS)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    val logs = snapshot.documents.mapNotNull { doc ->
+                        doc.data?.let { LoginLog.fromFirestoreMap(it) }
+                    }
+                    onLogsUpdated(logs.sortedByDescending { it.timestamp })
+                }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun isUrlAllowed(url: String?): Boolean {

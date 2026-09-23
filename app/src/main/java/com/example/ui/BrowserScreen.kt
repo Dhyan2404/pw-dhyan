@@ -143,7 +143,7 @@ fun BrowserScreen(
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
     var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
 
-    // Listen for live announcements & maintenance mode from Admin
+    // Listen for live announcements, push notifications & maintenance mode from Admin
     DisposableEffect(securityManager) {
         val reg = securityManager.listenToAnnouncements { ann ->
             activeAnnouncement = ann
@@ -151,9 +151,13 @@ fun BrowserScreen(
         val mReg = securityManager.listenToMaintenance { info ->
             maintenanceInfo = info
         }
+        val pReg = securityManager.listenToPushNotifications { notif ->
+            showToast("🔔 ${notif.title}: ${notif.message}")
+        }
         onDispose {
             reg?.remove()
             mReg?.remove()
+            pReg?.remove()
         }
     }
 
@@ -476,6 +480,27 @@ fun BrowserScreen(
                             (context as? Activity)?.runOnUiThread {
                                 toggleOrientation()
                             }
+                        }
+
+                        @JavascriptInterface
+                        fun logWatchProgress(
+                            lectureTitle: String?,
+                            subjectName: String?,
+                            chapterName: String?,
+                            currentTime: Double,
+                            duration: Double,
+                            progressPercent: Double
+                        ) {
+                            try {
+                                securityManager.recordWatchProgress(
+                                    lectureTitle = lectureTitle ?: "Lecture",
+                                    subjectName = subjectName ?: "",
+                                    chapterName = chapterName ?: "",
+                                    currentTime = currentTime.toLong(),
+                                    duration = duration.toLong(),
+                                    progressPercent = progressPercent.toInt()
+                                )
+                            } catch (_: Exception) {}
                         }
                     }, "AndroidPlayerBridge")
 

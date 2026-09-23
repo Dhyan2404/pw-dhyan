@@ -1518,6 +1518,13 @@ private fun UserDeviceCard(
                             text = "Key: ${session.passkey} (${session.label}) • Logged in: ${session.getFormattedLoginTime()}",
                             style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontSize = 9.5.sp)
                         )
+
+                        if (!session.currentLecture.isNullOrBlank()) {
+                            Text(
+                                text = "🎬 Watching: ${session.currentLecture} (${session.currentProgressPercent}%)",
+                                style = MaterialTheme.typography.labelSmall.copy(color = CyberCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
                 }
             }

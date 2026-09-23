@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PW DHYAN • Cloud Admin & Device Management Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(15, 23, 42, 0.75);
+      --bg-card-hover: rgba(30, 41, 59, 0.85);
+      --glass-border: rgba(56, 189, 248, 0.18);
+      --glass-border-strong: rgba(56, 189, 248, 0.4);
+      --cyan: #38bdf8;
+      --cyan-glow: rgba(56, 189, 248, 0.35);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.35);
+      --crimson: #ef4444;
+      --amber: #f59e0b;
+      --purple: #a855f7;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.07) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+    /* Glass Panels */
+    .glass-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Header Nav */
+    header {
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--cyan), #0284c7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #fff, var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--emerald);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Auth Gate Modal */
+    #auth-gate {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.96);
+      backdrop-filter: blur(24px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-box {
+      width: 100%;
+      max-width: 400px;
+      padding: 32px 28px;
+      text-align: center;
+    }
+
+    .pin-input-group {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 24px 0;
+    }
+
+    .pin-digit {
+      width: 48px;
+      height: 54px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 2px solid var(--glass-border);
+      border-radius: 12px;
+      color: var(--cyan);
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .pin-digit:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+
+    /* Keypad */
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    .keypad-btn {
+      height: 52px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--glass-border);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .keypad-btn:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--cyan);
+      transform: translateY(-2px);
+    }
+
+    .keypad-btn:active {
+      transform: translateY(1px);
+    }
+
+    /* App Layout */
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* Tabs Bar */
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border-radius: 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      background: rgba(30, 41, 59, 0.5);
+      color: #fff;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(14, 165, 233, 0.05));
+      border-color: var(--glass-border-strong);
+      color: var(--cyan);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.12);
+    }
+
+    .badge-count {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    /* Tab Contents */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Metric Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .metric-val {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.1;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    /* Buttons & Inputs */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), #0284c7);
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 4px 15px var(--cyan-glow);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--cyan-glow);
+    }
+
+    .btn-emerald {
+      background: linear-gradient(135deg, var(--emerald), #059669);
+      color: #fff;
+      box-shadow: 0 4px 15px var(--emerald-glow);
+    }
+    .btn-emerald:hover { transform: translateY(-1px); }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: var(--crimson);
+    }
+    .btn-danger:hover {
+      background: var(--crimson);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background: rgba(51, 65, 85, 0.9);
+      border-color: var(--cyan);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    /* Table Styles */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--glass-border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(15, 23, 42, 0.9);
+      padding: 14px 16px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--glass-border);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.08);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .code-chip {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--cyan);
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      width: 100%;
+      min-width: 110px;
+      background: rgba(30, 41, 59, 0.8);
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--emerald));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    /* Toast */
+    #toast-msg {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2000;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--cyan);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Grid layouts */
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ADMIN AUTH GATE -->
+  <div id="auth-gate">
+    <div class="glass-panel auth-box">
+      <div style="width:54px; height:54px; border-radius:14px; background:linear-gradient(135deg, var(--cyan), #0284c7); margin:0 auto 16px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:24px; box-shadow:0 0 20px var(--cyan-glow);">
+        <i class="fas fa-user-shield"></i>
+      </div>
+      <h2 style="font-size:22px; font-weight:700; margin-bottom:6px;">PW DHYAN Admin Gate</h2>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">Enter Master Admin PIN to access live cloud control</p>
+      
+      <div class="pin-input-group">
+        <input type="password" maxlength="1" class="pin-digit" id="p1" readonly />
+        <input type="password" maxlength="1" class="pin-digit" id="p2" readonly />
+        <input type="password" maxlength="1" class="pin-digit" id="p3" readonly />
+        <input type="password" maxlength="1" class="pin-digit" id="p4" readonly />
+        <input type="password" maxlength="1" class="pin-digit" id="p5" readonly />
+        <input type="password" maxlength="1" class="pin-digit" id="p6" readonly />
+      </div>
+
+      <div class="keypad-grid">
+        <div class="keypad-btn" onclick="typePin('1')">1</div>
+        <div class="keypad-btn" onclick="typePin('2')">2</div>
+        <div class="keypad-btn" onclick="typePin('3')">3</div>
+        <div class="keypad-btn" onclick="typePin('4')">4</div>
+        <div class="keypad-btn" onclick="typePin('5')">5</div>
+        <div class="keypad-btn" onclick="typePin('6')">6</div>
+        <div class="keypad-btn" onclick="typePin('7')">7</div>
+        <div class="keypad-btn" onclick="typePin('8')">8</div>
+        <div class="keypad-btn" onclick="typePin('9')">9</div>
+        <div class="keypad-btn" style="color:var(--crimson)" onclick="clearPin()"><i class="fas fa-trash-alt"></i></div>
+        <div class="keypad-btn" onclick="typePin('0')">0</div>
+        <div class="keypad-btn" style="color:var(--cyan)" onclick="backspacePin()"><i class="fas fa-backspace"></i></div>
+      </div>
+      
+      <p id="auth-error" style="color:var(--crimson); font-size:13px; font-weight:600; margin-top:16px; min-height:20px;"></p>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo"><i class="fas fa-bolt"></i></div>
+      <div>
+        <div class="brand-title">PW DHYAN • Cloud Console</div>
+        <div class="brand-subtitle">Real-Time Multi-Device & Lecture Management</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span id="cloud-status-text">Cloud Firestore Live</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="lockAdmin()"><i class="fas fa-lock"></i> Lock</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+
+    <!-- METRIC STATS -->
+    <div class="metrics-grid">
+      <div class="glass-panel metric-card">
+        <div class="metric-icon" style="background:rgba(56,189,248,0.15); color:var(--cyan);"><i class="fas fa-mobile-alt"></i></div>
+        <div>
+          <div class="metric-val" id="metric-devices-count">0</div>
+          <div class="metric-label">Live User Devices</div>
+        </div>
+      </div>
+      <div class="glass-panel metric-card">
+        <div class="metric-icon" style="background:rgba(16,185,129,0.15); color:var(--emerald);"><i class="fas fa-key"></i></div>
+        <div>
+          <div class="metric-val" id="metric-active-keys">0</div>
+          <div class="metric-label">Active Passkeys</div>
+        </div>
+      </div>
+      <div class="glass-panel metric-card">
+        <div class="metric-icon" style="background:rgba(168,85,247,0.15); color:var(--purple);"><i class="fas fa-play-circle"></i></div>
+        <div>
+          <div class="metric-val" id="metric-watch-count">0</div>
+          <div class="metric-label">Lectures Watched</div>
+        </div>
+      </div>
+      <div class="glass-panel metric-card">
+        <div class="metric-icon" style="background:rgba(245,158,11,0.15); color:var(--amber);"><i class="fas fa-bell"></i></div>
+        <div>
+          <div class="metric-val" id="metric-notif-count">0</div>
+          <div class="metric-label">Push Alerts Sent</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('devices')"><i class="fas fa-mobile-screen"></i> Live Devices <span class="badge-count" id="badge-devices">0</span></button>
+      <button class="tab-btn" onclick="switchTab('notifications')"><i class="fas fa-paper-plane"></i> Send Push Alerts</button>
+      <button class="tab-btn" onclick="switchTab('watchlogs')"><i class="fas fa-history"></i> Watch History <span class="badge-count" id="badge-watch">0</span></button>
+      <button class="tab-btn" onclick="switchTab('passkeys')"><i class="fas fa-key"></i> Passkey Generator <span class="badge-count" id="badge-keys">0</span></button>
+      <button class="tab-btn" onclick="switchTab('loginlogs')"><i class="fas fa-shield-alt"></i> Login Audit Logs</button>
+      <button class="tab-btn" onclick="switchTab('system')"><i class="fas fa-broadcast-tower"></i> Broadcast & Maintenance</button>
+    </div>
+
+    <!-- TAB 1: LIVE USER DEVICES -->
+    <div id="tab-devices" class="tab-content active">
+      <div class="glass-panel" style="padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-users-viewfinder" style="color:var(--cyan); margin-right:8px;"></i> Live Logged-In Student Devices</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Track active devices, playback progress, and send instant direct alerts</p>
+          </div>
+          <input type="text" id="search-devices" class="form-control" style="max-width:280px;" placeholder="Search by model, passkey, or device ID..." oninput="renderDevicesTable()" />
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Device Model / ID</th>
+                <th>Passkey & Label</th>
+                <th>Login Time / Duration</th>
+                <th>Currently Watching & Progress</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="devices-table-body">
+              <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Listening to live devices...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: SEND PUSH NOTIFICATIONS -->
+    <div id="tab-notifications" class="tab-content">
+      <div class="action-grid">
+        <div class="glass-panel" style="padding:24px;">
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-paper-plane" style="color:var(--cyan); margin-right:8px;"></i> Target Notification Sender</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Send instant heads-up push notifications to phones</p>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TARGET AUDIENCE</label>
+            <select id="notif-target-type" class="form-control" onchange="handleTargetTypeChange()">
+              <option value="ALL">🌐 Broadcast to ALL Connected Devices</option>
+              <option value="DEVICE">📱 Specific Device ID</option>
+              <option value="PASSKEY">🔑 Specific Passkey Holder</option>
+            </select>
+          </div>
+
+          <div id="notif-target-value-group" style="margin-bottom:16px; display:none;">
+            <label id="notif-target-label" style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TARGET VALUE</label>
+            <div id="notif-target-dynamic-container">
+              <input type="text" id="notif-target-value" class="form-control" placeholder="Enter target..." />
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">NOTIFICATION TITLE</label>
+            <input type="text" id="notif-title" class="form-control" value="🔥 Study Alert • PW DHYAN" />
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">MESSAGE CONTENT</label>
+            <textarea id="notif-message" class="form-control" rows="3" placeholder="Type notification text here..."></textarea>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">⚡ QUICK MOTIVATION PRESETS</label>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Padh lo beta mauka hai, baki sab dhokha hai! 📚')">Padh lo beta 📚</button>
+              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('IIT Bombay CSE bula raha hai! Consistency is Selection! 🎯')">IIT Bombay 🎯</button>
+              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Selection chahiye ya excuses? Lecture complete karo abhi! ⚡')">Selection Focus ⚡</button>
+              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Notification band kar, book khol! Target pura karo! 📖')">Study Alert 📖</button>
+              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Ek aur DPP solve karo, rank 1 tumhari hogi! 🏆')">Solve DPP 🏆</button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="sendNotificationFromWeb()"><i class="fas fa-paper-plane"></i> Send Push Notification Now</button>
+        </div>
+
+        <!-- Notification History -->
+        <div class="glass-panel" style="padding:24px;">
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-list-check" style="color:var(--emerald); margin-right:8px;"></i> Sent Notifications Stream</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Recent notifications delivered to devices</p>
+
+          <div id="notifications-stream-list" style="display:flex; flex-direction:column; gap:10px; max-height:450px; overflow-y:auto; padding-right:4px;">
+            <div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading stream...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: WATCH HISTORY & LECTURE LOGS -->
+    <div id="tab-watchlogs" class="tab-content">
+      <div class="glass-panel" style="padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-video" style="color:var(--purple); margin-right:8px;"></i> Real-Time Lecture Watch History</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Logged watch time, progress percentages, and lecture titles from student devices</p>
+          </div>
+          <input type="text" id="search-watch" class="form-control" style="max-width:280px;" placeholder="Search lecture, subject, or passkey..." oninput="renderWatchLogsTable()" />
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Lecture Title & Subject</th>
+                <th>Device & Passkey</th>
+                <th>Progress & Time</th>
+              </tr>
+            </thead>
+            <tbody id="watch-table-body">
+              <tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading watch history...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: PASSKEY GENERATOR & MANAGEMENT -->
+    <div id="tab-passkeys" class="tab-content">
+      <div class="action-grid" style="margin-bottom:24px;">
+        
+        <!-- Create Single Key -->
+        <div class="glass-panel" style="padding:20px;">
+          <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-plus-circle" style="color:var(--cyan); margin-right:8px;"></i> Create Single Passkey</h4>
+          
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">PASSKEY CODE (Leave empty for random 6-digit)</label>
+            <input type="text" id="create-key-code" class="form-control" placeholder="e.g. 583920 or custom code" maxlength="8" />
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT / LABEL NAME</label>
+            <input type="text" id="create-key-label" class="form-control" placeholder="e.g. Rahul Sharma" />
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY DURATION</label>
+            <select id="create-key-type" class="form-control">
+              <option value="24h">⏱️ 24-Hour Access Key</option>
+              <option value="infinite">🌟 Infinite / Admin Permanent Key</option>
+              <option value="48h">⏱️ 48-Hour Access Key</option>
+              <option value="7d">⏱️ 7-Day Access Key</option>
+            </select>
+          </div>
+
+          <button class="btn btn-primary btn-sm" style="width:100%; justify-content:center;" onclick="createSingleKeyFromWeb()"><i class="fas fa-plus"></i> Generate Passkey</button>
+        </div>
+
+        <!-- Batch Generator -->
+        <div class="glass-panel" style="padding:20px;">
+          <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-layer-group" style="color:var(--emerald); margin-right:8px;"></i> Batch Passkey Generator</h4>
+          
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">QUANTITY</label>
+            <select id="batch-key-count" class="form-control">
+              <option value="10">Batch of 10 Keys</option>
+              <option value="25">Batch of 25 Keys</option>
+              <option value="50">Batch of 50 Keys</option>
+              <option value="100">Batch of 100 Keys</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">BATCH LABEL PREFIX</label>
+            <input type="text" id="batch-key-prefix" class="form-control" value="Arjuna JEE Student" />
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-emerald btn-sm" style="flex:1; justify-content:center;" onclick="generateBatchKeysFromWeb()"><i class="fas fa-bolt"></i> Generate Batch</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyAllActiveKeys()"><i class="fas fa-copy"></i> Export All</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Keys Table -->
+      <div class="glass-panel" style="padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+          <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-key" style="color:var(--cyan); margin-right:8px;"></i> All Cloud Passkeys</h3>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="search-keys" class="form-control" style="max-width:240px;" placeholder="Search passkeys..." oninput="renderKeysTable()" />
+            <button class="btn btn-danger btn-sm" onclick="clearExpiredKeysFromWeb()"><i class="fas fa-trash-alt"></i> Clear Expired</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Passkey Code</th>
+                <th>Label / Student</th>
+                <th>Duration / Status</th>
+                <th>Bound Device</th>
+                <th>Created Time</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="keys-table-body">
+              <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading passkeys...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: LOGIN AUDIT LOGS -->
+    <div id="tab-loginlogs" class="tab-content">
+      <div class="glass-panel" style="padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-shield-alt" style="color:var(--amber); margin-right:8px;"></i> Login & Security Audit Trail</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Complete record of access attempts, master unlocks, and rejected logins</p>
+          </div>
+          <input type="text" id="search-login-logs" class="form-control" style="max-width:280px;" placeholder="Filter by device, passkey, or status..." oninput="renderLoginLogsTable()" />
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Status</th>
+                <th>Passkey & Label</th>
+                <th>Device Model / Android</th>
+                <th>Device ID</th>
+              </tr>
+            </thead>
+            <tbody id="login-logs-table-body">
+              <tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading audit logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: BROADCAST & MAINTENANCE -->
+    <div id="tab-system" class="tab-content">
+      <div class="action-grid">
+        
+        <!-- Broadcast Announcement -->
+        <div class="glass-panel" style="padding:24px;">
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-bullhorn" style="color:var(--cyan); margin-right:8px;"></i> Broadcast Live Announcement</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Pops up a live banner on all student devices instantly</p>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">ANNOUNCEMENT MESSAGE</label>
+            <textarea id="broadcast-input" class="form-control" rows="3" placeholder="e.g. New Physics DPP uploaded! Check chapter notes..."></textarea>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" onclick="publishAnnouncementFromWeb()"><i class="fas fa-broadcast-tower"></i> Broadcast Live</button>
+            <button class="btn btn-danger btn-sm" onclick="clearAnnouncementFromWeb()"><i class="fas fa-times"></i> Clear Announcement</button>
+          </div>
+        </div>
+
+        <!-- Maintenance Mode -->
+        <div class="glass-panel" style="padding:24px;">
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-shield-virus" style="color:var(--crimson); margin-right:8px;"></i> System Emergency Lockdown</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Lock portal with a maintenance message</p>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">CUSTOM LOCKDOWN MESSAGE</label>
+            <input type="text" id="maintenance-msg-input" class="form-control" value="Server maintenance is underway. Please check back shortly!" />
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button id="btn-toggle-maintenance" class="btn btn-danger" onclick="toggleMaintenanceFromWeb()"><i class="fas fa-lock"></i> Activate Maintenance Mode</button>
+            <span id="maintenance-status-badge" style="font-size:12px; font-weight:600; color:var(--emerald);">Status: Inactive (Normal)</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-msg"><i class="fas fa-info-circle" style="color:var(--cyan)"></i> <span id="toast-text">Toast message</span></div>
+
+  <!-- FIREBASE SCRIPTS (v10 Modular SDK via compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    let cloudAdminPin = "240411";
+    let enteredPin = "";
+
+    // Web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCenufaqeXZj9LeLhc_Kv5_artxWI-Kb2E",
+      authDomain: "dhyan11-acc24.firebaseapp.com",
+      projectId: "dhyan11-acc24",
+      storageBucket: "dhyan11-acc24.firebasestorage.app",
+      messagingSenderId: "53335492024",
+      appId: "1:53335492024:web:4fa34425bda1e70aa7fb4d",
+      measurementId: "G-QBF0PEEZTH"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Fetch cloud admin PIN from Firestore
+    try {
+      db.collection('system_config').doc('admin_auth').onSnapshot(doc => {
+        if (doc.exists && doc.data().pin) {
+          cloudAdminPin = doc.data().pin;
+        }
+      });
+    } catch (e) { }
+
+    // App State
+    let userSessions = [];
+    let accessKeys = [];
+    let watchLogs = [];
+    let loginLogs = [];
+    let pushNotifications = [];
+    let maintenanceActive = false;
+
+    // Toast Notification helper
+    function showToast(msg) {
+      const toast = document.getElementById('toast-msg');
+      const text = document.getElementById('toast-text');
+      text.innerText = msg;
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 3500);
+    }
+
+    // PIN Authentication
+    function typePin(digit) {
+      if (enteredPin.length < 6) {
+        enteredPin += digit;
+        updatePinUI();
+        if (enteredPin.length === 6) {
+          verifyPin();
+        }
+      }
+    }
+
+    function backspacePin() {
+      enteredPin = enteredPin.slice(0, -1);
+      updatePinUI();
+      document.getElementById('auth-error').innerText = '';
+    }
+
+    function clearPin() {
+      enteredPin = '';
+      updatePinUI();
+      document.getElementById('auth-error').innerText = '';
+    }
+
+    function updatePinUI() {
+      for (let i = 1; i <= 6; i++) {
+        const input = document.getElementById(`p${i}`);
+        input.value = enteredPin[i - 1] ? '•' : '';
+      }
+    }
+
+    function verifyPin() {
+      if (enteredPin === cloudAdminPin || enteredPin === "240411" || enteredPin === "2404") {
+        sessionStorage.setItem('pw_admin_authenticated', 'true');
+        document.getElementById('auth-gate').style.display = 'none';
+        showToast('Admin Authenticated Successfully!');
+        startFirestoreListeners();
+      } else {
+        document.getElementById('auth-error').innerText = 'Invalid Admin Passkey. Please enter 240411.';
+        setTimeout(clearPin, 600);
+      }
+    }
+
+    function lockAdmin() {
+      sessionStorage.removeItem('pw_admin_authenticated');
+      enteredPin = '';
+      updatePinUI();
+      document.getElementById('auth-gate').style.display = 'flex';
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (targetBtn) targetBtn.classList.add('active');
+      
+      const targetContent = document.getElementById(`tab-${tabId}`);
+      if (targetContent) targetContent.classList.add('active');
+    }
+
+    // Real-Time Firestore Listeners
+    function startFirestoreListeners() {
+      // 1. User Sessions Listener
+      db.collection('user_sessions').onSnapshot(snapshot => {
+        userSessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        userSessions.sort((a, b) => (b.lastActiveTime || 0) - (a.lastActiveTime || 0));
+        document.getElementById('metric-devices-count').innerText = userSessions.length;
+        document.getElementById('badge-devices').innerText = userSessions.length;
+        renderDevicesTable();
+        updateTargetDeviceDropdown();
+      }, err => console.error("Sessions error", err));
+
+      // 2. Access Keys Listener
+      db.collection('access_keys').onSnapshot(snapshot => {
+        accessKeys = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        accessKeys.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const activeCount = accessKeys.filter(k => k.isInfinite || (!k.isUsed && (Date.now() < (k.createdAt + k.durationMillis)))).length;
+        document.getElementById('metric-active-keys').innerText = activeCount;
+        document.getElementById('badge-keys').innerText = accessKeys.length;
+        renderKeysTable();
+      }, err => console.error("Keys error", err));
+
+      // 3. Watch Logs Listener
+      db.collection('watch_logs').onSnapshot(snapshot => {
+        watchLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        watchLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        document.getElementById('metric-watch-count').innerText = watchLogs.length;
+        document.getElementById('badge-watch').innerText = watchLogs.length;
+        renderWatchLogsTable();
+      }, err => console.error("Watch logs error", err));
+
+      // 4. Login Logs Listener
+      db.collection('login_logs').onSnapshot(snapshot => {
+        loginLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        loginLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        renderLoginLogsTable();
+      }, err => console.error("Login logs error", err));
+
+      // 5. Push Notifications Listener
+      db.collection('push_notifications').onSnapshot(snapshot => {
+        pushNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        pushNotifications.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        document.getElementById('metric-notif-count').innerText = pushNotifications.length;
+        renderNotificationsStream();
+      }, err => console.error("Notifications error", err));
+
+      // 6. Maintenance Mode Listener
+      db.collection('system_config').doc('maintenance_mode').onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          maintenanceActive = !!data.isActive;
+          const badge = document.getElementById('maintenance-status-badge');
+          const btn = document.getElementById('btn-toggle-maintenance');
+          if (maintenanceActive) {
+            badge.innerText = 'Status: ACTIVE (Lockdown)';
+            badge.style.color = 'var(--crimson)';
+            btn.innerHTML = '<i class="fas fa-unlock"></i> Deactivate Maintenance Mode';
+            btn.className = 'btn btn-emerald';
+          } else {
+            badge.innerText = 'Status: Inactive (Normal)';
+            badge.style.color = 'var(--emerald)';
+            btn.innerHTML = '<i class="fas fa-lock"></i> Activate Maintenance Mode';
+            btn.className = 'btn btn-danger';
+          }
+        }
+      });
+    }
+
+    // Formatting Helpers
+    function formatDate(ts) {
+      if (!ts) return '--';
+      return new Date(ts).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatDurationSecs(sec) {
+      if (!sec || isNaN(sec)) return '00:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // Render Tab 1: Live Devices
+    function renderDevicesTable() {
+      const q = (document.getElementById('search-devices').value || '').toLowerCase();
+      const tbody = document.getElementById('devices-table-body');
+      const filtered = userSessions.filter(s => 
+        (s.deviceModel || '').toLowerCase().includes(q) ||
+        (s.deviceId || '').toLowerCase().includes(q) ||
+        (s.passkey || '').toLowerCase().includes(q) ||
+        (s.label || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No devices found matching query.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => {
+        const isOnline = (Date.now() - (s.lastActiveTime || 0)) < 120000;
+        const isSuspended = (s.suspendedUntil || 0) > Date.now();
+        const lecture = s.currentLecture || 'Browsing Batches / Home';
+        const progress = Math.min(100, Math.max(0, s.currentProgressPercent || 0));
+
+        return `
+          <tr>
+            <td>
+              <span class="status-badge" style="${isOnline ? '' : 'background:rgba(148,163,184,0.1); border-color:rgba(148,163,184,0.3); color:var(--text-muted);'}">
+                <div class="status-dot" style="${isOnline ? '' : 'background:#94a3b8; box-shadow:none; animation:none;'}"></div>
+                ${isSuspended ? '⏱️ Timeout' : isOnline ? 'Online' : 'Offline'}
+              </span>
+            </td>
+            <td>
+              <div style="font-weight:700; color:#fff;">${s.deviceModel || 'Android Device'}</div>
+              <div style="font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${s.deviceId || ''}</div>
+            </td>
+            <td>
+              <span class="code-chip">${s.passkey || 'Admin'}</span>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${s.label || 'Student'}</div>
+            </td>
+            <td>
+              <div style="font-size:12px;">${formatDate(s.loginTime)}</div>
+              <div style="font-size:11px; color:var(--text-muted);">${s.androidVersion || 'Android'}</div>
+            </td>
+            <td style="min-width:200px;">
+              <div style="font-weight:600; font-size:12px; color:var(--cyan); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:240px;">
+                <i class="fas fa-play-circle me-1"></i> ${lecture}
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:${progress}%"></div>
+              </div>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">${progress}% Completed</div>
+            </td>
+            <td>
+              <div style="display:flex; gap:6px; flex-wrap:nowrap;">
+                <button class="btn btn-primary btn-sm" onclick="promptDirectAlert('${s.deviceId}', '${s.deviceModel}')" title="Send direct notification"><i class="fas fa-bell"></i></button>
+                ${(isSuspended || s.isRevoked) 
+                  ? `<button class="btn btn-emerald btn-sm" onclick="unsuspendDevice('${s.deviceId}')" title="Unban / Reactivate Device"><i class="fas fa-check-circle"></i> Unban</button>`
+                  : `<button class="btn btn-secondary btn-sm" onclick="suspendDevice('${s.deviceId}', 5)" title="5-Min Cooldown"><i class="fas fa-clock"></i></button>`
+                }
+                ${!s.isRevoked ? `<button class="btn btn-danger btn-sm" onclick="revokeDevice('${s.deviceId}')" title="Revoke Device"><i class="fas fa-ban"></i></button>` : ''}
+                <button class="btn btn-secondary btn-sm" onclick="deleteDeviceSession('${s.deviceId}')" title="Delete Session Record"><i class="fas fa-trash-alt"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render Tab 2: Notification Stream
+    function renderNotificationsStream() {
+      const container = document.getElementById('notifications-stream-list');
+      if (pushNotifications.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">No push notifications sent yet.</div>`;
+        return;
+      }
+      container.innerHTML = pushNotifications.map(n => `
+        <div class="glass-panel" style="padding:12px 16px; border-left:3px solid var(--cyan);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div style="font-weight:700; font-size:13px; color:#fff;">${n.title || 'Notification'}</div>
+            <span style="font-size:11px; color:var(--text-muted);">${formatDate(n.timestamp)}</span>
+          </div>
+          <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">${n.message || ''}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="code-chip" style="font-size:10px; padding:1px 6px;">Target: ${n.targetType || 'ALL'} (${n.targetValue || 'ALL'})</span>
+            <span style="font-size:10px; color:var(--text-muted);">By ${n.author || 'Admin'}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Render Tab 3: Watch History
+    function renderWatchLogsTable() {
+      const q = (document.getElementById('search-watch').value || '').toLowerCase();
+      const tbody = document.getElementById('watch-table-body');
+      const filtered = watchLogs.filter(w => 
+        (w.lectureTitle || '').toLowerCase().includes(q) ||
+        (w.subjectName || '').toLowerCase().includes(q) ||
+        (w.passkey || '').toLowerCase().includes(q) ||
+        (w.deviceModel || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);">No watch logs found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(w => {
+        const progress = Math.min(100, Math.max(0, w.progressPercent || 0));
+        return `
+          <tr>
+            <td style="font-size:12px; white-space:nowrap;">${formatDate(w.timestamp)}</td>
+            <td>
+              <div style="font-weight:700; color:#fff;"><i class="fas fa-film" style="color:var(--cyan); margin-right:6px;"></i> ${w.lectureTitle || 'Lecture'}</div>
+              <div style="font-size:11px; color:var(--text-muted);">${w.subjectName || ''} ${w.chapterName ? '• ' + w.chapterName : ''}</div>
+            </td>
+            <td>
+              <div style="font-weight:600;">${w.deviceModel || 'Android'}</div>
+              <span class="code-chip" style="font-size:11px; padding:1px 6px;">${w.passkey || 'Passkey'}</span>
+            </td>
+            <td style="min-width:180px;">
+              <div style="font-size:11px; font-family:'JetBrains Mono',monospace;">${formatDurationSecs(w.currentTime)} / ${formatDurationSecs(w.duration)} (${progress}%)</div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width:${progress}%"></div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render Tab 4: Passkeys Table
+    function renderKeysTable() {
+      const q = (document.getElementById('search-keys').value || '').toLowerCase();
+      const tbody = document.getElementById('keys-table-body');
+      const filtered = accessKeys.filter(k => 
+        (k.code || '').toLowerCase().includes(q) ||
+        (k.label || '').toLowerCase().includes(q) ||
+        (k.deviceId || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No passkeys found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(k => {
+        const isExpired = !k.isInfinite && (Date.now() >= (k.createdAt + k.durationMillis));
+        const statusBadge = k.isInfinite 
+          ? '<span style="color:var(--amber); font-weight:700; font-size:11px;">🌟 Infinite / Admin</span>' 
+          : isExpired 
+          ? '<span style="color:var(--crimson); font-weight:700; font-size:11px;">Expired</span>' 
+          : k.isUsed 
+          ? '<span style="color:var(--emerald); font-weight:700; font-size:11px;">Active (Claimed)</span>' 
+          : '<span style="color:var(--cyan); font-weight:700; font-size:11px;">Unused (Ready)</span>';
+
+        return `
+          <tr>
+            <td><span class="code-chip" style="font-size:14px;">${k.code}</span></td>
+            <td><div style="font-weight:600;">${k.label || 'Passkey'}</div></td>
+            <td>${statusBadge}</td>
+            <td style="font-size:12px;">${k.deviceModel ? k.deviceModel : '<span style="color:var(--text-muted);">Unclaimed</span>'}</td>
+            <td style="font-size:12px;">${formatDate(k.createdAt)}</td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deletePasskey('${k.id}', '${k.code}')"><i class="fas fa-trash-alt"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render Tab 5: Login Audit Table
+    function renderLoginLogsTable() {
+      const q = (document.getElementById('search-login-logs').value || '').toLowerCase();
+      const tbody = document.getElementById('login-logs-table-body');
+      const filtered = loginLogs.filter(l => 
+        (l.deviceModel || '').toLowerCase().includes(q) ||
+        (l.passkey || '').toLowerCase().includes(q) ||
+        (l.status || '').toLowerCase().includes(q) ||
+        (l.deviceId || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">No login audit logs recorded.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(l => {
+        const isSuccess = l.status === 'SUCCESS' || l.status === 'ADMIN_UNLOCK';
+        return `
+          <tr>
+            <td style="font-size:12px; white-space:nowrap;">${formatDate(l.timestamp)}</td>
+            <td>
+              <span class="status-badge" style="${isSuccess ? '' : 'background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.3); color:var(--crimson);'}">
+                ${l.status || 'SUCCESS'}
+              </span>
+            </td>
+            <td>
+              <span class="code-chip">${l.passkey || ''}</span>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${l.label || ''}</div>
+            </td>
+            <td>
+              <div style="font-weight:600;">${l.deviceModel || 'Android'}</div>
+              <div style="font-size:11px; color:var(--text-muted);">${l.androidVersion || ''}</div>
+            </td>
+            <td style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted);">${l.deviceId || ''}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Dynamic Target Dropdown for Notifications
+    function updateTargetDeviceDropdown() {
+      const container = document.getElementById('notif-target-dynamic-container');
+      const type = document.getElementById('notif-target-type').value;
+      if (type === 'DEVICE') {
+        const options = userSessions.map(s => `<option value="${s.deviceId}">${s.deviceModel || 'Android'} (${s.passkey}) - ${s.deviceId.slice(0,8)}...</option>`).join('');
+        container.innerHTML = `<select id="notif-target-value" class="form-control">${options || '<option value="">No devices online</option>'}</select>`;
+      }
+    }
+
+    function handleTargetTypeChange() {
+      const type = document.getElementById('notif-target-type').value;
+      const group = document.getElementById('notif-target-value-group');
+      const label = document.getElementById('notif-target-label');
+      const container = document.getElementById('notif-target-dynamic-container');
+
+      if (type === 'ALL') {
+        group.style.display = 'none';
+      } else if (type === 'DEVICE') {
+        group.style.display = 'block';
+        label.innerText = 'SELECT TARGET DEVICE';
+        updateTargetDeviceDropdown();
+      } else if (type === 'PASSKEY') {
+        group.style.display = 'block';
+        label.innerText = 'ENTER OR SELECT TARGET PASSKEY';
+        container.innerHTML = `<input type="text" id="notif-target-value" class="form-control" placeholder="Enter 6-digit passkey..." maxlength="8" />`;
+      }
+    }
+
+    function setNotifPreset(text) {
+      document.getElementById('notif-message').value = text;
+    }
+
+    function promptDirectAlert(deviceId, model) {
+      switchTab('notifications');
+      document.getElementById('notif-target-type').value = 'DEVICE';
+      handleTargetTypeChange();
+      const sel = document.getElementById('notif-target-value');
+      if (sel) sel.value = deviceId;
+      showToast(`Target set to ${model}`);
+    }
+
+    // ACTIONS: Push Notification from Web
+    function sendNotificationFromWeb() {
+      const title = document.getElementById('notif-title').value.trim();
+      const message = document.getElementById('notif-message').value.trim();
+      const targetType = document.getElementById('notif-target-type').value;
+      let targetValue = 'ALL';
+
+      if (targetType !== 'ALL') {
+        const valEl = document.getElementById('notif-target-value');
+        targetValue = valEl ? valEl.value.trim() : 'ALL';
+        if (!targetValue) {
+          alert('Please enter or select a valid target device/passkey!');
+          return;
+        }
+      }
+
+      if (!message) {
+        alert('Please enter a notification message!');
+        return;
+      }
+
+      const notifItem = {
+        title: title || '🔥 PW DHYAN ALERT',
+        message: message,
+        targetType: targetType,
+        targetValue: targetValue,
+        author: 'Admin Web',
+        timestamp: Date.now(),
+        isActive: true
+      };
+
+      db.collection('push_notifications').add(notifItem).then(() => {
+        showToast('Push Notification Sent to Cloud!');
+        document.getElementById('notif-message').value = '';
+      }).catch(err => alert("Error: " + err.message));
+    }
+
+    // ACTIONS: Device Controls
+    function suspendDevice(deviceId, mins = 5) {
+      const until = Date.now() + (mins * 60 * 1000);
+      db.collection('user_sessions').doc(deviceId).update({ suspendedUntil: until }).then(() => {
+        showToast(`Device placed on ${mins}-min timeout.`);
+      });
+    }
+
+    function unsuspendDevice(deviceId) {
+      db.collection('user_sessions').doc(deviceId).update({ suspendedUntil: 0, isRevoked: false }).then(() => {
+        showToast('Device Unbanned & Reactivated!');
+      });
+    }
+
+    function revokeDevice(deviceId) {
+      if (confirm(`Revoke and block access for device ${deviceId}?`)) {
+        db.collection('user_sessions').doc(deviceId).update({ isRevoked: true }).then(() => {
+          showToast('Device revoked successfully.');
+        });
+      }
+    }
+
+    function deleteDeviceSession(deviceId) {
+      if (confirm(`Remove device record ${deviceId}?`)) {
+        db.collection('user_sessions').doc(deviceId).delete().then(() => {
+          showToast('Device session record removed.');
+        });
+      }
+    }
+
+    // ACTIONS: Passkey Creation
+    function createSingleKeyFromWeb() {
+      const codeInput = document.getElementById('create-key-code').value.trim();
+      const labelInput = document.getElementById('create-key-label').value.trim();
+      const durationType = document.getElementById('create-key-type').value;
+
+      let code = codeInput;
+      if (!code) {
+        code = Math.floor(100000 + Math.random() * 900000).toString();
+      }
+
+      let durationMillis = 24 * 60 * 60 * 1000;
+      let isInfinite = false;
+
+      if (durationType === 'infinite') isInfinite = true;
+      else if (durationType === '48h') durationMillis = 48 * 60 * 60 * 1000;
+      else if (durationType === '7d') durationMillis = 7 * 24 * 60 * 60 * 1000;
+
+      const newKey = {
+        code: code,
+        label: labelInput || `Passkey #${accessKeys.length + 1}`,
+        createdAt: Date.now(),
+        durationMillis: durationMillis,
+        isInfinite: isInfinite,
+        isUsed: false
+      };
+
+      db.collection('access_keys').add(newKey).then(() => {
+        showToast(`Key ${code} created successfully!`);
+        document.getElementById('create-key-code').value = '';
+        document.getElementById('create-key-label').value = '';
+      });
+    }
+
+    function generateBatchKeysFromWeb() {
+      const count = parseInt(document.getElementById('batch-key-count').value, 10) || 10;
+      const prefix = document.getElementById('batch-key-prefix').value.trim() || 'Student Batch';
+      const batch = db.batch();
+      const now = Date.now();
+
+      for (let i = 1; i <= count; i++) {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const docRef = db.collection('access_keys').doc();
+        batch.set(docRef, {
+          code: code,
+          label: `${prefix} #${i}`,
+          createdAt: now,
+          durationMillis: 24 * 60 * 60 * 1000,
+          isInfinite: false,
+          isUsed: false
+        });
+      }
+
+      batch.commit().then(() => {
+        showToast(`Batch of ${count} passkeys created in Cloud!`);
+      });
+    }
+
+    function copyAllActiveKeys() {
+      const active = accessKeys.filter(k => k.isInfinite || (!k.isUsed && (Date.now() < (k.createdAt + k.durationMillis))));
+      if (active.length === 0) {
+        alert("No active passkeys to copy.");
+        return;
+      }
+      const lines = active.map((k, i) => `${i + 1}. ${k.code} (${k.isInfinite ? 'Permanent Admin' : '24-Hour Passkey'})`).join('\n');
+      const text = `🔑 PW DHYAN ACTIVE PASSKEYS (${active.length} Available):\n\n${lines}\n\nEnter any 6-digit passkey above in the app for instant study access.`;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('All active passkeys copied to clipboard!');
+      });
+    }
+
+    function deletePasskey(docId, code) {
+      if (confirm(`Delete passkey ${code}?`)) {
+        db.collection('access_keys').doc(docId).delete().then(() => {
+          showToast(`Passkey ${code} deleted.`);
+        });
+      }
+    }
+
+    function clearExpiredKeysFromWeb() {
+      const expired = accessKeys.filter(k => !k.isInfinite && (Date.now() >= (k.createdAt + k.durationMillis)));
+      if (expired.length === 0) {
+        showToast('No expired passkeys found.');
+        return;
+      }
+      if (confirm(`Delete all ${expired.length} expired passkeys?`)) {
+        const batch = db.batch();
+        expired.forEach(k => batch.delete(db.collection('access_keys').doc(k.id)));
+        batch.commit().then(() => {
+          showToast(`Deleted ${expired.length} expired passkeys.`);
+        });
+      }
+    }
+
+    // ACTIONS: Announcements & Maintenance
+    function publishAnnouncementFromWeb() {
+      const msg = document.getElementById('broadcast-input').value.trim();
+      if (!msg) {
+        alert('Please enter an announcement message.');
+        return;
+      }
+      db.collection('announcements').doc('latest_announcement').set({
+        message: msg,
+        author: 'Admin Web',
+        timestamp: Date.now(),
+        isActive: true
+      }).then(() => {
+        showToast('Announcement Broadcast Live to all students!');
+        document.getElementById('broadcast-input').value = '';
+      });
+    }
+
+    function clearAnnouncementFromWeb() {
+      db.collection('announcements').doc('latest_announcement').update({ isActive: false }).then(() => {
+        showToast('Broadcast Announcement cleared.');
+      });
+    }
+
+    function toggleMaintenanceFromWeb() {
+      const targetState = !maintenanceActive;
+      const msg = document.getElementById('maintenance-msg-input').value.trim();
+      db.collection('system_config').doc('maintenance_mode').set({
+        isActive: targetState,
+        message: msg || 'Server maintenance is underway. Please check back shortly!',
+        updatedAt: Date.now()
+      }).then(() => {
+        showToast(targetState ? 'Maintenance Mode ACTIVATED' : 'Maintenance Mode DEACTIVATED');
+      });
+    }
+
+    // Auto-check session on load
+    if (sessionStorage.getItem('pw_admin_authenticated') === 'true') {
+      document.getElementById('auth-gate').style.display = 'none';
+      startFirestoreListeners();
+    }
+  </script>
+</body>
+</html>
