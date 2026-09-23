@@ -346,26 +346,29 @@
 
         @media (max-width: 900px), (max-height: 520px) {
             #custom-player-hub {
-                bottom: 6px;
-                width: min(calc(100vw - 14px), 520px);
-                height: 32px;
-                padding: 2px 8px;
-                gap: 5px;
+                bottom: 8px;
+                width: min(calc(100vw - 16px), 520px);
+                height: 34px;
+                padding: 3px 10px;
+                gap: 6px;
                 border-radius: 9999px;
-                background: rgba(10, 15, 30, 0.75) !important;
-                backdrop-filter: blur(12px);
-                -webkit-backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.18);
-                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+                background: linear-gradient(135deg, rgba(13, 20, 38, 0.88) 0%, rgba(6, 10, 22, 0.94) 100%) !important;
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+                border: 1px solid rgba(56, 189, 248, 0.28);
+                border-top: 1.2px solid rgba(255, 255, 255, 0.5);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 14px rgba(56, 189, 248, 0.2);
             }
-            .hub-btn { width: 24px; height: 24px; font-size: 0.75rem; }
-            #c-play-btn { width: 26px; height: 26px; font-size: 0.8rem; }
-            #c-rwd, #c-fwd { display: flex !important; width: 24px !important; height: 24px !important; font-size: 0.7rem; }
+            .hub-btn { width: 26px; height: 26px; font-size: 0.78rem; }
+            #c-play-btn { width: 28px; height: 28px; font-size: 0.85rem; color: var(--lq-accent, #38bdf8); }
+            #c-rwd, #c-fwd { display: flex !important; width: 26px !important; height: 26px !important; font-size: 0.72rem; }
             #c-notes-btn, #c-shortcuts-btn { display: none !important; }
-            .hub-time { font-size: 0.62rem; min-width: 24px; font-family: monospace; }
-            .hub-speed-badge { height: 20px !important; padding: 0 4px !important; font-size: 0.62rem !important; border-radius: 6px; }
-            .scrubber-track-container { height: 18px; }
-            .hub-slider::-webkit-slider-thumb { width: 12px; height: 12px; }
+            .hub-time { font-size: 0.65rem; min-width: 28px; font-family: monospace; font-weight: 700; color: #e2e8f0; }
+            .hub-speed-badge { height: 22px !important; padding: 0 6px !important; font-size: 0.65rem !important; border-radius: 8px; background: rgba(56, 189, 248, 0.15) !important; border: 1px solid rgba(56, 189, 248, 0.4) !important; color: var(--lq-accent, #38bdf8) !important; font-weight: 800; }
+            .scrubber-track-container { height: 20px; }
+            .hub-track-bg { height: 4px; background: rgba(255, 255, 255, 0.18); border-radius: 999px; }
+            .hub-fill-bar { height: 4px; background: linear-gradient(90deg, #0284c7 0%, var(--lq-accent, #38bdf8) 100%); box-shadow: 0 0 8px var(--lq-accent-glow, rgba(56, 189, 248, 0.8)); }
+            .hub-slider::-webkit-slider-thumb { width: 13px; height: 13px; background: #ffffff; border: 2px solid var(--lq-accent, #38bdf8); box-shadow: 0 0 10px var(--lq-accent, #38bdf8), 0 2px 4px rgba(0,0,0,0.5); }
             .shortcuts-grid { grid-template-columns: 1fr; }
             #lq-top-lecture-hud {
                 top: 6px;
@@ -2997,8 +3000,11 @@
 
         notesBtn.onclick = directOpenPDF;
 
-        // Global Keyboard Shortcuts
-        window.addEventListener('keydown', (e) => {
+        // Global Keyboard Shortcuts (Guarded to prevent stacked listeners across SPA lecture changes)
+        if (window._liquidKeydownHandler) {
+            try { window.removeEventListener('keydown', window._liquidKeydownHandler); } catch (e) {}
+        }
+        window._liquidKeydownHandler = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
             if (['Space', 'ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown'].includes(e.code) || ['k', 'K', 'j', 'J', 'l', 'L', 'm', 'M', '<', '>', ',', '.', '[', ']'].includes(e.key)) {
@@ -3062,7 +3068,8 @@
                 closeAllDrawers();
                 dismissNextLecturePrompt();
             }
-        });
+        };
+        window.addEventListener('keydown', window._liquidKeydownHandler);
 
         video.addEventListener('loadedmetadata', () => {
             applySpeed(currentSpeed, false, false);

@@ -272,8 +272,12 @@ class SecurityManager(private val context: Context) {
 
         val deviceId = getDeviceId()
         val suspendedUntil = prefs.getLong("suspended_until_$deviceId", 0L)
-        if (suspendedUntil > System.currentTimeMillis()) {
-            return false // On temporary timeout!
+        if (suspendedUntil > 0L) {
+            if (suspendedUntil > System.currentTimeMillis()) {
+                return false // On temporary timeout!
+            } else {
+                prefs.edit().remove("suspended_until_$deviceId").apply()
+            }
         }
 
         val isSessionStored = prefs.getBoolean(KEY_SESSION_ACTIVE, false)
@@ -506,20 +510,22 @@ class SecurityManager(private val context: Context) {
 
         val fs = firestore
         if (fs != null) {
-            val batch = fs.batch()
-            generatedList.forEach { key ->
-                val docRef = fs.collection(FIRESTORE_COLLECTION_KEYS).document(key.id)
-                batch.set(docRef, key.toFirestoreMap())
+            generatedList.chunked(400).forEach { chunk ->
+                val batch = fs.batch()
+                chunk.forEach { key ->
+                    val docRef = fs.collection(FIRESTORE_COLLECTION_KEYS).document(key.id)
+                    batch.set(docRef, key.toFirestoreMap())
+                }
+                batch.commit()
+                    .addOnSuccessListener {
+                        Log.d(TAG, "Batch of ${chunk.size} keys saved to Cloud Firestore")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "Batch key creation error: ${e.message}")
+                        showToast("Cloud Error: ${e.localizedMessage}")
+                    }
             }
-            batch.commit()
-                .addOnSuccessListener {
-                    Log.d(TAG, "Batch of ${generatedList.size} keys saved to Cloud Firestore")
-                    showToast("Batch of ${generatedList.size} keys saved to Google Cloud!")
-                }
-                .addOnFailureListener { e ->
-                    Log.e(TAG, "Batch key creation error: ${e.message}")
-                    showToast("Cloud Error: ${e.localizedMessage}")
-                }
+            showToast("Batch of ${generatedList.size} keys saved to Google Cloud!")
         }
 
         return generatedList

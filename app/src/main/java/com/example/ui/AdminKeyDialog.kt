@@ -775,6 +775,17 @@ fun AdminKeyDialog(
                     }
                 } else if (selectedTab == 1) {
                     // TAB 1: USER DEVICES & LOGINS MONITOR
+                    var deviceSearchQuery by remember { mutableStateOf("") }
+                    val filteredUserSessions = remember(userSessions, deviceSearchQuery) {
+                        if (deviceSearchQuery.isBlank()) userSessions
+                        else userSessions.filter {
+                            it.deviceModel.contains(deviceSearchQuery, ignoreCase = true) ||
+                            it.deviceId.contains(deviceSearchQuery, ignoreCase = true) ||
+                            it.label.contains(deviceSearchQuery, ignoreCase = true) ||
+                            it.passkey.contains(deviceSearchQuery, ignoreCase = true)
+                        }
+                    }
+
                     Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
                         Text(
                             text = "Live Logged-In User Devices (Firestore Synced)",
@@ -786,15 +797,46 @@ fun AdminKeyDialog(
                             modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
                         )
 
+                        if (userSessions.isNotEmpty()) {
+                            OutlinedTextField(
+                                value = deviceSearchQuery,
+                                onValueChange = { deviceSearchQuery = it },
+                                placeholder = { Text("Search by device, model, passkey...", fontSize = 12.sp, color = TextMuted) },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = GoldenAccent, modifier = Modifier.size(16.dp)) },
+                                trailingIcon = {
+                                    if (deviceSearchQuery.isNotBlank()) {
+                                        IconButton(onClick = { deviceSearchQuery = "" }) {
+                                            Icon(Icons.Default.Close, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = GoldenAccent,
+                                    unfocusedBorderColor = DarkSurfaceVariant,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary,
+                                    focusedContainerColor = DarkBackground,
+                                    unfocusedContainerColor = DarkBackground
+                                )
+                            )
+                        }
+
                         if (userSessions.isEmpty()) {
                             EmptyListPlaceholder("No User Devices Logged In Yet", "When students or users enter their passkey, their phone model, Android ID, and login timestamp will appear here live.")
+                        } else if (filteredUserSessions.isEmpty()) {
+                            EmptyListPlaceholder("No Matching Devices", "No device found matching \"$deviceSearchQuery\".")
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 contentPadding = PaddingValues(vertical = 4.dp)
                             ) {
-                                items(userSessions, key = { it.deviceId }) { session ->
+                                items(filteredUserSessions, key = { it.deviceId }) { session ->
                                     UserDeviceCard(
                                         session = session,
                                         onRevoke = {

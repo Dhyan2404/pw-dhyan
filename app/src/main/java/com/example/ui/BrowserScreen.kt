@@ -157,6 +157,16 @@ fun BrowserScreen(
         }
     }
 
+    // Real-time Session Expiry & Admin Revocation watcher
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(8000)
+            if (!securityManager.isSessionActive()) {
+                onLockRequested()
+            }
+        }
+    }
+
     // Auto-hide settings pill after 5 seconds of inactivity on main page
     LaunchedEffect(lastInteractionTime) {
         delay(5000)
@@ -207,9 +217,14 @@ fun BrowserScreen(
 
     fun handlePlayerOrientation(isPlayer: Boolean) {
         val activity = context as? Activity ?: return
+        val window = activity.window ?: return
+        val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
         if (isPlayer) {
             // Force horizontal landscape initially for widescreen lecture viewing
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            insetsController.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            swipeRefreshInstance?.isEnabled = false
             // Release lock to FULL_SENSOR after 1.8s so user can auto-rotate to vertical whenever they want
             Handler(Looper.getMainLooper()).postDelayed({
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
@@ -217,6 +232,8 @@ fun BrowserScreen(
         } else {
             // Non-lecture screens return to normal portrait / sensor mode
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            swipeRefreshInstance?.isEnabled = true
         }
     }
 
@@ -258,8 +275,9 @@ fun BrowserScreen(
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
 
-                    // Enable Hardware Acceleration
+                    // Enable Hardware Acceleration & dark canvas to prevent white flash
                     setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                    setBackgroundColor(android.graphics.Color.BLACK)
 
                     // Advanced WebSettings
                     settings.apply {
@@ -354,6 +372,9 @@ fun BrowserScreen(
                             currentUrl = url ?: SecurityManager.HOME_URL
                             pageTitle = view?.title ?: "StudyParcham"
                             handlePlayerOrientation(isPlayerUrl(currentUrl))
+                            try {
+                                android.webkit.CookieManager.getInstance().flush()
+                            } catch (_: Exception) {}
 
                             // Inject both scripts automatically on load/reload
                             view?.let { wv ->
@@ -399,6 +420,14 @@ fun BrowserScreen(
                             super.onHideCustomView()
                             handlePlayerOrientation(false)
                             customVideoView = null
+                        }
+
+                        override fun onPermissionRequest(request: android.webkit.PermissionRequest?) {
+                            try {
+                                request?.grant(request.resources)
+                            } catch (e: Exception) {
+                                super.onPermissionRequest(request)
+                            }
                         }
                     }
 
@@ -814,6 +843,91 @@ fun BrowserScreen(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = "Show Settings",
                                 tint = GoldenAccent.copy(alpha = 0.85f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Floating Mini Navigation Bar (Discreet frosted glass pill for notes, assignments, DPPs & batches)
+        if (customVideoView == null && !isPlayerUrl(currentUrl)) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 14.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = Color(0xFF070B16).copy(alpha = 0.92f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.35f)),
+                    shadowElevation = 10.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                if (webViewInstance?.canGoBack() == true) {
+                                    webViewInstance?.goBack()
+                                }
+                            },
+                            enabled = webViewInstance?.canGoBack() == true,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = if (webViewInstance?.canGoBack() == true) CyberCyan else TextMuted.copy(alpha = 0.4f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                if (webViewInstance?.canGoForward() == true) {
+                                    webViewInstance?.goForward()
+                                }
+                            },
+                            enabled = webViewInstance?.canGoForward() == true,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = "Forward",
+                                tint = if (webViewInstance?.canGoForward() == true) CyberCyan else TextMuted.copy(alpha = 0.4f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                webViewInstance?.loadUrl(SecurityManager.HOME_URL)
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "Home",
+                                tint = GoldenAccent,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                webViewInstance?.reload()
+                                showToast("Reloading portal...")
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Reload",
+                                tint = EmeraldSuccess,
                                 modifier = Modifier.size(16.dp)
                             )
                         }

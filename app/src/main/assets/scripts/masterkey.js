@@ -67,6 +67,25 @@
         configurable: false
     });
 
+    // Intercept direct <a> clicks to prevent telegram redirects
+    document.addEventListener('click', function (e) {
+        const a = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (a && a.href) {
+            const h = a.href.toLowerCase();
+            if (h.includes('t.me') || h.includes('telegram') || h.includes('youtube.com') || h.includes('whatsapp')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+    }, true);
+
+    // Dynamic observer to eradicate AI widget & Telegram overlays immediately
+    const purgeObserver = new MutationObserver(() => {
+        const killList = document.querySelectorAll('#ai-fab-btn, #ai-window, .ai-fab, .ai-window, #tg-overlay, #tg-box, #donation-modal, #bruno-peeking-bear, .onesignal-slidedown-dialog');
+        killList.forEach(el => el.remove());
+    });
+    purgeObserver.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
     // 1.3 Neutralize OneSignal push popups & notification prompts
     window.OneSignalDeferred = [];
     window.OneSignal = {
