@@ -92,32 +92,37 @@ jobs:
             release_apk/PW-DHYAN-Direct.zip
 
       - name: Publish Direct APK & ZIP to GitHub Releases
-        uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: "v1.0.${{ github.run_number }}"
-          name: "PW DHYAN Official Release (Direct APK & ZIP)"
-          body: |
-            ### 🚀 PW DHYAN Latest Android App
-            
-            **Direct Download Links**:
-            - 📲 **Direct APK** (No unzipping required): [PW-DHYAN.apk](https://github.com/Dhyan2404/pw-dhyan/releases/download/v1.0.${{ github.run_number }}/PW-DHYAN.apk)
-            - 📦 **Direct ZIP**: [PW-DHYAN-Direct.zip](https://github.com/Dhyan2404/pw-dhyan/releases/download/v1.0.${{ github.run_number }}/PW-DHYAN-Direct.zip)
-            
-            - Built from commit: `${{ github.sha }}`
-            - Mobile-optimized Liquid Player with responsive 10s skip & slim layout
-            - Sensor Landscape mode enabled by default for widescreen lectures
-            - Non-blocking Background PDF & DPP downloader
-            - Master passcode `240411` + Admin-only generated Passkeys (Phone time bypass removed)
-            - Admin Push Notifications & 10x Motivation Spam
-          files: |
-            release_apk/PW-DHYAN.apk
-            release_apk/PW-DHYAN-Direct.zip
-          fail_on_unmatched_files: true
-          prerelease: false
-          make_latest: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="v1.0.${{ github.run_number }}"
+          cat << 'EOF' > release_notes.md
+          ### 🚀 PW DHYAN Latest Android App
+          
+          **Direct Download Links**:
+          - 📲 **Direct APK** (No unzipping required): [PW-DHYAN.apk](https://github.com/Dhyan2404/pw-dhyan/releases/download/v1.0.${{ github.run_number }}/PW-DHYAN.apk)
+          - 📦 **Direct ZIP**: [PW-DHYAN-Direct.zip](https://github.com/Dhyan2404/pw-dhyan/releases/download/v1.0.${{ github.run_number }}/PW-DHYAN-Direct.zip)
+          
+          - Mobile-optimized Liquid Player with responsive 10s skip & slim layout
+          - Sensor Landscape mode enabled by default for widescreen lectures
+          - Non-blocking Background PDF & DPP downloader
+          - Master passcode 240411 + Admin-only generated Passkeys
+          - Deep Firestore persistence engine and player runtime
+          EOF
+
+          # Create release with assets, or upload if tag exists
+          gh release create "$TAG_NAME" \
+            release_apk/PW-DHYAN.apk \
+            release_apk/PW-DHYAN-Direct.zip \
+            --title "PW DHYAN Official Release (Direct APK & ZIP)" \
+            --notes-file release_notes.md \
+            --latest || \
+          gh release upload "$TAG_NAME" \
+            release_apk/PW-DHYAN.apk \
+            release_apk/PW-DHYAN-Direct.zip \
+            --clobber
 
       - name: Push Build Log to branch
         if: always()
