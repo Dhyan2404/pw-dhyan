@@ -184,35 +184,29 @@ fun LockScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Glowing Cyber-Bird Crest
+            // Glowing PW DHYAN Metallic Crest
             Box(
                 modifier = Modifier
                     .size(92.dp)
                     .scale(pulseScale)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                CyberCyan.copy(alpha = 0.28f),
-                                Color(0xFF1E293B).copy(alpha = 0.4f),
-                                Color.Transparent
-                            )
-                        )
-                    )
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.Black)
                     .border(
                         1.5.dp,
                         Brush.linearGradient(
                             colors = listOf(CyberCyan, Color(0xFF6366F1), CyberCyan.copy(alpha = 0.3f))
                         ),
-                        CircleShape
+                        RoundedCornerShape(24.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_bird_logo),
-                    contentDescription = "App Logo",
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(58.dp)
+                androidx.compose.foundation.Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "PW DHYAN Logo",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
                 )
             }
 
