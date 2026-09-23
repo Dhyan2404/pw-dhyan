@@ -2,6 +2,8 @@ package com.example.ui
 
 import android.annotation.SuppressLint
 import android.app.DownloadManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
