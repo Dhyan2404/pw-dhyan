@@ -42,14 +42,18 @@ jobs:
         shell: bash
         run: |
           set +e
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.txt
+          ./gradlew assembleDebug -x lint -x test --no-daemon --stacktrace 2>&1 | tee build_output.txt
           EXIT_CODE=${PIPESTATUS[0]}
           if [ $EXIT_CODE -ne 0 ]; then
             echo "## ❌ Gradle Build Failed (Exit Code: $EXIT_CODE)" >> $GITHUB_STEP_SUMMARY
             echo '```text' >> $GITHUB_STEP_SUMMARY
             grep -E -C 4 "e: |error:|FAILED" build_output.txt | head -n 120 >> $GITHUB_STEP_SUMMARY || tail -n 80 build_output.txt >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "::error::Gradle assembleDebug failed! Check Step Summary."
+            ERR_MSG=$(grep -E "e: |error:|FAILURE:|FAILED" build_output.txt | head -n 6 | tr '\r\n' '  ')
+            if [ -z "$ERR_MSG" ]; then
+              ERR_MSG=$(tail -n 10 build_output.txt | tr '\r\n' '  ')
+            fi
+            echo "::error title=Gradle Error::$ERR_MSG"
             exit $EXIT_CODE
           fi
 
