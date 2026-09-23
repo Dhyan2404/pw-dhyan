@@ -178,6 +178,53 @@
       box-shadow: 0 0 16px var(--cyan-glow);
     }
 
+    /* Modal Overlay & Dialogs */
+    .app-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.88);
+      backdrop-filter: blur(16px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app-modal-box {
+      width: 100%;
+      max-width: 520px;
+      padding: 26px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid var(--glass-border-strong);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      animation: modalScaleIn 0.22s ease-out;
+    }
+
+    @keyframes modalScaleIn {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .quick-hour-chip {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--glass-border);
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .quick-hour-chip:hover, .quick-hour-chip.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
     /* Keypad */
     .keypad-grid {
       display: grid;
@@ -536,6 +583,62 @@
     </div>
   </div>
 
+  <!-- MODAL: DIRECT DEVICE ACCESS GRANT (CUSTOM HOURS) -->
+  <div id="grant-access-modal" class="app-modal-overlay">
+    <div class="glass-panel app-modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-hourglass-half" style="color:var(--amber);"></i> Grant Device Access
+        </h3>
+        <button class="btn btn-secondary btn-sm" onclick="closeGrantAccessModal()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+        Grant custom access duration to a student's device. The device will <b>instantly unlock without typing any passkey</b> and will stay unlocked for the selected hours!
+      </p>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">TARGET DEVICE ID</label>
+        <input type="text" id="grant-modal-device-id" class="form-control" placeholder="Select or paste Device ID" />
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT / DEVICE LABEL</label>
+        <input type="text" id="grant-modal-device-label" class="form-control" placeholder="e.g. Rahul Sharma" />
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">QUICK DURATION PRESETS</label>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="quick-hour-chip" onclick="setGrantHours(1, this)">1h</button>
+          <button type="button" class="quick-hour-chip" onclick="setGrantHours(3, this)">3h</button>
+          <button type="button" class="quick-hour-chip active" onclick="setGrantHours(6, this)">6h</button>
+          <button type="button" class="quick-hour-chip" onclick="setGrantHours(12, this)">12h</button>
+          <button type="button" class="quick-hour-chip" onclick="setGrantHours(24, this)">24h</button>
+          <button type="button" class="quick-hour-chip" onclick="setGrantHours(48, this)">48h</button>
+          <button type="button" class="quick-hour-chip" onclick="setGrantHours(168, this)">7 Days</button>
+          <button type="button" class="quick-hour-chip" onclick="setGrantInfinite(this)">🌟 Infinite</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px;" id="grant-custom-hours-wrap">
+        <label style="font-size:11px; font-weight:600; color:var(--cyan); display:block; margin-bottom:4px;">CUSTOM ACCESS DURATION (IN HOURS)</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="number" id="grant-modal-hours" class="form-control" value="6" min="0.1" step="any" placeholder="e.g. 5.5" style="flex:1;" />
+          <span style="font-size:13px; font-weight:600; color:var(--text-muted);">Hours</span>
+        </div>
+        <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;">
+          e.g. <b>0.5</b> = 30m, <b>6</b> = 6h, <b>24</b> = 1 day, <b>72</b> = 3 days
+        </small>
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn btn-secondary btn-sm" onclick="closeGrantAccessModal()">Cancel</button>
+        <button class="btn btn-emerald btn-sm" onclick="confirmGrantDeviceAccess()"><i class="fas fa-unlock"></i> Grant Access Now</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MAIN APP -->
   <header>
     <div class="brand">
@@ -637,7 +740,10 @@ service cloud.firestore {
             <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-users-viewfinder" style="color:var(--cyan); margin-right:8px;"></i> Live Logged-In Student Devices</h3>
             <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Track active devices, playback progress, and send instant direct alerts</p>
           </div>
-          <input type="text" id="search-devices" class="form-control" style="max-width:280px;" placeholder="Search by model, passkey, or device ID..." oninput="renderDevicesTable()" />
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="text" id="search-devices" class="form-control" style="max-width:280px;" placeholder="Search by model, passkey, or device ID..." oninput="renderDevicesTable()" />
+            <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal()"><i class="fas fa-hourglass-half"></i> Grant Device Access</button>
+          </div>
         </div>
 
         <div class="table-container">
@@ -647,7 +753,7 @@ service cloud.firestore {
                 <th>Status</th>
                 <th>Device Model / ID</th>
                 <th>Passkey & Label</th>
-                <th>Login Time / Duration</th>
+                <th>Session Expiry / Login</th>
                 <th>Currently Watching & Progress</th>
                 <th>Actions</th>
               </tr>
@@ -788,12 +894,28 @@ service cloud.firestore {
 
           <div style="margin-bottom:16px;">
             <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY DURATION</label>
-            <select id="create-key-type" class="form-control">
-              <option value="24h">⏱️ 24-Hour Access Key</option>
-              <option value="infinite">🌟 Infinite / Admin Permanent Key</option>
+            <select id="create-key-type" class="form-control" onchange="toggleSingleKeyCustomHours()">
+              <option value="custom">⏱️ Custom Hours (Specify below)...</option>
+              <option value="1h">⏱️ 1-Hour Quick Pass</option>
+              <option value="2h">⏱️ 2-Hour Study Pass</option>
+              <option value="3h">⏱️ 3-Hour Exam Pass</option>
+              <option value="6h">⏱️ 6-Hour Session Pass</option>
+              <option value="12h">⏱️ 12-Hour Access Key</option>
+              <option value="24h" selected>⏱️ 24-Hour Access Key</option>
               <option value="48h">⏱️ 48-Hour Access Key</option>
+              <option value="72h">⏱️ 3-Day Access Key</option>
               <option value="7d">⏱️ 7-Day Access Key</option>
+              <option value="30d">⏱️ 30-Day Monthly Pass</option>
+              <option value="infinite">🌟 Infinite / Admin Permanent Key</option>
             </select>
+            <div id="create-key-custom-box" style="display:none; margin-top:8px;">
+              <label style="font-size:11px; font-weight:600; color:var(--cyan); display:block; margin-bottom:4px;">CUSTOM ACCESS DURATION (HOURS)</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="number" id="create-key-custom-hours" class="form-control" placeholder="e.g. 5" min="0.1" step="any" value="6" style="flex:1;" />
+                <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Hours</span>
+              </div>
+              <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;">User stays logged in without typing passkey again for this exact duration.</small>
+            </div>
           </div>
 
           <button class="btn btn-primary btn-sm" style="width:100%; justify-content:center;" onclick="createSingleKeyFromWeb()"><i class="fas fa-plus"></i> Generate Passkey</button>
@@ -811,6 +933,28 @@ service cloud.firestore {
               <option value="50">Batch of 50 Keys</option>
               <option value="100">Batch of 100 Keys</option>
             </select>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY DURATION PER PASSKEY</label>
+            <select id="batch-key-duration" class="form-control" onchange="toggleBatchCustomHours()">
+              <option value="24h" selected>⏱️ 24-Hour Access Keys</option>
+              <option value="custom">⏱️ Custom Hours...</option>
+              <option value="1h">⏱️ 1-Hour Access Keys</option>
+              <option value="3h">⏱️ 3-Hour Exam Keys</option>
+              <option value="6h">⏱️ 6-Hour Study Keys</option>
+              <option value="12h">⏱️ 12-Hour Access Keys</option>
+              <option value="48h">⏱️ 48-Hour Access Keys</option>
+              <option value="7d">⏱️ 7-Day Access Keys</option>
+              <option value="infinite">🌟 Infinite / Permanent Keys</option>
+            </select>
+            <div id="batch-key-custom-box" style="display:none; margin-top:8px;">
+              <label style="font-size:11px; font-weight:600; color:var(--emerald); display:block; margin-bottom:4px;">CUSTOM HOURS PER KEY</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="number" id="batch-key-custom-hours" class="form-control" placeholder="e.g. 8" min="0.1" step="any" value="8" style="flex:1;" />
+                <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Hours</span>
+              </div>
+            </div>
           </div>
 
           <div style="margin-bottom:16px;">
@@ -1298,6 +1442,20 @@ service cloud.firestore {
       return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
+    function formatDurationMillis(ms) {
+      if (!ms || isNaN(ms)) return '24h';
+      const hours = ms / (3600 * 1000);
+      if (hours < 1) {
+        const mins = Math.max(1, Math.round(ms / 60000));
+        return `${mins}m`;
+      }
+      if (hours % 24 === 0 && hours >= 24) {
+        const days = hours / 24;
+        return `${days}d (${hours}h)`;
+      }
+      return Number.isInteger(hours) ? `${hours}h` : `${hours.toFixed(1)}h`;
+    }
+
     function escapeHtml(str) {
       if (!str) return '';
       return String(str).replace(/[&<>"']/g, function(m) {
@@ -1390,6 +1548,21 @@ service cloud.firestore {
 
         const offlineLabel = timeSinceActiveSec > 60 ? `${Math.round(timeSinceActiveSec / 60)}m ago` : `${timeSinceActiveSec}s ago`;
 
+        const now = Date.now();
+        let expiryHtml = '';
+        if (s.isPermanentAdmin) {
+          expiryHtml = '<div style="color:var(--amber); font-weight:700; font-size:11px;">🌟 Permanent Admin</div>';
+        } else if (s.sessionExpiry) {
+          const remMs = s.sessionExpiry - now;
+          if (remMs <= 0) {
+            expiryHtml = '<div style="color:var(--crimson); font-weight:700; font-size:11px;">Expired Session</div>';
+          } else {
+            const remHours = remMs / 3600000;
+            const remText = remHours < 1 ? `${Math.max(1, Math.round(remMs / 60000))}m left` : `${remHours.toFixed(1)}h left`;
+            expiryHtml = `<div style="color:var(--emerald); font-weight:700; font-size:11.5px;">⏱️ ${remText}</div>`;
+          }
+        }
+
         return `
           <tr>
             <td>
@@ -1399,23 +1572,24 @@ service cloud.firestore {
               </span>
             </td>
             <td>
-              <div style="font-weight:700; color:#fff;">${s.deviceModel || 'Android Device'}</div>
+              <div style="font-weight:700; color:#fff;">${escapeHtml(s.deviceModel || 'Android Device')}</div>
               <div style="font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${s.deviceId || ''}</div>
             </td>
             <td>
-              <span class="code-chip">${s.passkey || 'Admin'}</span>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${s.label || 'Student'}</div>
+              <span class="code-chip">${escapeHtml(s.passkey || 'Admin')}</span>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${escapeHtml(s.label || 'Student')}</div>
             </td>
             <td>
-              <div style="font-size:12px;">${formatDate(s.loginTime)}</div>
-              <div style="font-size:11px; color:var(--text-muted);">${s.androidVersion || 'Android'}</div>
+              ${expiryHtml}
+              <div style="font-size:11px; color:var(--text-muted);">${formatDate(s.loginTime)}</div>
             </td>
             <td style="min-width:230px;">
               ${activityHtml}
             </td>
             <td>
               <div style="display:flex; gap:6px; flex-wrap:nowrap;">
-                <button class="btn btn-primary btn-sm" onclick="promptDirectAlert('${s.deviceId}', '${s.deviceModel}')" title="Send direct notification"><i class="fas fa-bell"></i></button>
+                <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${escapeHtml(s.label || 'Student')}')" title="Grant or Extend Custom Access Hours (No login needed)"><i class="fas fa-hourglass-half"></i> Grant Hours</button>
+                <button class="btn btn-primary btn-sm" onclick="promptDirectAlert('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Send direct notification"><i class="fas fa-bell"></i></button>
                 ${(isSuspended || s.isRevoked) 
                   ? `<button class="btn btn-emerald btn-sm" onclick="unsuspendDevice('${s.deviceId}')" title="Unban / Reactivate Device"><i class="fas fa-check-circle"></i> Unban</button>`
                   : `<button class="btn btn-secondary btn-sm" onclick="suspendDevice('${s.deviceId}', 5)" title="5-Min Cooldown"><i class="fas fa-clock"></i></button>`
@@ -1520,24 +1694,28 @@ service cloud.firestore {
 
       tbody.innerHTML = filtered.map(k => {
         const isExpired = !k.isInfinite && (Date.now() >= (k.createdAt + k.durationMillis));
+        const durationText = k.isInfinite ? 'Permanent' : formatDurationMillis(k.durationMillis);
         const statusBadge = k.isInfinite 
-          ? '<span style="color:var(--amber); font-weight:700; font-size:11px;">🌟 Infinite / Admin</span>' 
+          ? '<span style="color:var(--amber); font-weight:700; font-size:11px;">🌟 Infinite</span>' 
           : isExpired 
           ? '<span style="color:var(--crimson); font-weight:700; font-size:11px;">Expired</span>' 
           : k.isUsed 
-          ? '<span style="color:var(--emerald); font-weight:700; font-size:11px;">Active (Claimed)</span>' 
-          : '<span style="color:var(--cyan); font-weight:700; font-size:11px;">Unused (Ready)</span>';
+          ? '<span style="color:var(--emerald); font-weight:700; font-size:11px;">Active</span>' 
+          : '<span style="color:var(--cyan); font-weight:700; font-size:11px;">Unused</span>';
 
         return `
           <tr>
             <td><span class="code-chip" style="font-size:14px;">${k.code}</span></td>
-            <td><div style="font-weight:600;">${k.label || 'Passkey'}</div></td>
-            <td>${statusBadge}</td>
-            <td style="font-size:12px;">${k.deviceModel ? k.deviceModel : '<span style="color:var(--text-muted);">Unclaimed</span>'}</td>
+            <td><div style="font-weight:600;">${escapeHtml(k.label || 'Passkey')}</div></td>
+            <td>
+              <span class="code-chip" style="font-size:11px; padding:2px 7px; color:var(--cyan); margin-right:4px;">${durationText}</span>
+              ${statusBadge}
+            </td>
+            <td style="font-size:12px;">${k.deviceModel ? escapeHtml(k.deviceModel) : '<span style="color:var(--text-muted);">Unclaimed</span>'}</td>
             <td style="font-size:12px;">${formatDate(k.createdAt)}</td>
             <td>
               <div style="display:flex; gap:6px;">
-                <button class="btn btn-primary btn-sm" onclick="promptDirectAlertToPasskey('${k.code}', '${k.label}')" title="Send notification to this passkey"><i class="fas fa-bell"></i></button>
+                <button class="btn btn-primary btn-sm" onclick="promptDirectAlertToPasskey('${k.code}', '${escapeHtml(k.label || '')}')" title="Send notification to this passkey"><i class="fas fa-bell"></i></button>
                 <button class="btn btn-danger btn-sm" onclick="deletePasskey('${k.id}', '${k.code}')" title="Delete passkey"><i class="fas fa-trash-alt"></i></button>
               </div>
             </td>
@@ -1755,29 +1933,58 @@ service cloud.firestore {
     }
     window.deleteDeviceSession = deleteDeviceSession;
 
-    // ACTIONS: Passkey Creation
+    // ACTIONS: Custom Hours Passkey Creation & Device Grants
+    function toggleSingleKeyCustomHours() {
+      const type = document.getElementById('create-key-type')?.value;
+      const box = document.getElementById('create-key-custom-box');
+      if (box) box.style.display = (type === 'custom') ? 'block' : 'none';
+    }
+    window.toggleSingleKeyCustomHours = toggleSingleKeyCustomHours;
+
+    function toggleBatchCustomHours() {
+      const type = document.getElementById('batch-key-duration')?.value;
+      const box = document.getElementById('batch-key-custom-box');
+      if (box) box.style.display = (type === 'custom') ? 'block' : 'none';
+    }
+    window.toggleBatchCustomHours = toggleBatchCustomHours;
+
+    function parseDuration(type, customHoursVal) {
+      if (type === 'infinite') return { durationMillis: 365 * 24 * 3600 * 1000, isInfinite: true, labelText: 'Permanent' };
+      if (type === 'custom') {
+        const hrs = Math.max(0.1, parseFloat(customHoursVal) || 1);
+        return { durationMillis: Math.round(hrs * 3600 * 1000), isInfinite: false, labelText: `${hrs}h` };
+      }
+      if (type === '1h') return { durationMillis: 1 * 3600 * 1000, isInfinite: false, labelText: '1h' };
+      if (type === '2h') return { durationMillis: 2 * 3600 * 1000, isInfinite: false, labelText: '2h' };
+      if (type === '3h') return { durationMillis: 3 * 3600 * 1000, isInfinite: false, labelText: '3h' };
+      if (type === '6h') return { durationMillis: 6 * 3600 * 1000, isInfinite: false, labelText: '6h' };
+      if (type === '12h') return { durationMillis: 12 * 3600 * 1000, isInfinite: false, labelText: '12h' };
+      if (type === '24h') return { durationMillis: 24 * 3600 * 1000, isInfinite: false, labelText: '24h' };
+      if (type === '48h') return { durationMillis: 48 * 3600 * 1000, isInfinite: false, labelText: '48h' };
+      if (type === '72h') return { durationMillis: 72 * 3600 * 1000, isInfinite: false, labelText: '72h' };
+      if (type === '7d') return { durationMillis: 7 * 24 * 3600 * 1000, isInfinite: false, labelText: '7d' };
+      if (type === '30d') return { durationMillis: 30 * 24 * 3600 * 1000, isInfinite: false, labelText: '30d' };
+      return { durationMillis: 24 * 3600 * 1000, isInfinite: false, labelText: '24h' };
+    }
+
     function createSingleKeyFromWeb() {
       const codeInput = document.getElementById('create-key-code').value.trim();
       const labelInput = document.getElementById('create-key-label').value.trim();
       const durationType = document.getElementById('create-key-type').value;
+      const customHours = document.getElementById('create-key-custom-hours')?.value;
 
       let code = codeInput;
       if (!code) {
         code = Math.floor(100000 + Math.random() * 900000).toString();
       }
 
-      let durationMillis = 24 * 60 * 60 * 1000;
-      let isInfinite = false;
-
-      if (durationType === 'infinite') isInfinite = true;
-      else if (durationType === '48h') durationMillis = 48 * 60 * 60 * 1000;
-      else if (durationType === '7d') durationMillis = 7 * 24 * 60 * 60 * 1000;
+      const { durationMillis, isInfinite, labelText } = parseDuration(durationType, customHours);
 
       const docRef = doc(collection(db, 'access_keys'));
       const newKey = {
         id: docRef.id,
         code: code,
-        label: labelInput || `Passkey #${accessKeys.length + 1}`,
+        label: labelInput || `Passkey (${labelText}) #${accessKeys.length + 1}`,
         createdAt: Date.now(),
         durationMillis: durationMillis,
         isInfinite: isInfinite,
@@ -1785,7 +1992,7 @@ service cloud.firestore {
       };
 
       setDoc(docRef, newKey).then(() => {
-        showToast(`Key ${code} created successfully!`);
+        showToast(`Passkey ${code} created for ${labelText}!`);
         document.getElementById('create-key-code').value = '';
         document.getElementById('create-key-label').value = '';
       }).catch(err => handleFirestoreError("Create Passkey", err));
@@ -1795,6 +2002,10 @@ service cloud.firestore {
     function generateBatchKeysFromWeb() {
       const count = parseInt(document.getElementById('batch-key-count').value, 10) || 10;
       const prefix = document.getElementById('batch-key-prefix').value.trim() || 'Student Batch';
+      const durationType = document.getElementById('batch-key-duration')?.value || '24h';
+      const customHours = document.getElementById('batch-key-custom-hours')?.value;
+
+      const { durationMillis, isInfinite, labelText } = parseDuration(durationType, customHours);
       const batch = writeBatch(db);
       const now = Date.now();
 
@@ -1804,19 +2015,127 @@ service cloud.firestore {
         batch.set(docRef, {
           id: docRef.id,
           code: code,
-          label: `${prefix} #${i}`,
+          label: `${prefix} #${i} (${labelText})`,
           createdAt: now,
-          durationMillis: 24 * 60 * 60 * 1000,
-          isInfinite: false,
+          durationMillis: durationMillis,
+          isInfinite: isInfinite,
           isUsed: false
         });
       }
 
       batch.commit().then(() => {
-        showToast(`Batch of ${count} passkeys created in Cloud!`);
+        showToast(`Batch of ${count} passkeys created for ${labelText}!`);
       }).catch(err => handleFirestoreError("Batch Keys", err));
     }
     window.generateBatchKeysFromWeb = generateBatchKeysFromWeb;
+
+    // Direct Device Access Modal & Granting
+    function openGrantAccessModal(deviceId = '', model = '', label = '') {
+      const modal = document.getElementById('grant-access-modal');
+      const idInput = document.getElementById('grant-modal-device-id');
+      const labelInput = document.getElementById('grant-modal-device-label');
+      const hoursInput = document.getElementById('grant-modal-hours');
+
+      if (idInput) idInput.value = deviceId;
+      if (labelInput) labelInput.value = label || model || 'Student';
+      if (hoursInput) {
+        hoursInput.value = '6';
+        delete hoursInput.dataset.isInfinite;
+      }
+      const wrap = document.getElementById('grant-custom-hours-wrap');
+      if (wrap) wrap.style.display = 'block';
+
+      document.querySelectorAll('.quick-hour-chip').forEach(c => c.classList.remove('active'));
+      const defChip = Array.from(document.querySelectorAll('.quick-hour-chip')).find(c => c.innerText.trim() === '6h');
+      if (defChip) defChip.classList.add('active');
+
+      if (modal) modal.style.display = 'flex';
+    }
+    window.openGrantAccessModal = openGrantAccessModal;
+
+    function closeGrantAccessModal() {
+      const modal = document.getElementById('grant-access-modal');
+      if (modal) modal.style.display = 'none';
+    }
+    window.closeGrantAccessModal = closeGrantAccessModal;
+
+    function setGrantHours(hours, btn) {
+      const hoursInput = document.getElementById('grant-modal-hours');
+      const wrap = document.getElementById('grant-custom-hours-wrap');
+      if (hoursInput) {
+        hoursInput.value = hours;
+        delete hoursInput.dataset.isInfinite;
+      }
+      if (wrap) wrap.style.display = 'block';
+      document.querySelectorAll('.quick-hour-chip').forEach(c => c.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+    window.setGrantHours = setGrantHours;
+
+    function setGrantInfinite(btn) {
+      const hoursInput = document.getElementById('grant-modal-hours');
+      const wrap = document.getElementById('grant-custom-hours-wrap');
+      if (hoursInput) {
+        hoursInput.dataset.isInfinite = 'true';
+        hoursInput.value = '99999';
+      }
+      if (wrap) wrap.style.display = 'none';
+      document.querySelectorAll('.quick-hour-chip').forEach(c => c.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+    }
+    window.setGrantInfinite = setGrantInfinite;
+
+    function confirmGrantDeviceAccess() {
+      const deviceId = document.getElementById('grant-modal-device-id').value.trim();
+      const label = document.getElementById('grant-modal-device-label').value.trim() || 'Student';
+      const hoursInput = document.getElementById('grant-modal-hours');
+      const isInfinite = hoursInput?.dataset.isInfinite === 'true';
+      const hours = parseFloat(hoursInput?.value) || 6;
+
+      if (!deviceId) {
+        alert('Please specify a valid Target Device ID.');
+        return;
+      }
+
+      const durationMillis = Math.max(60000, Math.round(hours * 3600 * 1000));
+      const now = Date.now();
+      const sessionExpiry = isInfinite ? 9999999999999 : now + durationMillis;
+
+      const payload = {
+        deviceId: deviceId,
+        sessionExpiry: sessionExpiry,
+        durationMillis: durationMillis,
+        isPermanentAdmin: isInfinite,
+        isRevoked: false,
+        suspendedUntil: 0,
+        isOnline: true,
+        passkey: isInfinite ? 'Master Admin' : `Admin Granted (${hours}h)`,
+        label: label,
+        lastGrantedAt: now,
+        loginTime: now
+      };
+
+      setDoc(doc(db, 'user_sessions', deviceId), payload, { merge: true }).then(() => {
+        // Also send instant push alert to wake and confirm unlock on device
+        const notifRef = doc(collection(db, 'push_notifications'));
+        setDoc(notifRef, {
+          id: notifRef.id,
+          title: '🎉 Study Access Granted!',
+          message: isInfinite ? 'Permanent access granted by Admin. App unlocked!' : `Admin has granted ${hours} hours of study access! App unlocked, no login required.`,
+          targetType: 'DEVICE',
+          targetValue: deviceId,
+          timestamp: now,
+          isActive: true,
+          isBurst: true,
+          burstCount: 3,
+          author: 'Admin'
+        }).catch(() => {});
+
+        showToast(`Access granted for ${isInfinite ? 'Permanent' : hours + 'h'}! Device unlocked.`);
+        closeGrantAccessModal();
+      }).catch(err => handleFirestoreError("Grant Device Access", err));
+    }
+    window.confirmGrantDeviceAccess = confirmGrantDeviceAccess;
 
     function copyAllActiveKeys() {
       const active = accessKeys.filter(k => k.isInfinite || (!k.isUsed && (Date.now() < (k.createdAt + k.durationMillis))));

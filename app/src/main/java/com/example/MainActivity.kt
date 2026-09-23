@@ -87,6 +87,17 @@ class MainActivity : ComponentActivity() {
                 var isUnlocked by remember { mutableStateOf(initialUnlocked) }
                 var isPermanentUnlocked by remember { mutableStateOf(alreadyPermanentlyUnlocked) }
 
+                androidx.compose.runtime.DisposableEffect(Unit) {
+                    val listener: (Boolean) -> Unit = { unlocked ->
+                        isUnlocked = unlocked
+                        isPermanentUnlocked = securityManager.isPermanentUnlocked()
+                    }
+                    securityManager.addSessionStateListener(listener)
+                    onDispose {
+                        securityManager.removeSessionStateListener(listener)
+                    }
+                }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = DarkBackground
@@ -130,6 +141,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hasSmsAccess = SmsAccess.hasPermission(this)
+        securityManager.ensureDeviceRegistered()
         securityManager.sendHeartbeat()
     }
 

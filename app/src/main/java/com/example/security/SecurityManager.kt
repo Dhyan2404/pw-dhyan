@@ -417,6 +417,7 @@ class SecurityManager(private val context: Context) {
     private var currentActiveKey: AccessKey? = null
     private var lastBroadcastAnnouncement: BroadcastAnnouncement? = null
     private val broadcastListeners = mutableListOf<(BroadcastAnnouncement?) -> Unit>()
+    private val sessionStateListeners = mutableListOf<(Boolean) -> Unit>()
     private val processedNotificationIds = mutableSetOf<String>()
 
     companion object {
@@ -446,6 +447,7 @@ class SecurityManager(private val context: Context) {
     init {
         initFirestore()
         restoreSessionFromPrefs()
+        ensureDeviceRegistered()
     }
 
     private fun restoreSessionFromPrefs() {
@@ -588,13 +590,95 @@ class SecurityManager(private val context: Context) {
                         cloudAdminPin = doc.getString("pin")
                     }
                 }
+
+            // Real-time listener for this specific device's session document
+            // Enables Admin to grant custom hours or extend access remotely without user login!
+            val myDeviceId = getDeviceId()
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(myDeviceId)
+                .addSnapshotListener { doc, err ->
+                    if (err != null || doc == null || !doc.exists()) return@addSnapshotListener
+                    val data = doc.data ?: return@addSnapshotListener
+
+                    val isRevoked = data["isRevoked"] as? Boolean ?: false
+                    if (isRevoked) {
+                        clearSession()
+                        notifySessionStateChanged(false)
+                        return@addSnapshotListener
+                    }
+
+                    val suspendedUntil = (data["suspendedUntil"] as? Number)?.toLong() ?: 0L
+                    if (suspendedUntil > System.currentTimeMillis()) {
+                        prefs.edit().putLong("suspended_until_$myDeviceId", suspendedUntil).apply()
+                        notifySessionStateChanged(false)
+                        return@addSnapshotListener
+                    }
+
+                    val sessionExpiry = (data["sessionExpiry"] as? Number)?.toLong() ?: 0L
+                    val isInf = data["isPermanentAdmin"] as? Boolean ?: false
+                    val passkey = data["passkey"] as? String ?: "Admin Granted"
+                    val label = data["label"] as? String ?: "Student"
+
+                    if (isInf || sessionExpiry > System.currentTimeMillis()) {
+                        val currentExpiry = prefs.getLong(KEY_SESSION_EXPIRY, 0L)
+                        if (!isSessionActive() || sessionExpiry > currentExpiry || isInf) {
+                            val remMillis = if (isInf) Long.MAX_VALUE else (sessionExpiry - System.currentTimeMillis()).coerceAtLeast(60000L)
+                            saveSession(passkey, label, remMillis, isInf)
+                            if (isInf) setPermanentUnlocked(true)
+                            notifySessionStateChanged(true)
+                        }
+                    }
+                }
         } catch (e: Exception) {
             Log.e(TAG, "Error attaching Firestore listener", e)
             isFirestoreConnected = false
         }
     }
 
+    fun ensureDeviceRegistered() {
+        val fs = firestore ?: return
+        val myDeviceId = getDeviceId()
+        val myDeviceModel = getDeviceModelName()
+        val now = System.currentTimeMillis()
+        val isInf = isPermanentUnlocked()
+        val isAct = isSessionActive()
+
+        val base = mutableMapOf<String, Any>(
+            "deviceId" to myDeviceId,
+            "deviceModel" to myDeviceModel,
+            "androidVersion" to "Android ${Build.VERSION.RELEASE}",
+            "lastActiveTime" to now,
+            "lastHeartbeat" to now,
+            "isOnline" to true,
+            "appVersion" to "2.0.0"
+        )
+        if (isAct) {
+            base["passkey"] = prefs.getString(KEY_SESSION_CODE, if (isInf) "Master Admin" else "Active Session") ?: "Active Session"
+            base["label"] = prefs.getString(KEY_SESSION_LABEL, if (isInf) "Administrator" else "Student") ?: "Student"
+            base["sessionExpiry"] = prefs.getLong(KEY_SESSION_EXPIRY, now + 24 * 3600 * 1000L)
+            base["isPermanentAdmin"] = isInf
+        } else {
+            base["passkey"] = "🔒 Locked / Awaiting Access"
+            base["label"] = "Student"
+        }
+        try {
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(myDeviceId)
+                .set(base, SetOptions.merge())
+        } catch (_: Exception) {}
+    }
+
     fun isCloudSyncActive(): Boolean = isFirestoreConnected
+
+    fun addSessionStateListener(listener: (Boolean) -> Unit) {
+        sessionStateListeners.add(listener)
+    }
+
+    fun removeSessionStateListener(listener: (Boolean) -> Unit) {
+        sessionStateListeners.remove(listener)
+    }
+
+    private fun notifySessionStateChanged(isUnlocked: Boolean) {
+        sessionStateListeners.forEach { it.invoke(isUnlocked) }
+    }
 
     fun addKeysUpdateListener(listener: (List<AccessKey>) -> Unit) {
         updateListeners.add(listener)
