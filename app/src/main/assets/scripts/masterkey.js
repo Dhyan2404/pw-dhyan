@@ -760,8 +760,8 @@
                                    document.querySelector('h1, h2')?.innerText?.trim() ||
                                    'PW Dhyan';
                 const videoEl = document.querySelector('video');
-                const isVideo = videoEl && !videoEl.paused;
-                const videoTitle = isVideo ? (document.querySelector('#video-title')?.innerText?.trim() || cleanTitle) : null;
+                const isVideo = videoEl && !videoEl.paused && videoEl.currentTime > 0;
+                const videoTitle = isVideo ? (document.querySelector('#video-title')?.innerText?.trim() || cleanTitle) : "";
                 window.AndroidPlayerBridge.updateCurrentActivity(currentUrl, cleanTitle, videoTitle);
             }
         } catch (e) {}

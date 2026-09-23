@@ -71,9 +71,10 @@ data class AccessKey(
     }
 
     companion object {
-        fun fromFirestoreMap(map: Map<String, Any?>): AccessKey {
+        fun fromFirestoreMap(map: Map<String, Any?>, docId: String? = null): AccessKey {
+            val keyId = docId?.takeIf { it.isNotBlank() } ?: (map["id"] as? String) ?: UUID.randomUUID().toString()
             return AccessKey(
-                id = (map["id"] as? String) ?: UUID.randomUUID().toString(),
+                id = keyId,
                 code = (map["code"] as? String) ?: "",
                 label = (map["label"] as? String) ?: "Passkey",
                 createdAt = (map["createdAt"] as? Number)?.toLong() ?: System.currentTimeMillis(),
@@ -113,6 +114,8 @@ data class UserSession(
     val currentUrl: String? = null,
     val currentPageTitle: String? = null
 ) {
+    val isCurrentlyOnline: Boolean get() = isOnline && (System.currentTimeMillis() - maxOf(lastHeartbeat, lastActiveTime) < 35000L)
+
     fun getFormattedLoginTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(loginTime))
     }
@@ -569,7 +572,7 @@ class SecurityManager(private val context: Context) {
                     if (snapshot != null) {
                         isFirestoreConnected = true
                         val remoteKeys = snapshot.documents.mapNotNull { doc ->
-                            doc.data?.let { AccessKey.fromFirestoreMap(it) }
+                            doc.data?.let { AccessKey.fromFirestoreMap(it, doc.id) }
                         }
                         cloudKeysList = remoteKeys.toMutableList()
                         notifyListeners(cloudKeysList.sortedByDescending { it.createdAt })
@@ -993,7 +996,14 @@ class SecurityManager(private val context: Context) {
         )
         if (!currentUrl.isNullOrBlank()) update["currentUrl"] = currentUrl
         if (!currentPageTitle.isNullOrBlank()) update["currentPageTitle"] = currentPageTitle
-        if (!currentLecture.isNullOrBlank()) update["currentLecture"] = currentLecture
+        if (currentLecture != null) {
+            if (currentLecture.isBlank()) {
+                update["currentLecture"] = ""
+                update["currentProgressPercent"] = 0
+            } else {
+                update["currentLecture"] = currentLecture
+            }
+        }
 
         try {
             fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(thisDeviceId)
@@ -1001,6 +1011,21 @@ class SecurityManager(private val context: Context) {
                 .addOnFailureListener { e ->
                     Log.w(TAG, "Heartbeat failed: ${e.message}")
                 }
+        } catch (_: Exception) {}
+    }
+
+    fun setDeviceOffline() {
+        val fs = firestore ?: return
+        val thisDeviceId = getDeviceId()
+        try {
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(thisDeviceId)
+                .set(
+                    mapOf(
+                        "isOnline" to false,
+                        "lastActiveTime" to System.currentTimeMillis()
+                    ),
+                    SetOptions.merge()
+                )
         } catch (_: Exception) {}
     }
 
@@ -1360,14 +1385,6 @@ class SecurityManager(private val context: Context) {
                             if (System.currentTimeMillis() - item.timestamp < 24 * 60 * 60 * 1000L) {
                                 processedNotificationIds.add(item.id)
                                 onNotification(item)
-                                try {
-                                    val notifHelper = com.example.notification.NotificationHelper(context)
-                                    if (item.isBurst || item.burstCount > 1) {
-                                        notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
-                                    } else {
-                                        notifHelper.sendCustomNotification(item.title, item.message)
-                                    }
-                                } catch (_: Exception) {}
                             }
                         }
                     }

@@ -1547,26 +1547,30 @@ private fun UserDeviceCard(
                                 style = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
+                            val isOnlineNow = session.isCurrentlyOnline
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
                                 color = when {
                                     session.isRevoked -> CrimsonAlert.copy(alpha = 0.2f)
                                     session.isSuspended() -> GoldenAccent.copy(alpha = 0.2f)
-                                    else -> EmeraldSuccess.copy(alpha = 0.2f)
+                                    isOnlineNow -> EmeraldSuccess.copy(alpha = 0.2f)
+                                    else -> TextMuted.copy(alpha = 0.15f)
                                 }
                             ) {
                                 Text(
                                     text = when {
                                         session.isRevoked -> "REVOKED"
                                         session.isSuspended() -> "TIMEOUT (${session.getRemainingSuspensionFormatted()})"
-                                        else -> "ACTIVE"
+                                        isOnlineNow -> "ONLINE"
+                                        else -> "OFFLINE"
                                     },
                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = when {
                                             session.isRevoked -> CrimsonAlert
                                             session.isSuspended() -> GoldenAccent
-                                            else -> EmeraldSuccess
+                                            isOnlineNow -> EmeraldSuccess
+                                            else -> TextMuted
                                         },
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 8.5.sp

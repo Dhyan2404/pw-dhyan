@@ -2337,7 +2337,24 @@
                     }
                     if (shouldTrigger) triggerNextLecturePrompt();
                 }
-            }
+        });
+
+        video.addEventListener('pause', () => {
+            try {
+                if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.updateCurrentActivity) {
+                    const cleanTitle = document.title.replace(/ - StudyParcham/gi, '').trim() || 'PW Dhyan';
+                    window.AndroidPlayerBridge.updateCurrentActivity(window.location.href, cleanTitle, "");
+                }
+            } catch (e) {}
+        });
+
+        video.addEventListener('ended', () => {
+            try {
+                if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.updateCurrentActivity) {
+                    const cleanTitle = document.title.replace(/ - StudyParcham/gi, '').trim() || 'PW Dhyan';
+                    window.AndroidPlayerBridge.updateCurrentActivity(window.location.href, cleanTitle, "");
+                }
+            } catch (e) {}
         });
 
         video.addEventListener('progress', updateBufferBar);

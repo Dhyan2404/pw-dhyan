@@ -176,9 +176,11 @@ fun BrowserScreen(
             delay(10000) // Exactly every 10 seconds
             val liveUrl = webViewInstance?.url
             val liveTitle = webViewInstance?.title
+            val isPlayerActive = isLandscape || (liveUrl != null && (liveUrl.contains("/player") || liveUrl.contains("/lecture") || liveUrl.contains("video")))
             securityManager.sendHeartbeat(
                 currentUrl = liveUrl,
-                currentPageTitle = liveTitle
+                currentPageTitle = liveTitle,
+                currentLecture = if (!isPlayerActive) "" else null
             )
             if (!securityManager.isSessionActive()) {
                 onLockRequested()
@@ -526,7 +528,7 @@ fun BrowserScreen(
                                 securityManager.sendHeartbeat(
                                     currentUrl = url,
                                     currentPageTitle = title,
-                                    currentLecture = lecture
+                                    currentLecture = if (lecture.isNullOrBlank()) "" else lecture
                                 )
                             }
                         }

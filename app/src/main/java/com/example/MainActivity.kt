@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.notification.NotificationHelper
+import com.example.notification.PushNotificationService
 import com.example.script.ScriptManager
 import com.example.security.SecurityManager
 import com.example.ui.BrowserScreen
@@ -60,8 +61,8 @@ class MainActivity : ComponentActivity() {
         // Start 5-minute background reminder notifications for normal users
         notificationHelper.startPeriodicNotification(lifecycleScope, securityManager)
 
-        // Global Push Notification listener for targeted device alerts
-        pushNotificationListener = securityManager.listenToPushNotifications { _ -> }
+        // Start 24/7 background sync service for cloud push alerts & bursts (works even when app is closed)
+        PushNotificationService.start(this)
 
         val initialUnlocked = securityManager.isSessionActive()
         val alreadyPermanentlyUnlocked = securityManager.isPermanentUnlocked()
@@ -113,8 +114,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        securityManager.sendHeartbeat()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        securityManager.setDeviceOffline()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        securityManager.setDeviceOffline()
         pushNotificationListener?.remove()
         notificationHelper.stopPeriodicNotification()
     }

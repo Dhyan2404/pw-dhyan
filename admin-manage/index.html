@@ -1137,9 +1137,26 @@ service cloud.firestore {
         if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
       });
 
-      // 2. Access Keys Listener
+      // 2. Access Keys Listener (Auto-deduplicate keys by code and clean up orphaned docs)
       onSnapshot(collection(db, 'access_keys'), snapshot => {
-        accessKeys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const rawKeys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const uniqueKeysMap = new Map();
+        for (const k of rawKeys) {
+          if (!k.code) continue;
+          if (!uniqueKeysMap.has(k.code)) {
+            uniqueKeysMap.set(k.code, k);
+          } else {
+            const existing = uniqueKeysMap.get(k.code);
+            // If this key is claimed and the existing one is not, keep the claimed and delete orphaned unused duplicate doc
+            if (k.isUsed && !existing.isUsed) {
+              uniqueKeysMap.set(k.code, k);
+              deleteDoc(doc(db, 'access_keys', existing.id)).catch(() => {});
+            } else if (!k.isUsed && existing.isUsed) {
+              deleteDoc(doc(db, 'access_keys', k.id)).catch(() => {});
+            }
+          }
+        }
+        accessKeys = Array.from(uniqueKeysMap.values());
         accessKeys.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         const activeCount = accessKeys.filter(k => k.isInfinite || (!k.isUsed && (Date.now() < (k.createdAt + k.durationMillis)))).length;
         const elMetric = document.getElementById('metric-active-keys');
@@ -1255,14 +1272,21 @@ service cloud.firestore {
       }
 
       tbody.innerHTML = filtered.map(s => {
-        const timeSinceActiveSec = Math.round((Date.now() - (s.lastActiveTime || 0)) / 1000);
-        const isOnline = timeSinceActiveSec < 75; // Active within 75s (heartbeat every 10s)
+        const lastPing = Math.max(s.lastHeartbeat || 0, s.lastActiveTime || 0);
+        const timeSinceActiveSec = Math.max(0, Math.round((Date.now() - lastPing) / 1000));
+        // A device is truly online ONLY if isOnline is not explicitly false AND heartbeat was received within last 35 seconds
+        const isOnline = (s.isOnline !== false) && (timeSinceActiveSec < 35);
         const isSuspended = (s.suspendedUntil || 0) > Date.now();
-        const isWatching = !!s.currentLecture;
+        const isWatching = !!s.currentLecture && s.currentLecture.trim() !== '' && s.currentLecture !== 'null';
         const progress = Math.min(100, Math.max(0, s.currentProgressPercent || 0));
-        const viewTitle = s.currentLecture || s.currentPageTitle || 'Browsing Batches / Home';
-        const viewUrl = s.currentUrl || '';
-        const liveStatusText = timeSinceActiveSec <= 15 ? 'Active now (10s live)' : `${timeSinceActiveSec}s ago`;
+        const viewTitle = isWatching ? s.currentLecture : (s.currentPageTitle || 'Browsing Batches / Home');
+        
+        let fullUrl = s.currentUrl || '';
+        if (fullUrl && !fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
+          fullUrl = 'https://' + fullUrl;
+        }
+
+        const liveStatusText = timeSinceActiveSec <= 15 ? 'Active now (10s live)' : (timeSinceActiveSec < 60 ? `${timeSinceActiveSec}s ago` : `${Math.round(timeSinceActiveSec / 60)}m ago`);
 
         let activityHtml = '';
         if (isWatching) {
@@ -1274,20 +1298,27 @@ service cloud.firestore {
             <div class="progress-bar-wrap" style="margin-bottom:4px;">
               <div class="progress-bar-fill" style="width:${progress}%"></div>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted);">
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); margin-bottom:3px;">
               <span>${progress}% watched</span>
               <span style="color:var(--cyan); font-weight:600;">${liveStatusText}</span>
             </div>
+            ${fullUrl ? `
+              <div style="font-size:10px; font-family:'JetBrains Mono',monospace;">
+                <a href="${escapeHtml(fullUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--cyan); text-decoration:underline; display:flex; align-items:center; gap:4px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  <i class="fas fa-external-link-alt" style="font-size:9px;"></i> ${escapeHtml(fullUrl)}
+                </a>
+              </div>
+            ` : ''}
           `;
-        } else if (viewUrl) {
+        } else if (fullUrl) {
           activityHtml = `
             <div style="font-weight:600; font-size:12px; color:var(--emerald); margin-bottom:3px; display:flex; align-items:center; gap:6px;">
               <i class="fas fa-globe text-emerald"></i>
               <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px;" title="${escapeHtml(viewTitle)}">${escapeHtml(viewTitle)}</span>
             </div>
             <div style="font-size:10px; font-family:'JetBrains Mono',monospace; margin-bottom:4px;">
-              <a href="${escapeHtml(viewUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted); text-decoration:underline; display:flex; align-items:center; gap:4px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                <i class="fas fa-external-link-alt" style="font-size:9px;"></i> ${escapeHtml(viewUrl)}
+              <a href="${escapeHtml(fullUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--cyan); text-decoration:underline; display:flex; align-items:center; gap:4px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <i class="fas fa-external-link-alt" style="font-size:9px;"></i> ${escapeHtml(fullUrl)}
               </a>
             </div>
             <div style="font-size:10px; color:var(--emerald); font-weight:600;">${liveStatusText}</div>
@@ -1301,12 +1332,14 @@ service cloud.firestore {
           `;
         }
 
+        const offlineLabel = timeSinceActiveSec > 60 ? `${Math.round(timeSinceActiveSec / 60)}m ago` : `${timeSinceActiveSec}s ago`;
+
         return `
           <tr>
             <td>
               <span class="status-badge" style="${isOnline ? '' : 'background:rgba(148,163,184,0.1); border-color:rgba(148,163,184,0.3); color:var(--text-muted);'}">
                 <div class="status-dot" style="${isOnline ? '' : 'background:#94a3b8; box-shadow:none; animation:none;'}"></div>
-                ${isSuspended ? '⏱️ Timeout' : isOnline ? 'Online' : 'Offline'}
+                ${isSuspended ? '⏱️ Timeout' : isOnline ? 'Online' : `Offline (${offlineLabel})`}
               </span>
             </td>
             <td>
@@ -1684,7 +1717,9 @@ service cloud.firestore {
       else if (durationType === '48h') durationMillis = 48 * 60 * 60 * 1000;
       else if (durationType === '7d') durationMillis = 7 * 24 * 60 * 60 * 1000;
 
+      const docRef = doc(collection(db, 'access_keys'));
       const newKey = {
+        id: docRef.id,
         code: code,
         label: labelInput || `Passkey #${accessKeys.length + 1}`,
         createdAt: Date.now(),
@@ -1693,7 +1728,7 @@ service cloud.firestore {
         isUsed: false
       };
 
-      addDoc(collection(db, 'access_keys'), newKey).then(() => {
+      setDoc(docRef, newKey).then(() => {
         showToast(`Key ${code} created successfully!`);
         document.getElementById('create-key-code').value = '';
         document.getElementById('create-key-label').value = '';
@@ -1711,6 +1746,7 @@ service cloud.firestore {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const docRef = doc(collection(db, 'access_keys'));
         batch.set(docRef, {
+          id: docRef.id,
           code: code,
           label: `${prefix} #${i}`,
           createdAt: now,
