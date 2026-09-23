@@ -1093,7 +1093,7 @@ fun AdminKeyDialog(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "When active, normal student access is paused. Admin code 240411 always bypasses.",
+                            text = "When active, normal student access is paused. Master Admin passkey always bypasses.",
                             style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 10.sp)
                         )
                         Spacer(modifier = Modifier.height(6.dp))
@@ -1223,7 +1223,7 @@ fun AdminKeyDialog(
                                 securityManager.revokeAdminAccess()
                                 Toast.makeText(
                                     context,
-                                    "Admin revoked! You are now a Normal User. Re-enter 240411 anytime to regain Admin.",
+                                    "Admin revoked! You are now a Normal User. Re-enter Admin Passkey anytime to regain Admin.",
                                     Toast.LENGTH_LONG
                                 ).show()
                                 onDismiss()

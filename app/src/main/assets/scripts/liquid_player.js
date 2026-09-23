@@ -425,36 +425,37 @@
 
         @media (max-width: 900px), (max-height: 520px) {
             #custom-player-hub {
-                bottom: 12px;
-                padding: 7px 16px;
-                gap: 10px;
+                bottom: 16px;
+                padding: 10px 20px;
+                gap: 12px;
                 width: min(1200px, calc(100vw - 20px));
+                border-radius: 9999px;
             }
-            .hub-btn { width: 34px; height: 34px; font-size: 1.05rem; }
-            #c-play-btn { width: 36px; height: 36px; font-size: 1.15rem; color: #ffffff; }
-            #c-rwd, #c-fwd { display: flex !important; width: 34px !important; height: 34px !important; font-size: 0.95rem; }
-            .hub-time { font-size: 0.76rem; min-width: 38px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #ffffff; }
-            .hub-speed-badge { height: 28px !important; padding: 0 10px !important; font-size: 0.78rem !important; border-radius: 999px !important; }
-            .scrubber-track-container { height: 28px; }
-            .hub-track-bg { height: 5px; background: rgba(255, 255, 255, 0.15); border-radius: 999px; }
-            .hub-fill-bar { height: 5px; }
-            .hub-slider::-webkit-slider-thumb { width: 16px; height: 16px; background: #ffffff; border: 2px solid var(--lq-accent, #38bdf8); }
+            .hub-btn { width: 38px; height: 38px; font-size: 1.15rem; }
+            #c-play-btn, #c-play { width: 42px; height: 42px; font-size: 1.25rem; color: #ffffff; }
+            #c-rwd, #c-fwd { display: flex !important; width: 38px !important; height: 38px !important; font-size: 1.05rem; }
+            .hub-time { font-size: 0.82rem; min-width: 42px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #ffffff; }
+            .hub-speed-badge { height: 32px !important; padding: 0 12px !important; font-size: 0.82rem !important; border-radius: 999px !important; }
+            .scrubber-track-container { height: 32px; }
+            .hub-track-bg { height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 999px; }
+            .hub-fill-bar { height: 6px; }
+            .hub-slider::-webkit-slider-thumb { width: 18px; height: 18px; background: #ffffff; border: 2.5px solid var(--lq-accent, #38bdf8); box-shadow: 0 0 10px var(--lq-accent-glow); }
             .shortcuts-grid { grid-template-columns: 1fr; }
             #lq-top-lecture-hud {
-                top: 12px;
+                top: 14px;
                 left: 50%;
                 transform: translateX(-50%) translateY(-70px);
                 max-width: min(800px, calc(100vw - 20px));
-                padding: 6px 14px;
-                gap: 8px;
+                padding: 8px 18px;
+                gap: 10px;
             }
             #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud.active-dropdown {
                 transform: translateX(-50%) translateY(0) !important;
             }
-            .top-hud-title { max-width: 260px; font-size: 0.8rem; }
-            .top-hud-chip { font-size: 0.68rem; padding: 2px 8px; }
-            .top-hud-btn { width: 28px; height: 28px; font-size: 0.88rem; }
-            .top-hud-badge { font-size: 0.76rem; padding: 4px 10px; }
+            .top-hud-title { max-width: 280px; font-size: 0.85rem; }
+            .top-hud-chip { font-size: 0.72rem; padding: 3px 10px; }
+            .top-hud-btn { width: 32px; height: 32px; font-size: 0.95rem; }
+            .top-hud-badge { font-size: 0.8rem; padding: 4px 12px; }
             #lq-top-playlist-dropdown {
                 width: 340px;
                 max-height: 60vh;
@@ -1488,22 +1489,16 @@
 
                     singleTapTimer = setTimeout(() => {
                         singleTapTimer = null;
-                        // Single tap behavior:
-                        // Center 50% screen -> Toggle Play/Pause directly
-                        // Side zones (left/right 25%) -> Toggle UI HUD visibility
-                        if (xRatio >= 0.25 && xRatio <= 0.75) {
-                            togglePlay();
+                        // Single tap behavior: Toggle HUD dock & top bar visibility
+                        const isHubActive = hub.classList.contains('user-active');
+                        if (isHubActive) {
+                            hub.classList.remove('user-active');
+                            topHud.classList.remove('user-active');
                         } else {
-                            const isHubActive = hub.classList.contains('user-active');
-                            if (isHubActive) {
-                                hub.classList.remove('user-active');
-                                topHud.classList.remove('user-active');
-                            } else {
-                                hub.classList.add('user-active');
-                                topHud.classList.add('user-active');
-                                scheduleIdleHide(3500);
-                                scheduleTopHudIdleHide(3500);
-                            }
+                            hub.classList.add('user-active');
+                            topHud.classList.add('user-active');
+                            scheduleIdleHide(3500);
+                            scheduleTopHudIdleHide(3500);
                         }
                     }, 280);
                 }
@@ -2298,20 +2293,29 @@
                     updateChapterStatsHub();
                 }
 
+                // Send progress telemetry to Android Native Bridge every 10 seconds
                 if (nowTime - lastCloudWatchLogTime >= 10000) {
                     lastCloudWatchLogTime = nowTime;
                     try {
                         if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.logWatchProgress) {
+                            const curLec = (currentLectureIndex >= 0 && currentLectureIndex < chapterLectures.length) ? chapterLectures[currentLectureIndex] : null;
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const curTitle = curLec?.title || urlParams.get('title') || document.title.replace(/ - StudyParcham/gi, '').trim() || 'Lecture';
+                            const curSubject = selectedSubjectId || urlParams.get('subjectName') || urlParams.get('subjectId') || '';
+                            const curChapter = selectedTopicId || urlParams.get('chapterName') || urlParams.get('topicId') || '';
+
                             window.AndroidPlayerBridge.logWatchProgress(
-                                lectureTitle || document.title || 'Lecture',
-                                batchName || '',
-                                chapterName || '',
+                                curTitle,
+                                curSubject,
+                                curChapter,
                                 video.currentTime,
                                 video.duration,
                                 progressPercent
                             );
                         }
-                    } catch (e) { }
+                    } catch (e) {
+                        console.warn("[Bridge] logWatchProgress error:", e);
+                    }
                 }
 
                 if (!hasDismissedNextPrompt && currentLectureIndex < chapterLectures.length - 1 && autoNextMode !== 'off') {

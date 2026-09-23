@@ -30,9 +30,14 @@ class SecurityManagerTest {
     }
 
     @Test
-    fun testPermanentUnlockCode2404() {
+    fun testPermanentUnlockCode240411() {
         assertFalse(securityManager.isPermanentUnlocked())
-        val result = securityManager.verifyCode("2404")
+        // Shorthand "2404" must be rejected
+        val rejectedResult = securityManager.verifyCode("2404")
+        assertTrue(rejectedResult is UnlockResult.Invalid)
+
+        // Full 6-digit master code "240411" unlocks
+        val result = securityManager.verifyCode("240411")
         assertTrue(result is UnlockResult.PermanentUnlocked)
         assertTrue(securityManager.isPermanentUnlocked())
     }

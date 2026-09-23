@@ -81,16 +81,14 @@ fun AdminVerificationDialog(
             securityManager.recordCurrentDeviceSession()
             onSuccess()
         } else {
-            errorMsg = "Invalid Admin Code. Please enter the master code (240411)."
+            errorMsg = "Invalid Admin Code. Access denied."
             adminCode = ""
         }
     }
 
     LaunchedEffect(adminCode) {
         val clean = adminCode.trim()
-        if (clean == SecurityManager.MASTER_PERMANENT_CODE || clean == "2404") {
-            checkCode()
-        } else if (clean.length == 6) {
+        if (clean.length == 6) {
             checkCode()
         }
     }

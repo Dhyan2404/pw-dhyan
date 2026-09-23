@@ -10,8 +10,10 @@ import android.util.Log
 import android.widget.Toast
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.MetadataChanges
+import com.google.firebase.firestore.SetOptions
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -87,7 +89,7 @@ data class AccessKey(
 }
 
 /**
- * Tracks a logged-in user device in Google Firestore.
+ * Tracks a logged-in user device in Google Firestore with complete state synchronization.
  */
 data class UserSession(
     val deviceId: String,
@@ -101,7 +103,13 @@ data class UserSession(
     val isRevoked: Boolean = false,
     val currentLecture: String? = null,
     val currentSubject: String? = null,
-    val currentProgressPercent: Int = 0
+    val currentChapter: String? = null,
+    val currentProgressPercent: Int = 0,
+    val totalWatchTimeSeconds: Long = 0L,
+    val isPermanentAdmin: Boolean = false,
+    val appVersion: String = "2.0.0",
+    val isOnline: Boolean = true,
+    val lastHeartbeat: Long = System.currentTimeMillis()
 ) {
     fun getFormattedLoginTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(loginTime))
@@ -136,13 +144,19 @@ data class UserSession(
             "passkey" to passkey,
             "label" to label,
             "loginTime" to loginTime,
-            "lastActiveTime" to System.currentTimeMillis(),
+            "lastActiveTime" to lastActiveTime,
             "suspendedUntil" to suspendedUntil,
             "isRevoked" to isRevoked,
-            "currentProgressPercent" to currentProgressPercent
+            "currentProgressPercent" to currentProgressPercent,
+            "totalWatchTimeSeconds" to totalWatchTimeSeconds,
+            "isPermanentAdmin" to isPermanentAdmin,
+            "appVersion" to appVersion,
+            "isOnline" to isOnline,
+            "lastHeartbeat" to lastHeartbeat
         )
         currentLecture?.let { map["currentLecture"] = it }
         currentSubject?.let { map["currentSubject"] = it }
+        currentChapter?.let { map["currentChapter"] = it }
         return map
     }
 
@@ -160,7 +174,13 @@ data class UserSession(
                 isRevoked = (map["isRevoked"] as? Boolean) ?: false,
                 currentLecture = map["currentLecture"] as? String,
                 currentSubject = map["currentSubject"] as? String,
-                currentProgressPercent = (map["currentProgressPercent"] as? Number)?.toInt() ?: 0
+                currentChapter = map["currentChapter"] as? String,
+                currentProgressPercent = (map["currentProgressPercent"] as? Number)?.toInt() ?: 0,
+                totalWatchTimeSeconds = (map["totalWatchTimeSeconds"] as? Number)?.toLong() ?: 0L,
+                isPermanentAdmin = (map["isPermanentAdmin"] as? Boolean) ?: false,
+                appVersion = (map["appVersion"] as? String) ?: "2.0.0",
+                isOnline = (map["isOnline"] as? Boolean) ?: true,
+                lastHeartbeat = (map["lastHeartbeat"] as? Number)?.toLong() ?: System.currentTimeMillis()
             )
         }
     }
@@ -180,6 +200,7 @@ data class WatchLog(
     val currentTime: Long = 0L,
     val duration: Long = 0L,
     val progressPercent: Int = 0,
+    val isCompleted: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 ) {
     fun getFormattedTime(): String {
@@ -198,6 +219,7 @@ data class WatchLog(
             "currentTime" to currentTime,
             "duration" to duration,
             "progressPercent" to progressPercent,
+            "isCompleted" to isCompleted,
             "timestamp" to timestamp
         )
     }
@@ -215,6 +237,7 @@ data class WatchLog(
                 currentTime = (map["currentTime"] as? Number)?.toLong() ?: 0L,
                 duration = (map["duration"] as? Number)?.toLong() ?: 0L,
                 progressPercent = (map["progressPercent"] as? Number)?.toInt() ?: 0,
+                isCompleted = (map["isCompleted"] as? Boolean) ?: false,
                 timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis()
             )
         }
@@ -498,9 +521,20 @@ class SecurityManager(private val context: Context) {
             if (FirebaseApp.getApps(context).isEmpty()) {
                 FirebaseApp.initializeApp(context)
             }
-            firestore = FirebaseFirestore.getInstance()
+            val fs = FirebaseFirestore.getInstance()
+            try {
+                val settings = FirebaseFirestoreSettings.Builder()
+                    .setPersistenceEnabled(true)
+                    .setCacheSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                    .build()
+                fs.firestoreSettings = settings
+            } catch (se: Exception) {
+                Log.w(TAG, "Offline settings config note: ${se.message}")
+            }
+            firestore = fs
             listenToFirestore()
-            Log.d(TAG, "Google Cloud Firestore initialized")
+            syncCurrentSessionToCloud()
+            Log.d(TAG, "Google Cloud Firestore initialized with offline cache")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Firebase Firestore", e)
             firestore = null
@@ -527,6 +561,8 @@ class SecurityManager(private val context: Context) {
                         }
                         cloudKeysList = remoteKeys.toMutableList()
                         notifyListeners(cloudKeysList.sortedByDescending { it.createdAt })
+                        // Sync current session state when cloud connection is verified
+                        syncCurrentSessionToCloud()
                     }
                 }
 
@@ -574,7 +610,7 @@ class SecurityManager(private val context: Context) {
     fun verifyAdminPassword(password: String): Boolean {
         val clean = password.trim()
         val cloudPin = cloudAdminPin
-        return clean == MASTER_PERMANENT_CODE || clean == "2404" || (!cloudPin.isNullOrBlank() && clean == cloudPin)
+        return clean == MASTER_PERMANENT_CODE || (!cloudPin.isNullOrBlank() && clean == cloudPin)
     }
 
     fun getDeviceId(): String {
@@ -611,7 +647,7 @@ class SecurityManager(private val context: Context) {
             var candidate: String
             do {
                 candidate = (100000..999999).random().toString()
-            } while (candidate == MASTER_PERMANENT_CODE || candidate == "2404" || existingCodes.contains(candidate))
+            } while (candidate == MASTER_PERMANENT_CODE || existingCodes.contains(candidate))
             candidate
         }
 
@@ -666,7 +702,7 @@ class SecurityManager(private val context: Context) {
             var candidate: String
             do {
                 candidate = (100000..999999).random().toString()
-            } while (candidate == MASTER_PERMANENT_CODE || candidate == "2404" || existingCodes.contains(candidate))
+            } while (candidate == MASTER_PERMANENT_CODE || existingCodes.contains(candidate))
             existingCodes.add(candidate)
 
             val key = AccessKey(
@@ -765,11 +801,11 @@ class SecurityManager(private val context: Context) {
         val thisDeviceId = getDeviceId()
         val thisDeviceModel = getDeviceModelName()
 
-        // 1. Master Admin permanent code (240411, or 2404) - ALWAYS VERIFIED REGARDLESS OF NETWORK
-        if (cleaned == MASTER_PERMANENT_CODE || cleaned == "2404") {
+        // 1. Master Admin permanent code (240411) - ALWAYS VERIFIED REGARDLESS OF NETWORK
+        if (cleaned == MASTER_PERMANENT_CODE) {
             setPermanentUnlocked(true)
             saveSession(MASTER_PERMANENT_CODE, "Administrator", Long.MAX_VALUE, true)
-            recordUserSession(thisDeviceId, thisDeviceModel, "Admin Master Code (240411)", "Administrator")
+            recordUserSession(thisDeviceId, thisDeviceModel, "Master Admin", "Administrator")
             recordLoginLog(MASTER_PERMANENT_CODE, "Administrator", "ADMIN_UNLOCK")
             return UnlockResult.PermanentUnlocked
         }
@@ -841,17 +877,17 @@ class SecurityManager(private val context: Context) {
             return UnlockResult.KeyUnlocked(boundKey)
         }
 
-        // SANITIZED ERROR: Only Admin passkeys and master code accepted
+        // SANITIZED ERROR: Only valid passkeys accepted (never leak master admin code)
         recordLoginLog(cleaned, "Unknown Key", "INVALID_CODE")
         return UnlockResult.Invalid(
-            "Invalid passkey. Access requires an Admin-issued passkey or 240411."
+            "Invalid passkey. Please check your 6-digit access code and try again."
         )
     }
 
     fun recordCurrentDeviceSession() {
         val thisDeviceId = getDeviceId()
         val thisDeviceModel = getDeviceModelName()
-        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Admin (240411)" else "Active Session") ?: "Active Session"
+        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Master Admin" else "Active Session") ?: "Active Session"
         val label = prefs.getString(KEY_SESSION_LABEL, if (isPermanentUnlocked()) "Administrator" else "Student") ?: "Student"
         recordUserSession(thisDeviceId, thisDeviceModel, passkey, label)
     }
@@ -859,25 +895,32 @@ class SecurityManager(private val context: Context) {
     fun getCurrentUserSession(): UserSession {
         val thisDeviceId = getDeviceId()
         val thisDeviceModel = getDeviceModelName()
-        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Admin (240411)" else "Active Session") ?: "Active Session"
-        val label = prefs.getString(KEY_SESSION_LABEL, if (isPermanentUnlocked()) "Administrator" else "Student") ?: "Student"
+        val isInf = isPermanentUnlocked()
+        val passkey = prefs.getString(KEY_SESSION_CODE, if (isInf) "Master Admin" else "Active Session") ?: "Active Session"
+        val label = prefs.getString(KEY_SESSION_LABEL, if (isInf) "Administrator" else "Student") ?: "Student"
+        val now = System.currentTimeMillis()
         return UserSession(
             deviceId = thisDeviceId,
             deviceModel = thisDeviceModel,
             androidVersion = "Android ${Build.VERSION.RELEASE}",
             passkey = passkey,
             label = label,
-            loginTime = prefs.getLong("session_login_time", System.currentTimeMillis()),
-            lastActiveTime = System.currentTimeMillis()
+            loginTime = prefs.getLong("session_login_time", now),
+            lastActiveTime = now,
+            lastHeartbeat = now,
+            isOnline = true,
+            isPermanentAdmin = isInf,
+            appVersion = "2.0.0"
         )
     }
 
-    private fun recordUserSession(deviceId: String, deviceModel: String, passkey: String, label: String) {
+    fun recordUserSession(deviceId: String, deviceModel: String, passkey: String, label: String) {
         val now = System.currentTimeMillis()
         if (!prefs.contains("session_login_time")) {
             prefs.edit().putLong("session_login_time", now).apply()
         }
         val loginTime = prefs.getLong("session_login_time", now)
+        val isInf = isPermanentUnlocked()
         val session = UserSession(
             deviceId = deviceId,
             deviceModel = deviceModel,
@@ -885,15 +928,60 @@ class SecurityManager(private val context: Context) {
             passkey = passkey,
             label = label,
             loginTime = loginTime,
-            lastActiveTime = now
+            lastActiveTime = now,
+            lastHeartbeat = now,
+            isOnline = true,
+            isPermanentAdmin = isInf,
+            appVersion = "2.0.0"
         )
 
         try {
             firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
-                ?.set(session.toFirestoreMap())
+                ?.set(session.toFirestoreMap(), SetOptions.merge())
+                ?.addOnSuccessListener {
+                    Log.d(TAG, "User session successfully saved in Cloud Firestore for $deviceId")
+                }
+                ?.addOnFailureListener { e ->
+                    Log.w(TAG, "Failed to record session to Firestore: ${e.message}")
+                }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to record session to Firestore: ${e.message}")
         }
+    }
+
+    fun syncCurrentSessionToCloud() {
+        val curSession = getCurrentUserSession()
+        val fs = firestore ?: return
+        try {
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(curSession.deviceId)
+                .set(curSession.toFirestoreMap(), SetOptions.merge())
+                .addOnSuccessListener {
+                    Log.d(TAG, "Session synced to Cloud Firestore: ${curSession.deviceId}")
+                }
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Cloud session sync failed: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.w(TAG, "syncCurrentSessionToCloud exception: ${e.message}")
+        }
+    }
+
+    fun sendHeartbeat() {
+        val fs = firestore ?: return
+        val thisDeviceId = getDeviceId()
+        val now = System.currentTimeMillis()
+        val update = mapOf(
+            "lastActiveTime" to now,
+            "lastHeartbeat" to now,
+            "isOnline" to true
+        )
+        try {
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(thisDeviceId)
+                .set(update, SetOptions.merge())
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Heartbeat failed: ${e.message}")
+                }
+        } catch (_: Exception) {}
     }
 
     fun listenToUserSessions(onSessionsUpdated: (List<UserSession>) -> Unit): ListenerRegistration? {
@@ -934,7 +1022,7 @@ class SecurityManager(private val context: Context) {
         prefs.edit().putStringSet(KEY_REVOKED_DEVICES, currentSet).apply()
 
         firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
-            ?.update("isRevoked", true)
+            ?.set(mapOf("isRevoked" to true, "isOnline" to false), SetOptions.merge())
             ?.addOnCompleteListener { onComplete?.invoke(true) }
     }
 
@@ -942,14 +1030,14 @@ class SecurityManager(private val context: Context) {
         val timeoutUntil = System.currentTimeMillis() + (durationMinutes * 60 * 1000L)
         prefs.edit().putLong("suspended_until_$deviceId", timeoutUntil).apply()
         firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
-            ?.update("suspendedUntil", timeoutUntil)
+            ?.set(mapOf("suspendedUntil" to timeoutUntil), SetOptions.merge())
             ?.addOnCompleteListener { onComplete?.invoke(true) }
     }
 
     fun unsuspendDevice(deviceId: String, onComplete: ((Boolean) -> Unit)? = null) {
         prefs.edit().remove("suspended_until_$deviceId").apply()
         firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
-            ?.update("suspendedUntil", 0L)
+            ?.set(mapOf("suspendedUntil" to 0L), SetOptions.merge())
             ?.addOnCompleteListener { onComplete?.invoke(true) }
     }
 
@@ -1111,40 +1199,54 @@ class SecurityManager(private val context: Context) {
     ) {
         val thisDeviceId = getDeviceId()
         val thisDeviceModel = getDeviceModelName()
-        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Admin (240411)" else "Student") ?: "Student"
+        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Master Admin" else "Student") ?: "Student"
+        val now = System.currentTimeMillis()
+        val isCompleted = progressPercent >= 90
 
-        // Update live user session doc in Firestore with current watch status
+        // 1. Update live user session doc in Firestore with SetOptions.merge() so it NEVER fails if doc was missing!
         val sessionUpdate = mutableMapOf<String, Any>(
-            "lastActiveTime" to System.currentTimeMillis(),
+            "deviceId" to thisDeviceId,
+            "deviceModel" to thisDeviceModel,
+            "androidVersion" to "Android ${Build.VERSION.RELEASE}",
+            "lastActiveTime" to now,
+            "lastHeartbeat" to now,
+            "isOnline" to true,
             "currentProgressPercent" to progressPercent
         )
         if (lectureTitle.isNotBlank()) sessionUpdate["currentLecture"] = lectureTitle
         if (subjectName.isNotBlank()) sessionUpdate["currentSubject"] = subjectName
+        if (chapterName.isNotBlank()) sessionUpdate["currentChapter"] = chapterName
 
-        try {
-            firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(thisDeviceId)
-                ?.update(sessionUpdate)
-        } catch (_: Exception) {}
+        val fs = firestore
+        if (fs != null) {
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(thisDeviceId)
+                .set(sessionUpdate, SetOptions.merge())
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Failed to update session progress: ${e.message}")
+                }
 
-        // Save detailed record in watch_logs collection
-        val safeKey = "${thisDeviceId}_${lectureTitle.hashCode()}"
-        val watchLog = WatchLog(
-            id = safeKey,
-            deviceId = thisDeviceId,
-            deviceModel = thisDeviceModel,
-            passkey = passkey,
-            lectureTitle = lectureTitle,
-            subjectName = subjectName,
-            chapterName = chapterName,
-            currentTime = currentTime,
-            duration = duration,
-            progressPercent = progressPercent,
-            timestamp = System.currentTimeMillis()
-        )
-        try {
-            firestore?.collection(FIRESTORE_COLLECTION_WATCH_LOGS)?.document(safeKey)
-                ?.set(watchLog.toFirestoreMap())
-        } catch (_: Exception) {}
+            // 2. Save detailed record in watch_logs collection
+            val safeKey = "${thisDeviceId}_${lectureTitle.hashCode()}"
+            val watchLog = WatchLog(
+                id = safeKey,
+                deviceId = thisDeviceId,
+                deviceModel = thisDeviceModel,
+                passkey = passkey,
+                lectureTitle = lectureTitle,
+                subjectName = subjectName,
+                chapterName = chapterName,
+                currentTime = currentTime,
+                duration = duration,
+                progressPercent = progressPercent,
+                isCompleted = isCompleted,
+                timestamp = now
+            )
+            fs.collection(FIRESTORE_COLLECTION_WATCH_LOGS).document(safeKey)
+                .set(watchLog.toFirestoreMap(), SetOptions.merge())
+                .addOnFailureListener { e ->
+                    Log.w(TAG, "Failed to write watch log: ${e.message}")
+                }
+        }
     }
 
     // Cloud Login Audit Logging
@@ -1162,8 +1264,13 @@ class SecurityManager(private val context: Context) {
         )
         try {
             firestore?.collection(FIRESTORE_COLLECTION_LOGIN_LOGS)?.document(log.id)
-                ?.set(log.toFirestoreMap())
-        } catch (_: Exception) {}
+                ?.set(log.toFirestoreMap(), SetOptions.merge())
+                ?.addOnFailureListener { e ->
+                    Log.w(TAG, "Failed to record login log: ${e.message}")
+                }
+        } catch (e: Exception) {
+            Log.w(TAG, "Login log exception: ${e.message}")
+        }
     }
 
     // Cloud Push Notification Sender (Target All, Device ID, or Passkey)
@@ -1210,16 +1317,15 @@ class SecurityManager(private val context: Context) {
 
         return try {
             fs.collection(FIRESTORE_COLLECTION_NOTIFICATIONS)
-                .whereEqualTo("isActive", true)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
                     val items = snapshot.documents.mapNotNull { doc ->
                         doc.data?.let { PushNotificationItem.fromFirestoreMap(it) }
                     }
-                    items.forEach { item ->
+                    items.filter { it.isActive }.forEach { item ->
                         val isForMe = when (item.targetType) {
-                            "DEVICE" -> item.targetValue == myDeviceId
-                            "PASSKEY" -> item.targetValue == myPasskey
+                            "DEVICE" -> item.targetValue.equals(myDeviceId, ignoreCase = true)
+                            "PASSKEY" -> item.targetValue.equals(myPasskey, ignoreCase = true)
                             else -> true // "ALL"
                         }
                         if (isForMe && !processedNotificationIds.contains(item.id)) {
@@ -1227,12 +1333,10 @@ class SecurityManager(private val context: Context) {
                             if (System.currentTimeMillis() - item.timestamp < 24 * 60 * 60 * 1000L) {
                                 processedNotificationIds.add(item.id)
                                 onNotification(item)
-                                if (!isPermanentUnlocked()) {
-                                    try {
-                                        com.example.notification.NotificationHelper(context)
-                                            .sendCustomNotification(item.title, item.message)
-                                    } catch (_: Exception) {}
-                                }
+                                try {
+                                    com.example.notification.NotificationHelper(context)
+                                        .sendCustomNotification(item.title, item.message)
+                                } catch (_: Exception) {}
                             }
                         }
                     }

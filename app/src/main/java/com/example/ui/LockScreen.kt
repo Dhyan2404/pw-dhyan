@@ -103,7 +103,7 @@ fun LockScreen(
             return
         }
         val cleanPin = pin.trim()
-        val isMaster = cleanPin == SecurityManager.MASTER_PERMANENT_CODE || cleanPin == "2404"
+        val isMaster = cleanPin == SecurityManager.MASTER_PERMANENT_CODE
         if (!isMaster && !securityManager.isCloudSyncActive()) {
             securityManager.refreshFromCloud()
             errorMessage = "Cloud Connection Required: Connecting to Google Cloud... Tap cloud status icon to retry."
@@ -135,13 +135,10 @@ fun LockScreen(
         }
     }
 
-    // Auto submit when 6 digits typed or matches master admin code
+    // Auto submit ONLY when all 6 digits are typed (never prematurely on 4 digits)
     LaunchedEffect(enteredPin) {
         val clean = enteredPin.trim()
-        if (clean == SecurityManager.MASTER_PERMANENT_CODE || clean == "2404") {
-            delay(100)
-            submitPin(clean)
-        } else if (clean.length == 6) {
+        if (clean.length == 6) {
             delay(100)
             submitPin(clean)
         }

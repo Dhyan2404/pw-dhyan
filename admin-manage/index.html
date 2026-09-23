@@ -556,6 +556,29 @@
 
   <div class="app-container">
 
+    <!-- FIRESTORE PERMISSIONS DIAGNOSTIC BANNER (Hidden by default, shown on permission error) -->
+    <div id="permission-error-banner" style="display:none; margin-bottom: 24px; padding: 18px 20px; background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--crimson); border-radius: 14px; color: #fff;">
+      <div style="font-weight: 700; font-size: 15px; margin-bottom: 8px; display:flex; align-items:center; gap:10px;">
+        <i class="fas fa-exclamation-triangle" style="color:var(--crimson); font-size:18px;"></i> Firebase Firestore Permission Denied!
+      </div>
+      <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
+        Your writes to Cloud Firestore on project <b>dhyan11-acc24</b> are blocked by Firestore Security Rules.<br>
+        To fix this instantly: Open your <a href="https://console.firebase.google.com/project/dhyan11-acc24/firestore/rules" target="_blank" style="color:var(--cyan); text-decoration:underline; font-weight:600;">Firebase Console &gt; Firestore Database &gt; Rules tab</a>, replace the rules with the code below, and click <b>Publish</b>:
+      </div>
+      <pre style="background: rgba(0,0,0,0.6); padding: 12px; border-radius: 8px; font-size: 12px; color: #4ade80; overflow-x: auto; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-secondary btn-sm" onclick="copyFirestoreRule()"><i class="fas fa-copy"></i> Copy Rule to Clipboard</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('permission-error-banner').style.display='none'"><i class="fas fa-times"></i> Dismiss</button>
+      </div>
+    </div>
+
     <!-- METRIC STATS -->
     <div class="metrics-grid">
       <div class="glass-panel metric-card">
@@ -986,8 +1009,43 @@
       }
     }
 
+    function showPermissionErrorBanner() {
+      const banner = document.getElementById('permission-error-banner');
+      if (banner) banner.style.display = 'block';
+    }
+    window.showPermissionErrorBanner = showPermissionErrorBanner;
+
+    function copyFirestoreRule() {
+      const ruleText = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}`;
+      navigator.clipboard.writeText(ruleText).then(() => {
+        showToast('Firestore Rule copied! Paste into Firebase Console > Rules');
+      }).catch(() => {
+        alert(ruleText);
+      });
+    }
+    window.copyFirestoreRule = copyFirestoreRule;
+
+    function handleFirestoreError(actionName, err) {
+      console.error(actionName, err);
+      const isPerm = err.code === 'permission-denied' || (err.message && (err.message.includes('permission') || err.message.includes('insufficient')));
+      if (isPerm) {
+        showPermissionErrorBanner();
+        alert(`Firestore Permission Error during ${actionName}!\n\nYour Firebase security rules on 'dhyan11-acc24' are blocking this write.\nPlease open Firebase Console -> Firestore Database -> Rules tab, and set:\nallow read, write: if true;\n\nCheck the diagnostic banner shown on the page.`);
+      } else {
+        alert(`${actionName} error: ${err.message}`);
+      }
+    }
+    window.handleFirestoreError = handleFirestoreError;
+
     function verifyPin() {
-      if (enteredPin === cloudAdminPin || enteredPin === "240411" || enteredPin === "2404") {
+      if (enteredPin === cloudAdminPin || enteredPin === "240411") {
         sessionStorage.setItem('pw_admin_authenticated', 'true');
         const gate = document.getElementById('auth-gate');
         if (gate) gate.style.display = 'none';
@@ -995,7 +1053,7 @@
         startFirestoreListeners();
       } else {
         const err = document.getElementById('auth-error');
-        if (err) err.innerText = 'Invalid Admin Passkey. Please enter 240411.';
+        if (err) err.innerText = 'Invalid Admin Passkey. Access Denied.';
         setTimeout(clearPin, 600);
       }
     }
@@ -1054,7 +1112,10 @@
         if (elBadge) elBadge.innerText = userSessions.length;
         renderDevicesTable();
         updateTargetDeviceDropdown();
-      }, err => console.error("Sessions error", err));
+      }, err => {
+        console.error("Sessions error", err);
+        if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
+      });
 
       // 2. Access Keys Listener
       onSnapshot(collection(db, 'access_keys'), snapshot => {
@@ -1066,7 +1127,10 @@
         if (elMetric) elMetric.innerText = activeCount;
         if (elBadge) elBadge.innerText = accessKeys.length;
         renderKeysTable();
-      }, err => console.error("Keys error", err));
+      }, err => {
+        console.error("Keys error", err);
+        if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
+      });
 
       // 3. Watch Logs Listener
       onSnapshot(collection(db, 'watch_logs'), snapshot => {
@@ -1077,14 +1141,20 @@
         if (elMetric) elMetric.innerText = watchLogs.length;
         if (elBadge) elBadge.innerText = watchLogs.length;
         renderWatchLogsTable();
-      }, err => console.error("Watch logs error", err));
+      }, err => {
+        console.error("Watch logs error", err);
+        if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
+      });
 
       // 4. Login Logs Listener
       onSnapshot(collection(db, 'login_logs'), snapshot => {
         loginLogs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         loginLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         renderLoginLogsTable();
-      }, err => console.error("Login logs error", err));
+      }, err => {
+        console.error("Login logs error", err);
+        if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
+      });
 
       // 5. Push Notifications Listener
       onSnapshot(collection(db, 'push_notifications'), snapshot => {
@@ -1093,7 +1163,10 @@
         const elMetric = document.getElementById('metric-notif-count');
         if (elMetric) elMetric.innerText = pushNotifications.length;
         renderNotificationsStream();
-      }, err => console.error("Notifications error", err));
+      }, err => {
+        console.error("Notifications error", err);
+        if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
+      });
 
       // 6. Maintenance Mode Listener
       onSnapshot(doc(db, 'system_config', 'maintenance_mode'), snapshot => {
@@ -1306,7 +1379,10 @@
             <td style="font-size:12px;">${k.deviceModel ? k.deviceModel : '<span style="color:var(--text-muted);">Unclaimed</span>'}</td>
             <td style="font-size:12px;">${formatDate(k.createdAt)}</td>
             <td>
-              <button class="btn btn-danger btn-sm" onclick="deletePasskey('${k.id}', '${k.code}')"><i class="fas fa-trash-alt"></i></button>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-primary btn-sm" onclick="promptDirectAlertToPasskey('${k.code}', '${k.label}')" title="Send notification to this passkey"><i class="fas fa-bell"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="deletePasskey('${k.id}', '${k.code}')" title="Delete passkey"><i class="fas fa-trash-alt"></i></button>
+              </div>
             </td>
           </tr>
         `;
@@ -1386,8 +1462,16 @@
         updateTargetDeviceDropdown();
       } else if (type === 'PASSKEY') {
         group.style.display = 'block';
-        label.innerText = 'ENTER OR SELECT TARGET PASSKEY';
-        container.innerHTML = `<input type="text" id="notif-target-value" class="form-control" placeholder="Enter 6-digit passkey..." maxlength="8" />`;
+        label.innerText = 'SELECT OR ENTER TARGET PASSKEY';
+        const keyOptions = accessKeys.map(k => `<option value="${k.code}">${k.code} - ${k.label || 'Passkey'} (${k.deviceModel || 'Unclaimed'})</option>`).join('');
+        container.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <input type="text" id="notif-target-value" list="passkey-datalist" class="form-control" placeholder="Select from list or type 6-digit passkey..." maxlength="12" />
+            <datalist id="passkey-datalist">
+              ${keyOptions}
+            </datalist>
+          </div>
+        `;
       }
     }
     window.handleTargetTypeChange = handleTargetTypeChange;
@@ -1404,10 +1488,30 @@
       if (sel) sel.value = 'DEVICE';
       handleTargetTypeChange();
       const valEl = document.getElementById('notif-target-value');
-      if (valEl) valEl.value = deviceId;
-      showToast(`Target set to ${model}`);
+      if (valEl) {
+        valEl.value = deviceId;
+        if (!valEl.value && valEl.tagName === 'SELECT') {
+          const opt = document.createElement('option');
+          opt.value = deviceId;
+          opt.innerText = `${model} (${deviceId.slice(0,8)}...)`;
+          valEl.appendChild(opt);
+          valEl.value = deviceId;
+        }
+      }
+      showToast(`Target set to device: ${model}`);
     }
     window.promptDirectAlert = promptDirectAlert;
+
+    function promptDirectAlertToPasskey(code, label) {
+      switchTab('notifications');
+      const sel = document.getElementById('notif-target-type');
+      if (sel) sel.value = 'PASSKEY';
+      handleTargetTypeChange();
+      const valEl = document.getElementById('notif-target-value');
+      if (valEl) valEl.value = code;
+      showToast(`Target set to passkey: ${code} (${label})`);
+    }
+    window.promptDirectAlertToPasskey = promptDirectAlertToPasskey;
 
     // ACTIONS: Push Notification from Web
     function sendNotificationFromWeb() {
@@ -1441,33 +1545,33 @@
       };
 
       addDoc(collection(db, 'push_notifications'), notifItem).then(() => {
-        showToast('Push Notification Sent to Cloud!');
+        showToast(`Push Notification Sent to ${targetType} (${targetValue})!`);
         document.getElementById('notif-message').value = '';
-      }).catch(err => alert("Error: " + err.message));
+      }).catch(err => handleFirestoreError("Send Notification", err));
     }
     window.sendNotificationFromWeb = sendNotificationFromWeb;
 
     // ACTIONS: Device Controls
     function suspendDevice(deviceId, mins = 5) {
       const until = Date.now() + (mins * 60 * 1000);
-      updateDoc(doc(db, 'user_sessions', deviceId), { suspendedUntil: until }).then(() => {
+      setDoc(doc(db, 'user_sessions', deviceId), { suspendedUntil: until }, { merge: true }).then(() => {
         showToast(`Device placed on ${mins}-min timeout.`);
-      }).catch(err => console.error("Suspend error", err));
+      }).catch(err => handleFirestoreError("Suspend Device", err));
     }
     window.suspendDevice = suspendDevice;
 
     function unsuspendDevice(deviceId) {
-      updateDoc(doc(db, 'user_sessions', deviceId), { suspendedUntil: 0, isRevoked: false }).then(() => {
+      setDoc(doc(db, 'user_sessions', deviceId), { suspendedUntil: 0, isRevoked: false }, { merge: true }).then(() => {
         showToast('Device Unbanned & Reactivated!');
-      }).catch(err => console.error("Unban error", err));
+      }).catch(err => handleFirestoreError("Unsuspend Device", err));
     }
     window.unsuspendDevice = unsuspendDevice;
 
     function revokeDevice(deviceId) {
       if (confirm(`Revoke and block access for device ${deviceId}?`)) {
-        updateDoc(doc(db, 'user_sessions', deviceId), { isRevoked: true }).then(() => {
+        setDoc(doc(db, 'user_sessions', deviceId), { isRevoked: true, isOnline: false }, { merge: true }).then(() => {
           showToast('Device revoked successfully.');
-        }).catch(err => console.error("Revoke error", err));
+        }).catch(err => handleFirestoreError("Revoke Device", err));
       }
     }
     window.revokeDevice = revokeDevice;
@@ -1476,7 +1580,7 @@
       if (confirm(`Remove device record ${deviceId}?`)) {
         deleteDoc(doc(db, 'user_sessions', deviceId)).then(() => {
           showToast('Device session record removed.');
-        }).catch(err => console.error("Delete session error", err));
+        }).catch(err => handleFirestoreError("Delete Session", err));
       }
     }
     window.deleteDeviceSession = deleteDeviceSession;
@@ -1512,7 +1616,7 @@
         showToast(`Key ${code} created successfully!`);
         document.getElementById('create-key-code').value = '';
         document.getElementById('create-key-label').value = '';
-      }).catch(err => alert("Error: " + err.message));
+      }).catch(err => handleFirestoreError("Create Passkey", err));
     }
     window.createSingleKeyFromWeb = createSingleKeyFromWeb;
 
@@ -1537,7 +1641,7 @@
 
       batch.commit().then(() => {
         showToast(`Batch of ${count} passkeys created in Cloud!`);
-      }).catch(err => alert("Batch error: " + err.message));
+      }).catch(err => handleFirestoreError("Batch Keys", err));
     }
     window.generateBatchKeysFromWeb = generateBatchKeysFromWeb;
 
@@ -1561,7 +1665,7 @@
       if (confirm(`Delete passkey ${code}?`)) {
         deleteDoc(doc(db, 'access_keys', docId)).then(() => {
           showToast(`Passkey ${code} deleted.`);
-        }).catch(err => alert("Delete error: " + err.message));
+        }).catch(err => handleFirestoreError("Delete Passkey", err));
       }
     }
     window.deletePasskey = deletePasskey;
@@ -1577,7 +1681,7 @@
         expired.forEach(k => batch.delete(doc(db, 'access_keys', k.id)));
         batch.commit().then(() => {
           showToast(`Deleted ${expired.length} expired passkeys.`);
-        }).catch(err => alert("Clear error: " + err.message));
+        }).catch(err => handleFirestoreError("Clear Expired", err));
       }
     }
     window.clearExpiredKeysFromWeb = clearExpiredKeysFromWeb;
@@ -1597,14 +1701,14 @@
       }).then(() => {
         showToast('Announcement Broadcast Live to all students!');
         document.getElementById('broadcast-input').value = '';
-      }).catch(err => alert("Broadcast error: " + err.message));
+      }).catch(err => handleFirestoreError("Broadcast Announcement", err));
     }
     window.publishAnnouncementFromWeb = publishAnnouncementFromWeb;
 
     function clearAnnouncementFromWeb() {
-      updateDoc(doc(db, 'announcements', 'latest_announcement'), { isActive: false }).then(() => {
+      setDoc(doc(db, 'announcements', 'latest_announcement'), { isActive: false }, { merge: true }).then(() => {
         showToast('Broadcast Announcement cleared.');
-      }).catch(err => alert("Clear error: " + err.message));
+      }).catch(err => handleFirestoreError("Clear Announcement", err));
     }
     window.clearAnnouncementFromWeb = clearAnnouncementFromWeb;
 
@@ -1617,7 +1721,7 @@
         updatedAt: Date.now()
       }).then(() => {
         showToast(targetState ? 'Maintenance Mode ACTIVATED' : 'Maintenance Mode DEACTIVATED');
-      }).catch(err => alert("Maintenance error: " + err.message));
+      }).catch(err => handleFirestoreError("Maintenance Mode", err));
     }
     window.toggleMaintenanceFromWeb = toggleMaintenanceFromWeb;
 

@@ -170,10 +170,16 @@ fun BrowserScreen(
         }
     }
 
-    // Real-time Session Expiry & Admin Revocation watcher
+    // Real-time Session Expiry, Cloud Heartbeat & Admin Revocation watcher
     LaunchedEffect(Unit) {
+        var heartbeatTick = 0
         while (true) {
             delay(8000)
+            heartbeatTick++
+            if (heartbeatTick >= 4) { // Every ~32 seconds
+                heartbeatTick = 0
+                securityManager.sendHeartbeat()
+            }
             if (!securityManager.isSessionActive()) {
                 onLockRequested()
             }
@@ -432,6 +438,13 @@ fun BrowserScreen(
                             } catch (e: Exception) {
                                 super.onPermissionRequest(request)
                             }
+                        }
+
+                        override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+                            consoleMessage?.let {
+                                android.util.Log.d("WebConsole", "[${it.messageLevel()}] ${it.message()} -- line ${it.lineNumber()} of ${it.sourceId()}")
+                            }
+                            return true
                         }
                     }
 
@@ -1022,7 +1035,7 @@ fun BrowserScreen(
                         modifier = Modifier.height(44.dp)
                     ) {
                         Text(
-                            text = "Admin Bypass (240411)",
+                            text = "Admin Bypass",
                             style = MaterialTheme.typography.labelLarge.copy(
                                 color = Color(0xFF030712),
                                 fontWeight = FontWeight.Bold

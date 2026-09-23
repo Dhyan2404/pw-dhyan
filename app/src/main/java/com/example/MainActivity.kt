@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var securityManager: SecurityManager
     private lateinit var scriptManager: ScriptManager
     private lateinit var notificationHelper: NotificationHelper
+    private var pushNotificationListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -58,8 +59,16 @@ class MainActivity : ComponentActivity() {
         // Start 5-minute background reminder notifications for normal users
         notificationHelper.startPeriodicNotification(lifecycleScope, securityManager)
 
+        // Global Push Notification listener for targeted device alerts
+        pushNotificationListener = securityManager.listenToPushNotifications { _ -> }
+
         val initialUnlocked = securityManager.isSessionActive()
         val alreadyPermanentlyUnlocked = securityManager.isPermanentUnlocked()
+
+        // Sync complete session state to Firestore on app startup
+        if (initialUnlocked) {
+            securityManager.syncCurrentSessionToCloud()
+        }
 
         android.widget.Toast.makeText(this, "made by dhyan ❤️", android.widget.Toast.LENGTH_LONG).show()
 
@@ -98,6 +107,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        pushNotificationListener?.remove()
         notificationHelper.stopPeriodicNotification()
     }
 }
