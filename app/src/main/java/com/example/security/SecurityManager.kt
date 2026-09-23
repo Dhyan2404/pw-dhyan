@@ -96,10 +96,33 @@ data class UserSession(
     val passkey: String,
     val label: String,
     val loginTime: Long = System.currentTimeMillis(),
+    val lastActiveTime: Long = System.currentTimeMillis(),
+    val suspendedUntil: Long = 0L,
     val isRevoked: Boolean = false
 ) {
     fun getFormattedLoginTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(loginTime))
+    }
+
+    fun getActiveDurationFormatted(): String {
+        val totalSecs = ((System.currentTimeMillis() - loginTime) / 1000).coerceAtLeast(0)
+        val hours = totalSecs / 3600
+        val mins = (totalSecs % 3600) / 60
+        val secs = totalSecs % 60
+        return when {
+            hours > 0 -> "${hours}h ${mins}m online"
+            mins > 0 -> "${mins}m ${secs}s online"
+            else -> "${secs}s online"
+        }
+    }
+
+    fun isSuspended(): Boolean = System.currentTimeMillis() < suspendedUntil
+
+    fun getRemainingSuspensionFormatted(): String {
+        val remSecs = ((suspendedUntil - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+        val mins = remSecs / 60
+        val secs = remSecs % 60
+        return if (mins > 0) "${mins}m ${secs}s" else "${secs}s"
     }
 
     fun toFirestoreMap(): Map<String, Any> {
@@ -110,6 +133,8 @@ data class UserSession(
             "passkey" to passkey,
             "label" to label,
             "loginTime" to loginTime,
+            "lastActiveTime" to System.currentTimeMillis(),
+            "suspendedUntil" to suspendedUntil,
             "isRevoked" to isRevoked
         )
     }
@@ -123,6 +148,8 @@ data class UserSession(
                 passkey = (map["passkey"] as? String) ?: "",
                 label = (map["label"] as? String) ?: "Student",
                 loginTime = (map["loginTime"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                lastActiveTime = (map["lastActiveTime"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                suspendedUntil = (map["suspendedUntil"] as? Number)?.toLong() ?: 0L,
                 isRevoked = (map["isRevoked"] as? Boolean) ?: false
             )
         }
@@ -153,6 +180,11 @@ class SecurityManager(private val context: Context) {
         const val MASTER_PERMANENT_CODE = "240411"
         private const val KEY_PERMANENT_UNLOCKED = "is_permanent_unlocked"
         private const val KEY_REVOKED_DEVICES = "revoked_devices_set"
+        private const val KEY_SESSION_ACTIVE = "session_active"
+        private const val KEY_SESSION_EXPIRY = "session_expiry"
+        private const val KEY_SESSION_CODE = "session_code"
+        private const val KEY_SESSION_LABEL = "session_label"
+        private const val KEY_SESSION_IS_INFINITE = "session_is_infinite"
         const val HOME_URL = "https://pw.studyparcham.in/#home-view"
         const val ALLOWED_DOMAIN = "pw.studyparcham.in"
         private const val FIRESTORE_COLLECTION_KEYS = "access_keys"
@@ -162,6 +194,85 @@ class SecurityManager(private val context: Context) {
 
     init {
         initFirestore()
+        restoreSessionFromPrefs()
+    }
+
+    private fun restoreSessionFromPrefs() {
+        if (isSessionActive()) {
+            val code = prefs.getString(KEY_SESSION_CODE, "") ?: ""
+            val label = prefs.getString(KEY_SESSION_LABEL, "Passkey") ?: "Passkey"
+            val expiry = prefs.getLong(KEY_SESSION_EXPIRY, 0L)
+            val isInf = prefs.getBoolean(KEY_SESSION_IS_INFINITE, false)
+            val rem = if (isInf) Long.MAX_VALUE else (expiry - System.currentTimeMillis()).coerceAtLeast(0L)
+            currentActiveKey = AccessKey(
+                code = code,
+                label = label,
+                durationMillis = rem,
+                isInfinite = isInf,
+                isUsed = true
+            )
+        }
+    }
+
+    fun isSessionActive(): Boolean {
+        if (isPermanentUnlocked()) return true
+
+        val deviceId = getDeviceId()
+        val suspendedUntil = prefs.getLong("suspended_until_$deviceId", 0L)
+        if (suspendedUntil > System.currentTimeMillis()) {
+            return false // On temporary timeout!
+        }
+
+        val isSessionStored = prefs.getBoolean(KEY_SESSION_ACTIVE, false)
+        val expiry = prefs.getLong(KEY_SESSION_EXPIRY, 0L)
+        val isInf = prefs.getBoolean(KEY_SESSION_IS_INFINITE, false)
+
+        if (isSessionStored && (isInf || System.currentTimeMillis() < expiry)) {
+            val revokedDevices = prefs.getStringSet(KEY_REVOKED_DEVICES, emptySet()) ?: emptySet()
+            if (revokedDevices.contains(deviceId)) {
+                clearSession()
+                return false
+            }
+            return true
+        }
+
+        if (isSessionStored && !isInf && System.currentTimeMillis() >= expiry) {
+            clearSession()
+        }
+        return false
+    }
+
+    fun saveSession(code: String, label: String, durationMillis: Long, isInfinite: Boolean) {
+        val expiry = if (isInfinite) Long.MAX_VALUE else System.currentTimeMillis() + durationMillis
+        prefs.edit()
+            .putBoolean(KEY_SESSION_ACTIVE, true)
+            .putLong(KEY_SESSION_EXPIRY, expiry)
+            .putString(KEY_SESSION_CODE, code)
+            .putString(KEY_SESSION_LABEL, label)
+            .putBoolean(KEY_SESSION_IS_INFINITE, isInfinite)
+            .apply()
+
+        currentActiveKey = AccessKey(
+            code = code,
+            label = label,
+            durationMillis = durationMillis,
+            isInfinite = isInfinite,
+            isUsed = true,
+            deviceId = getDeviceId(),
+            deviceModel = getDeviceModelName(),
+            usedAt = System.currentTimeMillis()
+        )
+    }
+
+    fun clearSession() {
+        prefs.edit()
+            .putBoolean(KEY_SESSION_ACTIVE, false)
+            .remove(KEY_SESSION_EXPIRY)
+            .remove(KEY_SESSION_CODE)
+            .remove(KEY_SESSION_LABEL)
+            .remove(KEY_SESSION_IS_INFINITE)
+            .apply()
+        currentActiveKey = null
     }
 
     private fun initFirestore() {
@@ -229,7 +340,7 @@ class SecurityManager(private val context: Context) {
 
     fun revokeAdminAccess() {
         setPermanentUnlocked(false)
-        currentActiveKey = null
+        clearSession()
     }
 
     fun verifyAdminPassword(password: String): Boolean {
@@ -377,10 +488,17 @@ class SecurityManager(private val context: Context) {
             return UnlockResult.Invalid("Access Revoked: Your device has been restricted by Admin.")
         }
 
+        // Check if device is in temporary timeout (e.g. 5-min cooldown)
+        val suspendedUntil = prefs.getLong("suspended_until_$thisDeviceId", 0L)
+        if (suspendedUntil > System.currentTimeMillis()) {
+            val remMins = ((suspendedUntil - System.currentTimeMillis()) / 60000) + 1
+            return UnlockResult.Invalid("Session Cooldown: Admin placed your device on a $remMins min timeout.")
+        }
+
         // 1. Master Admin permanent code (240411, or 2404)
         if (cleaned == MASTER_PERMANENT_CODE || cleaned == "2404") {
             setPermanentUnlocked(true)
-            currentActiveKey = null
+            saveSession(MASTER_PERMANENT_CODE, "Administrator", Long.MAX_VALUE, true)
             recordUserSession(thisDeviceId, thisDeviceModel, "Admin Master Code (240411)", "Administrator")
             return UnlockResult.PermanentUnlocked
         }
@@ -422,6 +540,7 @@ class SecurityManager(private val context: Context) {
             if (boundKey.isInfinite) {
                 setPermanentUnlocked(true)
             }
+            saveSession(boundKey.code, boundKey.label, boundKey.durationMillis, boundKey.isInfinite)
             return UnlockResult.KeyUnlocked(boundKey)
         }
 
@@ -429,6 +548,7 @@ class SecurityManager(private val context: Context) {
         val validTimeCodes = getValidPhoneTimeCodes()
         if (validTimeCodes.contains(cleaned)) {
             currentActiveKey = null
+            saveSession(cleaned, "Time Pass", 24 * 60 * 60 * 1000L, false)
             recordUserSession(thisDeviceId, thisDeviceModel, "Phone Time ($cleaned)", "Time Pass")
             return UnlockResult.SessionUnlocked
         }
@@ -485,6 +605,21 @@ class SecurityManager(private val context: Context) {
 
         firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
             ?.update("isRevoked", true)
+            ?.addOnCompleteListener { onComplete?.invoke(true) }
+    }
+
+    fun suspendDevice(deviceId: String, durationMinutes: Int = 5, onComplete: ((Boolean) -> Unit)? = null) {
+        val timeoutUntil = System.currentTimeMillis() + (durationMinutes * 60 * 1000L)
+        prefs.edit().putLong("suspended_until_$deviceId", timeoutUntil).apply()
+        firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
+            ?.update("suspendedUntil", timeoutUntil)
+            ?.addOnCompleteListener { onComplete?.invoke(true) }
+    }
+
+    fun unsuspendDevice(deviceId: String, onComplete: ((Boolean) -> Unit)? = null) {
+        prefs.edit().remove("suspended_until_$deviceId").apply()
+        firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
+            ?.update("suspendedUntil", 0L)
             ?.addOnCompleteListener { onComplete?.invoke(true) }
     }
 

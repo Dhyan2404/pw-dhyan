@@ -604,6 +604,16 @@ fun AdminKeyDialog(
                                             securityManager.revokeDevice(session.deviceId) {
                                                 Toast.makeText(context, "Device ${session.deviceModel} access revoked!", Toast.LENGTH_SHORT).show()
                                             }
+                                        },
+                                        onSuspend = {
+                                            securityManager.suspendDevice(session.deviceId, 5) {
+                                                Toast.makeText(context, "Device ${session.deviceModel} placed on 5m timeout!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        onUnsuspend = {
+                                            securityManager.unsuspendDevice(session.deviceId) {
+                                                Toast.makeText(context, "Device ${session.deviceModel} timeout cleared!", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     )
                                 }
@@ -850,7 +860,9 @@ private fun KeyCard(
 @Composable
 private fun UserDeviceCard(
     session: UserSession,
-    onRevoke: () -> Unit
+    onRevoke: () -> Unit,
+    onSuspend: () -> Unit,
+    onUnsuspend: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -858,77 +870,142 @@ private fun UserDeviceCard(
         shape = RoundedCornerShape(14.dp),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (session.isRevoked) CrimsonAlert.copy(alpha = 0.5f) else GoldenAccent.copy(alpha = 0.35f)
+            when {
+                session.isRevoked -> CrimsonAlert.copy(alpha = 0.5f)
+                session.isSuspended() -> GoldenAccent.copy(alpha = 0.5f)
+                else -> CyberCyan.copy(alpha = 0.35f)
+            }
         )
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(if (session.isRevoked) CrimsonAlert.copy(alpha = 0.15f) else GoldenAccent.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PhoneAndroid,
-                        contentDescription = null,
-                        tint = if (session.isRevoked) CrimsonAlert else GoldenAccent,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = session.deviceModel,
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                when {
+                                    session.isRevoked -> CrimsonAlert.copy(alpha = 0.15f)
+                                    session.isSuspended() -> GoldenAccent.copy(alpha = 0.15f)
+                                    else -> CyberCyan.copy(alpha = 0.15f)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PhoneAndroid,
+                            contentDescription = null,
+                            tint = when {
+                                session.isRevoked -> CrimsonAlert
+                                session.isSuspended() -> GoldenAccent
+                                else -> CyberCyan
+                            },
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = if (session.isRevoked) CrimsonAlert.copy(alpha = 0.2f) else EmeraldSuccess.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                text = if (session.isRevoked) "REVOKED" else "ACTIVE",
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = if (session.isRevoked) CrimsonAlert else EmeraldSuccess,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 8.5.sp
-                                )
-                            )
-                        }
                     }
 
-                    Text(
-                        text = "ID: ${session.deviceId.take(12)}... • ${session.androidVersion}",
-                        style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-                    )
+                    Spacer(modifier = Modifier.width(10.dp))
 
-                    Text(
-                        text = "Key: ${session.passkey} (${session.label}) • ${session.getFormattedLoginTime()}",
-                        style = MaterialTheme.typography.labelSmall.copy(color = CyberCyan, fontSize = 10.sp)
-                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = session.deviceModel,
+                                style = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = when {
+                                    session.isRevoked -> CrimsonAlert.copy(alpha = 0.2f)
+                                    session.isSuspended() -> GoldenAccent.copy(alpha = 0.2f)
+                                    else -> EmeraldSuccess.copy(alpha = 0.2f)
+                                }
+                            ) {
+                                Text(
+                                    text = when {
+                                        session.isRevoked -> "REVOKED"
+                                        session.isSuspended() -> "TIMEOUT (${session.getRemainingSuspensionFormatted()})"
+                                        else -> "ACTIVE"
+                                    },
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = when {
+                                            session.isRevoked -> CrimsonAlert
+                                            session.isSuspended() -> GoldenAccent
+                                            else -> EmeraldSuccess
+                                        },
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 8.5.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Time in App: ${session.getActiveDurationFormatted()} • ID: ${session.deviceId.take(10)}...",
+                            style = MaterialTheme.typography.labelSmall.copy(color = GoldenAccent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                        )
+
+                        Text(
+                            text = "Key: ${session.passkey} (${session.label}) • Logged in: ${session.getFormattedLoginTime()}",
+                            style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontSize = 9.5.sp)
+                        )
+                    }
                 }
             }
 
             if (!session.isRevoked) {
-                Button(
-                    onClick = onRevoke,
-                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonAlert.copy(alpha = 0.2f)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CrimsonAlert.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(30.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Kick", style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold))
+                    if (session.isSuspended()) {
+                        Button(
+                            onClick = onUnsuspend,
+                            colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent.copy(alpha = 0.2f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GoldenAccent.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(28.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Text("Unsuspend", style = MaterialTheme.typography.labelSmall.copy(color = GoldenAccent, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                        }
+                    } else {
+                        Button(
+                            onClick = onSuspend,
+                            colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent.copy(alpha = 0.15f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GoldenAccent.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(28.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Text("5m Timeout", style = MaterialTheme.typography.labelSmall.copy(color = GoldenAccent, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Button(
+                        onClick = onRevoke,
+                        colors = ButtonDefaults.buttonColors(containerColor = CrimsonAlert.copy(alpha = 0.2f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CrimsonAlert.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(28.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Text("Kick", style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    }
                 }
             }
         }

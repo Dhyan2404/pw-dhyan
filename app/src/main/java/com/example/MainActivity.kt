@@ -56,13 +56,14 @@ class MainActivity : ComponentActivity() {
         // Start 5-minute background reminder notifications for normal users
         notificationHelper.startPeriodicNotification(lifecycleScope, securityManager)
 
+        val initialUnlocked = securityManager.isSessionActive()
         val alreadyPermanentlyUnlocked = securityManager.isPermanentUnlocked()
 
         android.widget.Toast.makeText(this, "made by dhyan ❤️", android.widget.Toast.LENGTH_LONG).show()
 
         setContent {
             MyApplicationTheme {
-                var isUnlocked by remember { mutableStateOf(false) }
+                var isUnlocked by remember { mutableStateOf(initialUnlocked) }
                 var isPermanentUnlocked by remember { mutableStateOf(alreadyPermanentlyUnlocked) }
 
                 Surface(

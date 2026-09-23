@@ -269,13 +269,14 @@ fun BrowserScreen(
 
                         override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
                             super.onShowCustomView(view, callback)
-                            // Enforce vertical portrait mode for better viewing experience
-                            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            // Switch to horizontal landscape mode for full widescreen video viewing
+                            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                             customVideoView = view
                         }
 
                         override fun onHideCustomView() {
                             super.onHideCustomView()
+                            // Return back to portrait mode when exiting fullscreen video
                             (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                             customVideoView = null
                         }
@@ -563,6 +564,7 @@ fun BrowserScreen(
 
         DisposableEffect(Unit) {
             onDispose {
+                (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 webViewInstance?.destroy()
                 webViewInstance = null
                 swipeRefreshInstance = null
