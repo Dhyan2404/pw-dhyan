@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         StudyParcham Pure Liquid Glass Player
 // @namespace    https://studyparcham.in/
-// @version      49.0
-// @description  Masterpiece Liquid Glass UI: customizable accent color themes, 5s lecture HUD intro fade, center play/pause ripple pulse, ultra-thick 5px slide separators, and unified settings hub.
+// @version      49.1
+// @description  Masterpiece Liquid Glass UI with fixed scope and syntax repairs.
 // @match        *://*.studyparcham.in/*
 // @match        *://*/*player*
 // @include      *player.html*
@@ -12,23 +12,24 @@
 // @include      *://127.0.0.1/*
 // @include      file://*
 // @run-at       document-start
-// @grant        none
+// @grant        unsafeWindow
 // ==/UserScript==
 
 (function () {
     'use strict';
+    const win = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
 
     /* 0. ANTI-DEBUGGER & DEVTOOLS UNLOCKER */
     try {
         // Prevent anti-debugging scripts from wiping console
-        console.clear = () => {};
+        console.clear = () => { };
 
         // Neutralize dynamic Function("debugger")() calls
         const originalFunction = window.Function;
         const hookedFunction = function (...args) {
             if (args.length > 0 && typeof args[args.length - 1] === 'string') {
                 if (args[args.length - 1].includes('debugger')) {
-                    return function () {};
+                    return function () { };
                 }
             }
             return originalFunction.apply(this, args);
@@ -95,11 +96,11 @@
     function isPlayerPageActive() {
         const href = (window.location.href || '').toLowerCase();
         return href.includes('player') ||
-               href.includes('live') ||
-               href.includes('videoid=') ||
-               href.includes('vurl=') ||
-               href.includes('lectureid=') ||
-               (document.querySelector('video, #video-wrapper, .video-js') !== null);
+            href.includes('live') ||
+            href.includes('videoid=') ||
+            href.includes('vurl=') ||
+            href.includes('lectureid=') ||
+            (document.querySelector('video, #video-wrapper, .video-js') !== null);
     }
 
     try {
@@ -294,7 +295,7 @@
         .lq-swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.45); box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: all 0.2s cubic-bezier(0.16,1,0.3,1); position: relative; box-sizing: border-box; }
         .lq-swatch:hover { transform: scale(1.22); border-color: #ffffff; box-shadow: 0 0 8px rgba(255,255,255,0.6); z-index: 2; }
         .lq-swatch.active { border-color: #ffffff; transform: scale(1.25); box-shadow: 0 0 10px #ffffff, inset 0 0 3px rgba(255,255,255,0.8); z-index: 3; }
-        
+
         /* Mobile Quick Chips */
         .mobile-chips-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
         .mobile-chips-row::-webkit-scrollbar { display: none; }
@@ -832,7 +833,7 @@
             <!-- Top Playlist Dropdown -->
             <div id="lq-top-playlist-dropdown">
                 ${GLASS_HTML}
-                
+
                 <!-- 1. Content / Lecture List View -->
                 <div id="lq-playlist-lectures-view">
                     <div class="top-playlist-header">
@@ -893,7 +894,7 @@
                             <span><i class="fas fa-layer-group text-primary me-1" style="color:var(--lq-accent, #38bdf8)"></i> Select Subject & Topic</span>
                         </div>
                     </div>
-                    
+
                     <div>
                         <div class="lq-panel-label"><i class="fas fa-chalkboard-teacher me-1" style="color:var(--lq-accent, #38bdf8)"></i> Subject / Faculty ("By Sir")</div>
                         <select id="lq-subject-selector" class="lq-glass-select" style="margin-top:4px;">
@@ -959,7 +960,7 @@
             <button class="hub-btn" id="c-play"><i class="fas fa-play"></i></button>
             <button class="hub-btn" id="c-rwd" title="-10s (←)"><i class="fas fa-undo-alt"></i></button>
             <button class="hub-btn" id="c-fwd" title="+10s (→)"><i class="fas fa-redo-alt"></i></button>
-            
+
             <div class="hub-progress-box">
                 <span class="hub-time" id="c-cur-time">00:00</span>
                 <div class="scrubber-track-container" id="scrubber-track-container">
@@ -969,7 +970,7 @@
                     </div>
                     <input type="range" class="hub-slider" id="c-seek" min="0" max="100" value="0">
                     <div id="timeline-scrub-separators"></div>
-                    
+
                     <div id="scrubber-hover-preview">
                         ${GLASS_HTML}
                         <img src="" id="hover-preview-img">
@@ -984,7 +985,7 @@
 
             <button class="hub-btn" id="c-slides-btn" title="Lecture Slides (T)"><i class="fas fa-images"></i></button>
             <button class="hub-btn" id="c-notes-btn" title="Download Notes (PDF)"><i class="fas fa-file-pdf"></i></button>
-            
+
             <button class="hub-btn hub-speed-badge" id="c-speed-badge" title="Playback Speed (Click to Toggle Settings)" style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; font-weight:800; min-width:38px; padding:0 6px; color:var(--lq-accent, #38bdf8);">1.0x</button>
 
             <div style="position:relative;">
@@ -993,7 +994,7 @@
                     ${GLASS_HTML}
                     <div class="settings-drawer-pill"></div>
                     <div class="settings-header"><i class="fas fa-sliders-h"></i> Mobile Player Settings</div>
-                    
+
                     <div class="settings-theme-section">
                         <div class="settings-row" style="margin-bottom:4px;">
                             <span><i class="fas fa-palette me-1" style="color:var(--lq-accent, #38bdf8)"></i> Theme</span>
@@ -1767,7 +1768,7 @@
             if (!chaptersContainer) return;
             const urlParams = new URLSearchParams(window.location.search);
             const batchId = urlParams.get('batchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId') || (JSON.parse(localStorage.getItem('pw_enrolled_batches') || '[]')[0]);
-            
+
             const typeLabel = (activeTopicType === 'STUDY_MATERIAL') ? 'study material' : 'chapters';
             chaptersContainer.innerHTML = `<div style="color:#94a3b8; font-size:0.8rem; padding:12px; text-align:center;"><i class="fas fa-spinner fa-spin me-2" style="color:var(--lq-accent, #38bdf8)"></i> Loading ${typeLabel}...</div>`;
             if (chapterCountEl) chapterCountEl.innerText = '0';
@@ -1829,7 +1830,7 @@
             if (!item) return '';
             if (item.fileUrl && typeof item.fileUrl === 'string') return item.fileUrl;
             if (item.url && typeof item.url === 'string' && item.url.toLowerCase().endsWith('.pdf')) return item.url;
-            
+
             const atts = item.attachmentIds || item.notesDetails?.attachmentIds || item.dppPDFDetails?.attachmentIds || [];
             if (atts.length > 0 && atts[0]) {
                 const a = atts[0];
@@ -2272,7 +2273,7 @@
             } catch (e) { }
         }
 
-        let lastStatsHubUpdateTime = 0;
+
         let lastCloudWatchLogTime = 0;
 
         video.addEventListener('timeupdate', () => {
@@ -2312,6 +2313,9 @@
                                 video.duration,
                                 progressPercent
                             );
+                            if (window.AndroidPlayerBridge.updateCurrentActivity) {
+                                window.AndroidPlayerBridge.updateCurrentActivity(window.location.href, curTitle, curTitle);
+                            }
                         }
                     } catch (e) {
                         console.warn("[Bridge] logWatchProgress error:", e);
@@ -2951,7 +2955,7 @@
 
                 if (currentLectureIndex === -1 && (urlTitle || initialTitle)) {
                     const searchTitle = (urlTitle || initialTitle).toLowerCase();
-                    currentLectureIndex = chapterLectures.findIndex(l => 
+                    currentLectureIndex = chapterLectures.findIndex(l =>
                         l.title && (searchTitle.includes(l.title.toLowerCase()) || l.title.toLowerCase().includes(searchTitle))
                     );
                     if (currentLectureIndex === -1) {
@@ -3252,7 +3256,7 @@
 
         // Global Keyboard Shortcuts (Guarded to prevent stacked listeners across SPA lecture changes)
         if (window._liquidKeydownHandler) {
-            try { window.removeEventListener('keydown', window._liquidKeydownHandler); } catch (e) {}
+            try { window.removeEventListener('keydown', window._liquidKeydownHandler); } catch (e) { }
         }
         window._liquidKeydownHandler = (e) => {
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
@@ -3360,9 +3364,9 @@
             // In Single Page Apps, clicking another video lecture replaces the <video> element.
             // If the video element changed or old hub is orphaned, clean up and re-mount!
             if (_liquidCurrentVideo && _liquidCurrentVideo !== video) {
-                try { existingHub.remove(); } catch (e) {}
+                try { existingHub.remove(); } catch (e) { }
                 const oldTop = document.getElementById('lq-top-lecture-hud');
-                if (oldTop) try { oldTop.remove(); } catch (e) {}
+                if (oldTop) try { oldTop.remove(); } catch (e) { }
             } else {
                 return;
             }

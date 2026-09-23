@@ -112,17 +112,21 @@ jobs:
           - Deep Firestore persistence engine and player runtime
           EOF
 
-          # Create release with assets, or upload if tag exists
+          # 1. Create release if it doesn't already exist
           gh release create "$TAG_NAME" \
-            release_apk/PW-DHYAN.apk \
-            release_apk/PW-DHYAN-Direct.zip \
             --title "PW DHYAN Official Release (Direct APK & ZIP)" \
             --notes-file release_notes.md \
-            --latest || \
+            --latest || true
+
+          # 2. Upload APK & ZIP assets explicitly
+          echo "Uploading release assets to $TAG_NAME..."
           gh release upload "$TAG_NAME" \
             release_apk/PW-DHYAN.apk \
             release_apk/PW-DHYAN-Direct.zip \
             --clobber
+
+          # 3. Verify assets are attached to release
+          gh release view "$TAG_NAME"
 
       - name: Push Build Log to branch
         if: always()

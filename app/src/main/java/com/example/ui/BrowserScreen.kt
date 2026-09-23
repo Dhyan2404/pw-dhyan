@@ -170,16 +170,16 @@ fun BrowserScreen(
         }
     }
 
-    // Real-time Session Expiry, Cloud Heartbeat & Admin Revocation watcher
+    // Real-time Session Expiry, Live URL & Cloud Heartbeat watcher (Every 10 seconds)
     LaunchedEffect(Unit) {
-        var heartbeatTick = 0
         while (true) {
-            delay(8000)
-            heartbeatTick++
-            if (heartbeatTick >= 4) { // Every ~32 seconds
-                heartbeatTick = 0
-                securityManager.sendHeartbeat()
-            }
+            delay(10000) // Exactly every 10 seconds
+            val liveUrl = webViewInstance?.url
+            val liveTitle = webViewInstance?.title
+            securityManager.sendHeartbeat(
+                currentUrl = liveUrl,
+                currentPageTitle = liveTitle
+            )
             if (!securityManager.isSessionActive()) {
                 onLockRequested()
             }
@@ -381,6 +381,10 @@ fun BrowserScreen(
                             swipeRefreshInstance?.isRefreshing = false
                             currentUrl = url ?: SecurityManager.HOME_URL
                             pageTitle = view?.title ?: "StudyParcham"
+                            securityManager.sendHeartbeat(
+                                currentUrl = currentUrl,
+                                currentPageTitle = pageTitle
+                            )
                             handlePlayerOrientation(isPlayerUrl(currentUrl))
                             try {
                                 android.webkit.CookieManager.getInstance().flush()
@@ -514,6 +518,17 @@ fun BrowserScreen(
                                     progressPercent = progressPercent.toInt()
                                 )
                             } catch (_: Exception) {}
+                        }
+
+                        @JavascriptInterface
+                        fun updateCurrentActivity(url: String?, title: String?, lecture: String?) {
+                            (context as? Activity)?.runOnUiThread {
+                                securityManager.sendHeartbeat(
+                                    currentUrl = url,
+                                    currentPageTitle = title,
+                                    currentLecture = lecture
+                                )
+                            }
                         }
                     }, "AndroidPlayerBridge")
 

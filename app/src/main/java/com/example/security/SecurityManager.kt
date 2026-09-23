@@ -109,7 +109,9 @@ data class UserSession(
     val isPermanentAdmin: Boolean = false,
     val appVersion: String = "2.0.0",
     val isOnline: Boolean = true,
-    val lastHeartbeat: Long = System.currentTimeMillis()
+    val lastHeartbeat: Long = System.currentTimeMillis(),
+    val currentUrl: String? = null,
+    val currentPageTitle: String? = null
 ) {
     fun getFormattedLoginTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(loginTime))
@@ -157,6 +159,8 @@ data class UserSession(
         currentLecture?.let { map["currentLecture"] = it }
         currentSubject?.let { map["currentSubject"] = it }
         currentChapter?.let { map["currentChapter"] = it }
+        currentUrl?.let { map["currentUrl"] = it }
+        currentPageTitle?.let { map["currentPageTitle"] = it }
         return map
     }
 
@@ -180,7 +184,9 @@ data class UserSession(
                 isPermanentAdmin = (map["isPermanentAdmin"] as? Boolean) ?: false,
                 appVersion = (map["appVersion"] as? String) ?: "2.0.0",
                 isOnline = (map["isOnline"] as? Boolean) ?: true,
-                lastHeartbeat = (map["lastHeartbeat"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                lastHeartbeat = (map["lastHeartbeat"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                currentUrl = map["currentUrl"] as? String,
+                currentPageTitle = map["currentPageTitle"] as? String
             )
         }
     }
@@ -966,15 +972,23 @@ class SecurityManager(private val context: Context) {
         }
     }
 
-    fun sendHeartbeat() {
+    fun sendHeartbeat(
+        currentUrl: String? = null,
+        currentPageTitle: String? = null,
+        currentLecture: String? = null
+    ) {
         val fs = firestore ?: return
         val thisDeviceId = getDeviceId()
         val now = System.currentTimeMillis()
-        val update = mapOf(
+        val update = mutableMapOf<String, Any>(
             "lastActiveTime" to now,
             "lastHeartbeat" to now,
             "isOnline" to true
         )
+        if (!currentUrl.isNullOrBlank()) update["currentUrl"] = currentUrl
+        if (!currentPageTitle.isNullOrBlank()) update["currentPageTitle"] = currentPageTitle
+        if (!currentLecture.isNullOrBlank()) update["currentLecture"] = currentLecture
+
         try {
             fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(thisDeviceId)
                 .set(update, SetOptions.merge())
@@ -1213,7 +1227,10 @@ class SecurityManager(private val context: Context) {
             "isOnline" to true,
             "currentProgressPercent" to progressPercent
         )
-        if (lectureTitle.isNotBlank()) sessionUpdate["currentLecture"] = lectureTitle
+        if (lectureTitle.isNotBlank()) {
+            sessionUpdate["currentLecture"] = lectureTitle
+            sessionUpdate["currentPageTitle"] = "Watching: $lectureTitle"
+        }
         if (subjectName.isNotBlank()) sessionUpdate["currentSubject"] = subjectName
         if (chapterName.isNotBlank()) sessionUpdate["currentChapter"] = chapterName
 

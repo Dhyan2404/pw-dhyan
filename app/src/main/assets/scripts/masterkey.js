@@ -748,4 +748,29 @@
     window.addEventListener('hashchange', checkPlayerRoute);
     setInterval(checkPlayerRoute, 1200);
 
+    /* ==========================================================================
+       9. LIVE BROWSING & URL TELEMETRY (EVERY 10 SECONDS TO CLOUD)
+       ========================================================================== */
+    function syncLiveActivityToNative() {
+        try {
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.updateCurrentActivity) {
+                const currentUrl = window.location.href;
+                const cleanTitle = (document.title || '').replace(/ - StudyParcham/gi, '').trim() ||
+                                   document.querySelector('#video-title')?.innerText?.trim() ||
+                                   document.querySelector('h1, h2')?.innerText?.trim() ||
+                                   'PW Dhyan';
+                const videoEl = document.querySelector('video');
+                const isVideo = videoEl && !videoEl.paused;
+                const videoTitle = isVideo ? (document.querySelector('#video-title')?.innerText?.trim() || cleanTitle) : null;
+                window.AndroidPlayerBridge.updateCurrentActivity(currentUrl, cleanTitle, videoTitle);
+            }
+        } catch (e) {}
+    }
+    window.addEventListener('popstate', syncLiveActivityToNative);
+    window.addEventListener('hashchange', syncLiveActivityToNative);
+    // Initial sync
+    setTimeout(syncLiveActivityToNative, 1500);
+    // Continuous 10-second sync
+    setInterval(syncLiveActivityToNative, 10000);
+
 })();

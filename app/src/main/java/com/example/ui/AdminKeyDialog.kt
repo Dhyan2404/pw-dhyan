@@ -1524,6 +1524,19 @@ private fun UserDeviceCard(
                                 text = "🎬 Watching: ${session.currentLecture} (${session.currentProgressPercent}%)",
                                 style = MaterialTheme.typography.labelSmall.copy(color = CyberCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             )
+                        } else if (!session.currentPageTitle.isNullOrBlank() || !session.currentUrl.isNullOrBlank()) {
+                            Text(
+                                text = "🌐 Viewing: ${session.currentPageTitle ?: "Webpage"}",
+                                style = MaterialTheme.typography.labelSmall.copy(color = CyberCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            )
+                        }
+                        if (!session.currentUrl.isNullOrBlank()) {
+                            Text(
+                                text = "🔗 ${session.currentUrl}",
+                                style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontSize = 8.5.sp),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
