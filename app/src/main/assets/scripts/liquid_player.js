@@ -92,15 +92,18 @@
         }, true);
     } catch (e) { }
 
-    const isPlayerPage = window.location.href.includes('player') ||
-                         window.location.href.includes('live') ||
-                         window.location.href.includes('videoId=') ||
-                         window.location.href.includes('vUrl=') ||
-                         (document.querySelector('video, #video-wrapper, .video-js') !== null);
-    if (!isPlayerPage) return;
+    function isPlayerPageActive() {
+        const href = (window.location.href || '').toLowerCase();
+        return href.includes('player') ||
+               href.includes('live') ||
+               href.includes('videoid=') ||
+               href.includes('vurl=') ||
+               href.includes('lectureid=') ||
+               (document.querySelector('video, #video-wrapper, .video-js') !== null);
+    }
 
     try {
-        if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
+        if (isPlayerPageActive() && window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
             window.AndroidPlayerBridge.onLecturePlayerDetected(true);
         }
     } catch (e) { }
@@ -341,77 +344,87 @@
         .shortcut-key { background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%); border: 1px solid rgba(255,255,255,0.35); border-top: 1.2px solid rgba(255,255,255,0.65); border-radius: 8px; padding: 2px 8px; font-size: 0.75rem; font-family: monospace; font-weight: 700; color: var(--lq-accent, #38bdf8); box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), 0 2px 5px rgba(0,0,0,0.2); }
         .shortcut-desc { font-size: 0.8rem; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-        @media (max-width: 768px) {
+        @media (max-width: 900px), (max-height: 520px) {
             #custom-player-hub {
-                bottom: 8px;
-                width: min(calc(100vw - 12px), 540px);
-                padding: 4px 6px;
-                gap: 4px;
+                bottom: 6px;
+                width: min(calc(100vw - 14px), 520px);
+                height: 32px;
+                padding: 2px 8px;
+                gap: 5px;
                 border-radius: 9999px;
-                backdrop-filter: blur(16px);
-                -webkit-backdrop-filter: blur(16px);
+                background: rgba(10, 15, 30, 0.75) !important;
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
             }
-            .hub-btn { width: 28px; height: 28px; font-size: 0.82rem; }
-            #c-rwd, #c-fwd { display: flex !important; width: 28px !important; height: 28px !important; }
-            #c-notes-btn { display: none; }
-            .hub-time { font-size: 0.65rem; min-width: 28px; }
-            .hub-speed-badge { height: 24px !important; padding: 0 5px !important; font-size: 0.68rem !important; }
-            .scrubber-track-container { height: 24px; }
-            .hub-slider::-webkit-slider-thumb { width: 15px; height: 15px; }
+            .hub-btn { width: 24px; height: 24px; font-size: 0.75rem; }
+            #c-play-btn { width: 26px; height: 26px; font-size: 0.8rem; }
+            #c-rwd, #c-fwd { display: flex !important; width: 24px !important; height: 24px !important; font-size: 0.7rem; }
+            #c-notes-btn, #c-shortcuts-btn { display: none !important; }
+            .hub-time { font-size: 0.62rem; min-width: 24px; font-family: monospace; }
+            .hub-speed-badge { height: 20px !important; padding: 0 4px !important; font-size: 0.62rem !important; border-radius: 6px; }
+            .scrubber-track-container { height: 18px; }
+            .hub-slider::-webkit-slider-thumb { width: 12px; height: 12px; }
             .shortcuts-grid { grid-template-columns: 1fr; }
             #lq-top-lecture-hud {
-                top: 8px;
+                top: 6px;
                 left: 50%;
                 right: auto;
-                transform: translateX(-50%) translateY(-70px);
-                max-width: calc(100vw - 12px);
-                padding: 4px 8px;
-                gap: 5px;
-                border-radius: 16px;
+                transform: translateX(-50%) translateY(-60px);
+                max-width: calc(100vw - 14px);
+                height: 28px;
+                padding: 2px 8px;
+                gap: 6px;
+                border-radius: 14px;
+                background: rgba(10, 15, 30, 0.7) !important;
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
             }
             #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud:hover, #lq-top-lecture-hud.active-dropdown {
                 transform: translateX(-50%) translateY(0) !important;
             }
-            .top-hud-title { max-width: 130px; font-size: 0.72rem; }
-            .top-hud-chip { font-size: 0.65rem; padding: 2px 6px; }
-            .top-hud-btn { width: 28px; height: 28px; font-size: 0.85rem; }
+            .top-hud-title { max-width: 140px; font-size: 0.7rem; }
+            .top-hud-chip { font-size: 0.62rem; padding: 1px 6px; }
+            .top-hud-btn { width: 24px; height: 24px; font-size: 0.75rem; }
+            .top-hud-badge { font-size: 0.68rem; padding: 2px 8px; }
             #lq-top-playlist-dropdown {
-                width: min(340px, calc(100vw - 16px));
+                width: min(320px, calc(100vw - 16px));
                 left: 50%;
                 right: auto;
                 transform: translateX(-50%) translateY(-8px) scale(0.96);
-                max-height: 65vh;
+                max-height: 60vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
             #c-settings-menu {
-                width: min(310px, calc(100vw - 16px));
+                width: min(290px, calc(100vw - 16px));
                 right: -6px;
-                bottom: 48px;
-                max-height: 65vh;
+                bottom: 42px;
+                max-height: 60vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
-                padding: 10px 12px;
-                gap: 8px;
+                padding: 8px 10px;
+                gap: 6px;
             }
-            .lq-swatches-grid { grid-template-columns: repeat(6, 1fr); max-height: 95px; }
+            .lq-swatches-grid { grid-template-columns: repeat(6, 1fr); max-height: 85px; }
             #custom-timeline-tray {
                 width: calc(100vw - 16px);
-                bottom: 56px;
-                padding: 10px 12px;
-                max-height: 320px;
-                border-radius: 20px;
+                bottom: 46px;
+                padding: 8px 10px;
+                max-height: 260px;
+                border-radius: 16px;
             }
-            .tray-card { width: 125px; }
-            .tray-card img { height: 75px; }
+            .tray-card { width: 110px; }
+            .tray-card img { height: 65px; }
             #lq-next-lecture-prompt {
-                min-width: 250px;
-                max-width: calc(100vw - 24px);
-                bottom: 56px;
-                right: 12px;
-                padding: 10px 14px;
+                min-width: 240px;
+                max-width: calc(100vw - 20px);
+                bottom: 46px;
+                right: 10px;
+                padding: 8px 12px;
             }
-            #lq-osd-hud { top: 55px; font-size: 0.8rem; padding: 5px 14px; }
+            #lq-osd-hud { top: 46px; font-size: 0.75rem; padding: 4px 12px; }
         }
     `;
     (document.head || document.documentElement).appendChild(style);
@@ -1274,14 +1287,24 @@
                         showOSD('<i class="fas fa-forward" style="color:var(--lq-accent, #38bdf8)"></i>', '+10s');
                         showPlayPausePulse(true);
                     } else {
-                        togglePlay();
+                        // Center double-tap: toggle HUD visibility without stopping video
+                        const isHubActive = hub.classList.contains('user-active');
+                        if (isHubActive) {
+                            hub.classList.remove('user-active');
+                            topHud.classList.remove('user-active');
+                        } else {
+                            hub.classList.add('user-active');
+                            topHud.classList.add('user-active');
+                            scheduleIdleHide(3500);
+                            scheduleTopHudIdleHide(3500);
+                        }
                     }
                 } else {
                     lastTouchEndTime = now;
                     lastTouchPos = { x: touch.clientX, y: touch.clientY };
 
                     setTimeout(() => {
-                        if (Date.now() - lastTouchEndTime >= 300) {
+                        if (Date.now() - lastTouchEndTime >= 280) {
                             const isHubActive = hub.classList.contains('user-active');
                             if (isHubActive) {
                                 hub.classList.remove('user-active');
@@ -1289,11 +1312,11 @@
                             } else {
                                 hub.classList.add('user-active');
                                 topHud.classList.add('user-active');
-                                scheduleIdleHide(3800);
-                                scheduleTopHudIdleHide(3800);
+                                scheduleIdleHide(3500);
+                                scheduleTopHudIdleHide(3500);
                             }
                         }
-                    }, 310);
+                    }, 290);
                 }
             }
         }, { passive: true });
@@ -1358,8 +1381,27 @@
                 scheduleIdleHide(2500);
             }
         }
-        playBtn.onclick = () => togglePlay();
-        video.onclick = () => togglePlay();
+        playBtn.onclick = (e) => {
+            if (e) e.stopPropagation();
+            togglePlay();
+        };
+        // Tapping/clicking video ONLY toggles HUD controls visibility — NEVER pauses or stops playback!
+        video.onclick = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const isHubActive = hub.classList.contains('user-active');
+            if (isHubActive) {
+                hub.classList.remove('user-active');
+                topHud.classList.remove('user-active');
+            } else {
+                hub.classList.add('user-active');
+                topHud.classList.add('user-active');
+                scheduleIdleHide(3500);
+                scheduleTopHudIdleHide(3500);
+            }
+        };
 
         const rwdBtn = hub.querySelector('#c-rwd');
         const fwdBtn = hub.querySelector('#c-fwd');
@@ -3051,25 +3093,69 @@
         setTimeout(attemptResumePlayback, 2500);
     }
 
+    let _liquidCurrentVideo = null;
     function tryMountLiquidPlayer() {
-        if (document.getElementById('custom-player-hub')) return;
+        const existingHub = document.getElementById('custom-player-hub');
         const video = document.getElementById('video') || document.querySelector('#video-wrapper video, .video-js video, video');
-        if (video) {
-            try {
-                mountLiquidPlayer();
-            } catch (err) {
-                console.error("[LiquidPlayer] Mount error:", err);
+        if (!video) return;
+
+        if (existingHub) {
+            // In Single Page Apps, clicking another video lecture replaces the <video> element.
+            // If the video element changed or old hub is orphaned, clean up and re-mount!
+            if (_liquidCurrentVideo && _liquidCurrentVideo !== video) {
+                try { existingHub.remove(); } catch (e) {}
+                const oldTop = document.getElementById('lq-top-lecture-hud');
+                if (oldTop) try { oldTop.remove(); } catch (e) {}
+            } else {
+                return;
             }
-        } else {
-            setTimeout(tryMountLiquidPlayer, 350);
+        }
+
+        try {
+            _liquidCurrentVideo = video;
+            mountLiquidPlayer();
+        } catch (err) {
+            console.error("[LiquidPlayer] Mount error:", err);
         }
     }
 
+    function checkAndMountPlayer() {
+        if (isPlayerPageActive()) {
+            try {
+                if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
+                    window.AndroidPlayerBridge.onLecturePlayerDetected(true);
+                }
+            } catch (e) { }
+            tryMountLiquidPlayer();
+        }
+    }
+
+    // Intercept SPA client-side routing (pushState, replaceState, popstate, hashchange)
+    try {
+        const _origPush = history.pushState;
+        history.pushState = function () {
+            _origPush.apply(this, arguments);
+            setTimeout(checkAndMountPlayer, 150);
+            setTimeout(checkAndMountPlayer, 600);
+        };
+        const _origReplace = history.replaceState;
+        history.replaceState = function () {
+            _origReplace.apply(this, arguments);
+            setTimeout(checkAndMountPlayer, 150);
+            setTimeout(checkAndMountPlayer, 600);
+        };
+        window.addEventListener('popstate', checkAndMountPlayer);
+        window.addEventListener('hashchange', checkAndMountPlayer);
+    } catch (e) { }
+
+    // Continuous lightweight watcher for DOM/route changes
+    setInterval(checkAndMountPlayer, 800);
+
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        tryMountLiquidPlayer();
+        checkAndMountPlayer();
     } else {
-        document.addEventListener('DOMContentLoaded', tryMountLiquidPlayer);
-        window.addEventListener('load', tryMountLiquidPlayer);
-        setTimeout(tryMountLiquidPlayer, 350);
+        document.addEventListener('DOMContentLoaded', checkAndMountPlayer);
+        window.addEventListener('load', checkAndMountPlayer);
+        setTimeout(checkAndMountPlayer, 350);
     }
 })();

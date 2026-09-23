@@ -64,25 +64,39 @@ class ScriptManager(private val context: Context) {
             return
         }
 
-        val combinedScript = buildString {
-            append("/* [AI Studio Study Browser - Auto Injected Scripts] */\n")
+        webView.post {
             if (masterkey.isNotBlank()) {
-                append("try { \n")
-                append(masterkey)
-                append("\n} catch (e) { console.error('[Masterkey Injection Error]:', e); }\n")
+                webView.evaluateJavascript(
+                    """
+                    (function() {
+                        try {
+                            $masterkey
+                        } catch(e) {
+                            console.error('[Masterkey Injection Error]:', e);
+                        }
+                    })();
+                    """.trimIndent(),
+                    null
+                )
             }
             if (liquidPlayer.isNotBlank()) {
-                append("try { \n")
-                append(liquidPlayer)
-                append("\n} catch (e) { console.error('[LiquidPlayer Injection Error]:', e); }\n")
-            }
-        }
-
-        webView.post {
-            webView.evaluateJavascript(combinedScript) { result ->
-                lastInjectionTime = System.currentTimeMillis()
-                injectionCount++
-                Log.d(TAG, "Scripts injected successfully (#$injectionCount), result: $result")
+                webView.evaluateJavascript(
+                    """
+                    (function() {
+                        try {
+                            $liquidPlayer
+                        } catch(e) {
+                            console.error('[LiquidPlayer Injection Error]:', e);
+                        }
+                    })();
+                    """.trimIndent()
+                ) { result ->
+                    lastInjectionTime = System.currentTimeMillis()
+                    injectionCount++
+                    Log.d(TAG, "LiquidPlayer injected successfully (#$injectionCount), result: $result")
+                    onResult?.invoke(true)
+                }
+            } else {
                 onResult?.invoke(true)
             }
         }

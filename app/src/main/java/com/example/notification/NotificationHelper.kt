@@ -37,9 +37,14 @@ class NotificationHelper(private val context: Context) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Periodic notifications for study portal users"
+                description = "Important alerts & reminders for PW DHYAN study portal"
+                enableLights(true)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 150, 250)
+                setShowBadge(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
@@ -47,6 +52,11 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun sendDhyanNotification() {
+        val notificationManagerCompat = NotificationManagerCompat.from(context)
+        if (!notificationManagerCompat.areNotificationsEnabled()) {
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     context,
@@ -61,21 +71,33 @@ class NotificationHelper(private val context: Context) {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("PW DHYAN")
             .setContentText("Built with ❤️ by Dhyan • Dedicated Study Browser")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
 
-        with(NotificationManagerCompat.from(context)) {
+        with(notificationManagerCompat) {
             notify(NOTIFICATION_ID, builder.build())
         }
     }
 
     fun sendCustomNotification(title: String, message: String, notificationId: Int = NOTIFICATION_ID + (0..999).random()) {
+        val notificationManagerCompat = NotificationManagerCompat.from(context)
+        if (!notificationManagerCompat.areNotificationsEnabled()) {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                android.widget.Toast.makeText(context, "Notifications are disabled in device settings for PW DHYAN!", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    android.widget.Toast.makeText(context, "Notification permission not granted! Please allow notifications in App Settings.", android.widget.Toast.LENGTH_SHORT).show()
+                }
                 return
             }
         }
@@ -86,9 +108,10 @@ class NotificationHelper(private val context: Context) {
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setAutoCancel(true)
 
-        with(NotificationManagerCompat.from(context)) {
+        with(notificationManagerCompat) {
             notify(notificationId, builder.build())
         }
     }

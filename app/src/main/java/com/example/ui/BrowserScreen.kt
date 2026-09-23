@@ -340,6 +340,13 @@ fun BrowserScreen(
                             view?.let { scriptManager.injectPreloadSecurity(it) }
                         }
 
+                        override fun onPageCommitVisible(view: WebView?, url: String?) {
+                            super.onPageCommitVisible(view, url)
+                            view?.let { wv ->
+                                scriptManager.injectAll(wv)
+                            }
+                        }
+
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             isLoading = false

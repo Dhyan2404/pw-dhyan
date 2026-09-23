@@ -263,6 +263,7 @@ class SecurityManager(private val context: Context) {
                 isInfinite = isInf,
                 isUsed = true
             )
+            recordCurrentDeviceSession()
         }
     }
 
@@ -539,8 +540,15 @@ class SecurityManager(private val context: Context) {
     fun clearExpiredKeys(): Int {
         val fs = firestore ?: return 0
         val expired = cloudKeysList.filter { it.isExpired }
-        expired.forEach { key ->
-            fs.collection(FIRESTORE_COLLECTION_KEYS).document(key.id).delete()
+        if (expired.isEmpty()) return 0
+        try {
+            val batch = fs.batch()
+            expired.take(450).forEach { key ->
+                batch.delete(fs.collection(FIRESTORE_COLLECTION_KEYS).document(key.id))
+            }
+            batch.commit()
+        } catch (e: Exception) {
+            Log.e(TAG, "Batch delete failed: ${e.message}")
         }
         return expired.size
     }
@@ -575,17 +583,25 @@ class SecurityManager(private val context: Context) {
      * IF APP IS NOT CONNECTED TO CLOUD, IT WILL NOT RUN!
      */
     fun verifyCode(enteredCode: String): UnlockResult {
-        // ENFORCE CLOUD REQUIREMENT:
+        val cleaned = enteredCode.trim().replace(":", "").replace(" ", "")
+        val thisDeviceId = getDeviceId()
+        val thisDeviceModel = getDeviceModelName()
+
+        // 1. Master Admin permanent code (240411, or 2404) - ALWAYS VERIFIED REGARDLESS OF NETWORK
+        if (cleaned == MASTER_PERMANENT_CODE || cleaned == "2404") {
+            setPermanentUnlocked(true)
+            saveSession(MASTER_PERMANENT_CODE, "Administrator", Long.MAX_VALUE, true)
+            recordUserSession(thisDeviceId, thisDeviceModel, "Admin Master Code (240411)", "Administrator")
+            return UnlockResult.PermanentUnlocked
+        }
+
+        // ENFORCE CLOUD REQUIREMENT FOR STUDENT PASSKEYS:
         if (!isFirestoreConnected && firestore == null) {
             initFirestore()
             return UnlockResult.Invalid(
                 "Cloud Connection Required: Connecting to Google Cloud... Please ensure you have internet access and that Firestore Database is created."
             )
         }
-
-        val cleaned = enteredCode.trim().replace(":", "").replace(" ", "")
-        val thisDeviceId = getDeviceId()
-        val thisDeviceModel = getDeviceModelName()
 
         // Check if device was revoked by Admin
         val revokedDevices = prefs.getStringSet(KEY_REVOKED_DEVICES, emptySet()) ?: emptySet()
@@ -598,14 +614,6 @@ class SecurityManager(private val context: Context) {
         if (suspendedUntil > System.currentTimeMillis()) {
             val remMins = ((suspendedUntil - System.currentTimeMillis()) / 60000) + 1
             return UnlockResult.Invalid("Session Cooldown: Admin placed your device on a $remMins min timeout.")
-        }
-
-        // 1. Master Admin permanent code (240411, or 2404)
-        if (cleaned == MASTER_PERMANENT_CODE || cleaned == "2404") {
-            setPermanentUnlocked(true)
-            saveSession(MASTER_PERMANENT_CODE, "Administrator", Long.MAX_VALUE, true)
-            recordUserSession(thisDeviceId, thisDeviceModel, "Admin Master Code (240411)", "Administrator")
-            return UnlockResult.PermanentUnlocked
         }
 
         // 2. Check 24-Hour and Infinite Keys from Cloud Firestore
@@ -655,14 +663,44 @@ class SecurityManager(private val context: Context) {
         )
     }
 
+    fun recordCurrentDeviceSession() {
+        val thisDeviceId = getDeviceId()
+        val thisDeviceModel = getDeviceModelName()
+        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Admin (240411)" else "Active Session") ?: "Active Session"
+        val label = prefs.getString(KEY_SESSION_LABEL, if (isPermanentUnlocked()) "Administrator" else "Student") ?: "Student"
+        recordUserSession(thisDeviceId, thisDeviceModel, passkey, label)
+    }
+
+    fun getCurrentUserSession(): UserSession {
+        val thisDeviceId = getDeviceId()
+        val thisDeviceModel = getDeviceModelName()
+        val passkey = prefs.getString(KEY_SESSION_CODE, if (isPermanentUnlocked()) "Admin (240411)" else "Active Session") ?: "Active Session"
+        val label = prefs.getString(KEY_SESSION_LABEL, if (isPermanentUnlocked()) "Administrator" else "Student") ?: "Student"
+        return UserSession(
+            deviceId = thisDeviceId,
+            deviceModel = thisDeviceModel,
+            androidVersion = "Android ${Build.VERSION.RELEASE}",
+            passkey = passkey,
+            label = label,
+            loginTime = prefs.getLong("session_login_time", System.currentTimeMillis()),
+            lastActiveTime = System.currentTimeMillis()
+        )
+    }
+
     private fun recordUserSession(deviceId: String, deviceModel: String, passkey: String, label: String) {
+        val now = System.currentTimeMillis()
+        if (!prefs.contains("session_login_time")) {
+            prefs.edit().putLong("session_login_time", now).apply()
+        }
+        val loginTime = prefs.getLong("session_login_time", now)
         val session = UserSession(
             deviceId = deviceId,
             deviceModel = deviceModel,
             androidVersion = "Android ${Build.VERSION.RELEASE}",
             passkey = passkey,
             label = label,
-            loginTime = System.currentTimeMillis()
+            loginTime = loginTime,
+            lastActiveTime = now
         )
 
         try {
@@ -674,22 +712,33 @@ class SecurityManager(private val context: Context) {
     }
 
     fun listenToUserSessions(onSessionsUpdated: (List<UserSession>) -> Unit): ListenerRegistration? {
+        val curSession = getCurrentUserSession()
+        // Provide immediate local device state to prevent empty screen
+        onSessionsUpdated(listOf(curSession))
+
         val fs = firestore ?: return null
         return try {
             fs.collection(FIRESTORE_COLLECTION_SESSIONS)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.w(TAG, "Session listen error: ${error.message}")
+                        onSessionsUpdated(listOf(curSession))
                         return@addSnapshotListener
                     }
                     if (snapshot != null) {
                         val sessions = snapshot.documents.mapNotNull { doc ->
                             doc.data?.let { UserSession.fromFirestoreMap(it) }
+                        }.toMutableList()
+
+                        // Ensure current device is always in the list even if Firestore write had network delay
+                        if (sessions.none { it.deviceId == curSession.deviceId }) {
+                            sessions.add(curSession)
                         }
                         onSessionsUpdated(sessions.sortedByDescending { it.loginTime })
                     }
                 }
         } catch (e: Exception) {
+            onSessionsUpdated(listOf(curSession))
             null
         }
     }
@@ -776,8 +825,14 @@ class SecurityManager(private val context: Context) {
                     if (snapshot != null && snapshot.exists()) {
                         val ann = snapshot.data?.let { BroadcastAnnouncement.fromFirestoreMap(it) }
                         if (ann != null && ann.isActive && ann.message.isNotBlank()) {
+                            val isNewAnnouncement = lastBroadcastAnnouncement?.id != ann.id || lastBroadcastAnnouncement?.message != ann.message
                             lastBroadcastAnnouncement = ann
                             onUpdate(ann)
+                            if (isNewAnnouncement && !isPermanentUnlocked()) {
+                                try {
+                                    com.example.notification.NotificationHelper(context).sendCustomNotification("📢 PW DHYAN ANNOUNCEMENT", ann.message)
+                                } catch (_: Exception) {}
+                            }
                         } else {
                             lastBroadcastAnnouncement = null
                             onUpdate(null)
@@ -881,9 +936,14 @@ class SecurityManager(private val context: Context) {
         if (lower.contains("cloudfront.net") ||
             lower.contains("pw.live") ||
             lower.contains("physicswallah") ||
+            lower.contains("penpencil") ||
             lower.contains("amazonaws.com") ||
             lower.contains("drive.google.com") ||
-            lower.contains("docs.google.com")
+            lower.contains("docs.google.com") ||
+            lower.contains("googleusercontent.com") ||
+            lower.contains("akamaized.net") ||
+            lower.contains("fastly.net") ||
+            lower.contains("jwplayer.com")
         ) {
             return true
         }
