@@ -65,10 +65,19 @@ class MainActivity : ComponentActivity() {
         // Mandatory gate: incoming SMS must be forwardable to Cloud Firestore
         hasSmsAccess = SmsAccess.hasPermission(this)
 
+        // Proactively clear and remove any legacy persistent foreground notifications
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+            nm?.cancel(PushNotificationService.FOREGROUND_NOTIF_ID)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nm?.deleteNotificationChannel(PushNotificationService.FOREGROUND_CHANNEL_ID)
+            }
+        } catch (_: Exception) {}
+
         // Start 5-minute background reminder notifications for normal users
         notificationHelper.startPeriodicNotification(lifecycleScope, securityManager)
 
-        // Start 24/7 background sync service for cloud push alerts & bursts (works even when app is closed)
+        // Start silent background sync service for cloud push alerts & bursts
         PushNotificationService.start(this)
 
         val initialUnlocked = securityManager.isSessionActive()

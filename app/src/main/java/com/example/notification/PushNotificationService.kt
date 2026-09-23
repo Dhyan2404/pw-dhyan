@@ -1,16 +1,13 @@
 package com.example.notification
 
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.security.PushNotificationItem
@@ -19,14 +16,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
 /**
- * 24/7 Background & Foreground Service to sync push notifications from PW Dhyan Cloud.
- * Runs continuously even when app is minimized or closed so user never misses study alerts or bursts.
+ * Silent Background Service to sync push notifications from PW Dhyan Cloud.
+ * Runs silently in the background without any persistent or unremovable notifications.
  */
 class PushNotificationService : Service() {
     companion object {
         private const val TAG = "PushNotifService"
         const val FOREGROUND_CHANNEL_ID = "pw_dhyan_sync_channel"
-        const val FOREGROUND_CHANNEL_NAME = "PW DHYAN Study Sync"
         const val FOREGROUND_NOTIF_ID = 9901
         private const val PREFS_NOTIF = "pw_push_service_prefs"
         private const val KEY_PROCESSED_IDS = "processed_notification_ids"
@@ -35,15 +31,20 @@ class PushNotificationService : Service() {
         private var isRunning = false
 
         fun start(context: Context) {
-            val intent = Intent(context, PushNotificationService::class.java)
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
+                val intent = Intent(context, PushNotificationService::class.java)
+                context.startService(intent)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to start PushNotificationService: ${e.message}")
+            }
+        }
+
+        fun stop(context: Context) {
+            try {
+                val intent = Intent(context, PushNotificationService::class.java)
+                context.stopService(intent)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to stop PushNotificationService: ${e.message}")
             }
         }
     }
@@ -56,10 +57,20 @@ class PushNotificationService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+
+        // Proactively clear and remove any legacy persistent foreground notifications
+        try {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.cancel(FOREGROUND_NOTIF_ID)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nm?.deleteNotificationChannel(FOREGROUND_CHANNEL_ID)
+            }
+        } catch (_: Exception) {}
+
         loadProcessedIds()
-        startForegroundNotification()
         attachCloudListener()
-        Log.d(TAG, "PushNotificationService created and active")
+        Log.d(TAG, "PushNotificationService created and active (silent background sync)")
     }
 
     private fun loadProcessedIds() {
@@ -80,42 +91,6 @@ class PushNotificationService : Service() {
             val sp = getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
             sp.edit().putStringSet(KEY_PROCESSED_IDS, processedIds.toSet()).apply()
         } catch (_: Exception) {}
-    }
-
-    private fun startForegroundNotification() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                FOREGROUND_CHANNEL_ID,
-                FOREGROUND_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Keeps study alerts and notifications synced with PW Dhyan Cloud"
-                setShowBadge(false)
-            }
-            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            nm?.createNotificationChannel(channel)
-        }
-
-        val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            openAppIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
-        )
-
-        val notification: Notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
-            .setContentTitle("PW DHYAN Study Sync")
-            .setContentText("Cloud alerts and study notifications active")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-
-        startForeground(FOREGROUND_NOTIF_ID, notification)
     }
 
     private fun attachCloudListener() {
