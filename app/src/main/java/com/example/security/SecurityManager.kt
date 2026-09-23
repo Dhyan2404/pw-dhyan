@@ -156,6 +156,43 @@ data class UserSession(
     }
 }
 
+/**
+ * Global broadcast announcement sent by Admin to all active student devices.
+ */
+data class BroadcastAnnouncement(
+    val id: String = UUID.randomUUID().toString(),
+    val message: String,
+    val author: String = "Admin Dhyan",
+    val timestamp: Long = System.currentTimeMillis(),
+    val isActive: Boolean = true
+) {
+    fun getFormattedTime(): String {
+        return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp))
+    }
+
+    fun toFirestoreMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "message" to message,
+            "author" to author,
+            "timestamp" to timestamp,
+            "isActive" to isActive
+        )
+    }
+
+    companion object {
+        fun fromFirestoreMap(map: Map<String, Any?>): BroadcastAnnouncement {
+            return BroadcastAnnouncement(
+                id = (map["id"] as? String) ?: UUID.randomUUID().toString(),
+                message = (map["message"] as? String) ?: "",
+                author = (map["author"] as? String) ?: "Admin",
+                timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
+                isActive = (map["isActive"] as? Boolean) ?: true
+            )
+        }
+    }
+}
+
 sealed class UnlockResult {
     data object PermanentUnlocked : UnlockResult()
     data class KeyUnlocked(val key: AccessKey) : UnlockResult()
@@ -189,6 +226,8 @@ class SecurityManager(private val context: Context) {
         const val ALLOWED_DOMAIN = "pw.studyparcham.in"
         private const val FIRESTORE_COLLECTION_KEYS = "access_keys"
         private const val FIRESTORE_COLLECTION_SESSIONS = "user_sessions"
+        private const val FIRESTORE_COLLECTION_ANNOUNCEMENTS = "announcements"
+        private const val ANNOUNCEMENT_DOC_ID = "latest_announcement"
         private const val TAG = "FirestoreSecurity"
     }
 
@@ -419,6 +458,59 @@ class SecurityManager(private val context: Context) {
         return newKey
     }
 
+    /**
+     * Rapidly generates a batch of passkeys and saves them simultaneously to Firestore.
+     */
+    fun createBatchKeys(
+        count: Int,
+        durationMillis: Long = 24 * 60 * 60 * 1000L,
+        isInfinite: Boolean = false,
+        labelPrefix: String = "Student Batch"
+    ): List<AccessKey> {
+        val allExisting = getAllKeys()
+        val existingCodes = allExisting.map { it.code }.toMutableSet()
+        val generatedList = mutableListOf<AccessKey>()
+
+        val now = System.currentTimeMillis()
+        for (i in 1..count) {
+            var candidate: String
+            do {
+                candidate = (100000..999999).random().toString()
+            } while (candidate == MASTER_PERMANENT_CODE || candidate == "2404" || existingCodes.contains(candidate))
+            existingCodes.add(candidate)
+
+            val key = AccessKey(
+                code = candidate,
+                label = "$labelPrefix #$i",
+                createdAt = now,
+                durationMillis = durationMillis,
+                isInfinite = isInfinite,
+                isUsed = false
+            )
+            generatedList.add(key)
+        }
+
+        val fs = firestore
+        if (fs != null) {
+            val batch = fs.batch()
+            generatedList.forEach { key ->
+                val docRef = fs.collection(FIRESTORE_COLLECTION_KEYS).document(key.id)
+                batch.set(docRef, key.toFirestoreMap())
+            }
+            batch.commit()
+                .addOnSuccessListener {
+                    Log.d(TAG, "Batch of ${generatedList.size} keys saved to Cloud Firestore")
+                    showToast("Batch of ${generatedList.size} keys saved to Google Cloud!")
+                }
+                .addOnFailureListener { e ->
+                    Log.e(TAG, "Batch key creation error: ${e.message}")
+                    showToast("Cloud Error: ${e.localizedMessage}")
+                }
+        }
+
+        return generatedList
+    }
+
     fun removeKey(keyId: String): Boolean {
         val fs = firestore ?: return false
         fs.collection(FIRESTORE_COLLECTION_KEYS).document(keyId).delete()
@@ -621,6 +713,61 @@ class SecurityManager(private val context: Context) {
         firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
             ?.update("suspendedUntil", 0L)
             ?.addOnCompleteListener { onComplete?.invoke(true) }
+    }
+
+    fun publishAnnouncement(message: String, author: String = "Admin Dhyan", onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            onComplete?.invoke(false)
+            return
+        }
+        val announcement = BroadcastAnnouncement(
+            message = message.trim(),
+            author = author,
+            timestamp = System.currentTimeMillis(),
+            isActive = true
+        )
+        fs.collection(FIRESTORE_COLLECTION_ANNOUNCEMENTS).document(ANNOUNCEMENT_DOC_ID)
+            .set(announcement.toFirestoreMap())
+            .addOnSuccessListener {
+                showToast("Announcement Broadcast Live to all students!")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed to broadcast: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    fun clearAnnouncement(onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: return
+        fs.collection(FIRESTORE_COLLECTION_ANNOUNCEMENTS).document(ANNOUNCEMENT_DOC_ID)
+            .update("isActive", false)
+            .addOnCompleteListener { onComplete?.invoke(true) }
+    }
+
+    fun listenToAnnouncements(onUpdate: (BroadcastAnnouncement?) -> Unit): ListenerRegistration? {
+        val fs = firestore ?: return null
+        return try {
+            fs.collection(FIRESTORE_COLLECTION_ANNOUNCEMENTS).document(ANNOUNCEMENT_DOC_ID)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        Log.w(TAG, "Announcement listen error: ${error.message}")
+                        return@addSnapshotListener
+                    }
+                    if (snapshot != null && snapshot.exists()) {
+                        val ann = snapshot.data?.let { BroadcastAnnouncement.fromFirestoreMap(it) }
+                        if (ann != null && ann.isActive && ann.message.isNotBlank()) {
+                            onUpdate(ann)
+                        } else {
+                            onUpdate(null)
+                        }
+                    } else {
+                        onUpdate(null)
+                    }
+                }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun getCurrentAccessRemainingFormatted(): String {

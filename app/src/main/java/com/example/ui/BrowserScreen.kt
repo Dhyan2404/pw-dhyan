@@ -1,11 +1,15 @@
 package com.example.ui
 
 import android.annotation.SuppressLint
+import android.app.DownloadManager
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Environment
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -38,7 +42,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -81,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.script.ScriptManager
+import com.example.security.BroadcastAnnouncement
 import com.example.security.SecurityManager
 import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyberCyan
@@ -120,6 +127,18 @@ fun BrowserScreen(
     var showAdminAuthDialog by remember { mutableStateOf(false) }
     var isSettingsPillVisible by remember { mutableStateOf(true) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
+    var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
+
+    // Listen for live broadcast announcements from Admin
+    DisposableEffect(securityManager) {
+        val reg = securityManager.listenToAnnouncements { ann ->
+            activeAnnouncement = ann
+        }
+        onDispose {
+            reg?.remove()
+        }
+    }
 
     // Auto-hide settings pill after 5 seconds of inactivity on main page
     LaunchedEffect(lastInteractionTime) {
@@ -209,6 +228,27 @@ fun BrowserScreen(
                             request: WebResourceRequest?
                         ): Boolean {
                             val url = request?.url?.toString() ?: return false
+
+                            // Handle direct PDF or study note downloads
+                            if (url.endsWith(".pdf", ignoreCase = true) ||
+                                url.contains(".pdf?", ignoreCase = true) ||
+                                url.endsWith(".zip", ignoreCase = true) ||
+                                url.endsWith(".docx", ignoreCase = true)
+                            ) {
+                                try {
+                                    val fileName = URLUtil.guessFileName(url, null, "application/pdf")
+                                    val req = DownloadManager.Request(Uri.parse(url)).apply {
+                                        setTitle(fileName)
+                                        setDescription("Downloading Study Notes...")
+                                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                                    }
+                                    (context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager)?.enqueue(req)
+                                    toastMessage = "Downloading: $fileName"
+                                    return true
+                                } catch (_: Exception) {}
+                            }
+
                             if (securityManager.isUrlAllowed(url)) {
                                 return false // Allow navigation within pw.studyparcham.in
                             } else {
@@ -282,6 +322,37 @@ fun BrowserScreen(
                         }
                     }
 
+                    // Set DownloadListener for PDFs, notes, assignments
+                    setDownloadListener { downloadUrl, userAgent, contentDisposition, mimetype, _ ->
+                        try {
+                            val fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimetype)
+                            val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
+                                setMimeType(mimetype)
+                                addRequestHeader("User-Agent", userAgent)
+                                val cookies = android.webkit.CookieManager.getInstance().getCookie(downloadUrl)
+                                if (cookies != null) {
+                                    addRequestHeader("Cookie", cookies)
+                                }
+                                setTitle(fileName)
+                                setDescription("Downloading study notes / PDF...")
+                                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+                                setAllowedOverMetered(true)
+                                setAllowedOverRoaming(true)
+                            }
+                            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+                            dm?.enqueue(request)
+                            toastMessage = "Downloading: $fileName • Check notifications"
+                        } catch (e: Exception) {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(downloadUrl))
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                toastMessage = "Download failed: ${e.localizedMessage}"
+                            }
+                        }
+                    }
+
                     // Initial Load
                     loadUrl(SecurityManager.HOME_URL)
                     webViewInstance = this
@@ -343,6 +414,89 @@ fun BrowserScreen(
                 color = CyberCyan,
                 trackColor = Color.Transparent
             )
+        }
+
+        // Live Broadcast Announcement Banner (from Admin)
+        AnimatedVisibility(
+            visible = activeAnnouncement != null && activeAnnouncement?.id != dismissedAnnouncementId && customVideoView == null,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 14.dp, start = 12.dp, end = 12.dp)
+        ) {
+            val announcement = activeAnnouncement
+            if (announcement != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A).copy(alpha = 0.96f)),
+                    shape = RoundedCornerShape(14.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GoldenAccent.copy(alpha = 0.75f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(GoldenAccent.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Campaign,
+                                contentDescription = "Announcement",
+                                tint = GoldenAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "ANNOUNCEMENT • ${announcement.author}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = GoldenAccent,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = announcement.getFormattedTime(),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = TextMuted,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                            }
+                            Text(
+                                text = announcement.message,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp
+                                )
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { dismissedAnnouncementId = announcement.id },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Dismiss",
+                                tint = TextMuted,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // Blocked Navigation Notice Banner

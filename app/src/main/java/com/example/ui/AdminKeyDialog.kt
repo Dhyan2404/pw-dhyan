@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -80,6 +81,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.security.AccessKey
+import com.example.security.BroadcastAnnouncement
 import com.example.security.SecurityManager
 import com.example.security.UserSession
 import com.example.ui.theme.CrimsonAlert
@@ -101,7 +103,7 @@ fun AdminKeyDialog(
     onRevokeAdmin: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Passkeys, 1 = User Devices
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Passkeys, 1 = User Devices, 2 = Announcements
     var keysList by remember { mutableStateOf(securityManager.getAllKeys()) }
     var userSessions by remember { mutableStateOf<List<UserSession>>(emptyList()) }
     var showCreateForm by remember { mutableStateOf(false) }
@@ -110,12 +112,15 @@ fun AdminKeyDialog(
     var isInfiniteSelected by remember { mutableStateOf(false) }
     var copiedKeyId by remember { mutableStateOf<String?>(null) }
     var isSyncing by remember { mutableStateOf(false) }
+    var announcementText by remember { mutableStateOf("") }
+    var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
+    var isPublishingAnnouncement by remember { mutableStateOf(false) }
 
     fun refreshKeys() {
         keysList = securityManager.getAllKeys()
     }
 
-    // Real-time Firestore listeners for Keys and User Sessions
+    // Real-time Firestore listeners for Keys, User Sessions, and Live Announcements
     DisposableEffect(securityManager) {
         val keysListener: (List<AccessKey>) -> Unit = { updated ->
             keysList = updated
@@ -126,9 +131,14 @@ fun AdminKeyDialog(
             userSessions = sessions
         }
 
+        val announcementRegistration = securityManager.listenToAnnouncements { announcement ->
+            activeAnnouncement = announcement
+        }
+
         onDispose {
             securityManager.removeKeysUpdateListener(keysListener)
             sessionsRegistration?.remove()
+            announcementRegistration?.remove()
         }
     }
 
@@ -273,7 +283,7 @@ fun AdminKeyDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Luxury Tab Bar (Passkeys vs User Devices)
+                // Luxury Tab Bar (Passkeys vs User Devices vs Notices)
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = DarkBackground,
@@ -293,12 +303,12 @@ fun AdminKeyDialog(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         text = {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(13.dp))
                                 Text(
-                                    text = "Passkeys (${keysList.size})",
+                                    text = "Keys (${keysList.size})",
                                     fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.5.sp,
                                     color = if (selectedTab == 0) CyberCyan else TextMuted
                                 )
                             }
@@ -308,13 +318,28 @@ fun AdminKeyDialog(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
                         text = {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Icon(Icons.Default.PhoneAndroid, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Default.PhoneAndroid, contentDescription = null, modifier = Modifier.size(13.dp))
                                 Text(
-                                    text = "User Devices (${userSessions.size})",
+                                    text = "Devices (${userSessions.size})",
                                     fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 12.sp,
+                                    fontSize = 11.5.sp,
                                     color = if (selectedTab == 1) GoldenAccent else TextMuted
+                                )
+                            }
+                        }
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Text(
+                                    text = if (activeAnnouncement?.isActive == true) "Notice 🔴" else "Notice",
+                                    fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 11.5.sp,
+                                    color = if (selectedTab == 2) CyberCyan else TextMuted
                                 )
                             }
                         }
@@ -328,7 +353,7 @@ fun AdminKeyDialog(
                     // Action Bar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
                             onClick = {
@@ -340,13 +365,41 @@ fun AdminKeyDialog(
                                 .weight(1f)
                                 .height(42.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = CyberCyan),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF030712), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF030712), modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "+ 6-Digit Key",
-                                style = MaterialTheme.typography.labelLarge.copy(
+                                text = "+ 1 Key",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = Color(0xFF030712),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val batch = securityManager.createBatchKeys(10)
+                                refreshKeys()
+                                val codesText = batch.mapIndexed { i, k -> "${i + 1}. ${k.code}" }.joinToString("\n")
+                                val fullMessage = "🔑 PW DHYAN ACCESS PASSKEYS (24-Hour Access):\n$codesText\n\nEnter any 6-digit code above on the lock screen."
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("PW Dhyan Batch Keys", fullMessage)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "10 passkeys generated & copied to clipboard!", Toast.LENGTH_LONG).show()
+                            },
+                            modifier = Modifier.height(42.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null, tint = Color(0xFF030712), modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Batch 10",
+                                style = MaterialTheme.typography.labelMedium.copy(
                                     color = Color(0xFF030712),
                                     fontWeight = FontWeight.Bold
                                 )
@@ -363,10 +416,11 @@ fun AdminKeyDialog(
                                 1.dp,
                                 if (showCreateForm) GoldenAccent else CyberCyan.copy(alpha = 0.3f)
                             ),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
                             Text(
-                                text = if (showCreateForm) "Close" else "Custom Key",
+                                text = if (showCreateForm) "Close" else "Custom",
                                 style = MaterialTheme.typography.labelMedium.copy(
                                     color = if (showCreateForm) GoldenAccent else TextPrimary,
                                     fontWeight = FontWeight.SemiBold
@@ -576,7 +630,7 @@ fun AdminKeyDialog(
                             }
                         }
                     }
-                } else {
+                } else if (selectedTab == 1) {
                     // TAB 1: USER DEVICES & LOGINS MONITOR
                     Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
                         Text(
@@ -618,6 +672,159 @@ fun AdminKeyDialog(
                                     )
                                 }
                             }
+                        }
+                    }
+                } else {
+                    // TAB 2: LIVE BROADCAST NOTICES
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        Text(
+                            text = "Live Broadcast Announcements",
+                            style = MaterialTheme.typography.labelMedium.copy(color = CyberCyan, fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Notices broadcast here appear instantly at the top of all active student screens.",
+                            style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 11.sp),
+                            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+                        )
+
+                        // Current Broadcast Status Card
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (activeAnnouncement?.isActive == true) DarkBackground else DarkBackground.copy(alpha = 0.5f)
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (activeAnnouncement?.isActive == true) CyberCyan.copy(alpha = 0.7f) else DarkSurfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(if (activeAnnouncement?.isActive == true) CrimsonAlert else TextMuted)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = if (activeAnnouncement?.isActive == true) "CURRENT LIVE BROADCAST" else "NO ACTIVE BROADCAST",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = if (activeAnnouncement?.isActive == true) CrimsonAlert else TextMuted,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+
+                                    if (activeAnnouncement?.isActive == true) {
+                                        Button(
+                                            onClick = {
+                                                securityManager.clearAnnouncement {
+                                                    Toast.makeText(context, "Announcement cleared!", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = CrimsonAlert.copy(alpha = 0.2f)),
+                                            border = BorderStroke(1.dp, CrimsonAlert.copy(alpha = 0.5f)),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.height(28.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp)
+                                        ) {
+                                            Text("Clear Notice", style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                                        }
+                                    }
+                                }
+
+                                if (activeAnnouncement?.isActive == true) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "\"${activeAnnouncement?.message}\"",
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "By: ${activeAnnouncement?.author} • Published to all students",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontSize = 10.sp)
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Publish a notice below to alert all students in real time.",
+                                        style = MaterialTheme.typography.bodySmall.copy(color = TextMuted, fontSize = 11.sp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Publish New Announcement Form
+                        Text(
+                            text = "Send New Announcement",
+                            style = MaterialTheme.typography.labelMedium.copy(color = GoldenAccent, fontWeight = FontWeight.Bold)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        OutlinedTextField(
+                            value = announcementText,
+                            onValueChange = { announcementText = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp),
+                            placeholder = {
+                                Text("e.g. Physics Chapter 3 DPP & Notes uploaded! Live class starts at 6 PM.", color = TextMuted.copy(alpha = 0.6f), fontSize = 12.sp)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = CyberCyan,
+                                unfocusedBorderColor = DarkSurfaceVariant,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedContainerColor = DarkBackground,
+                                unfocusedContainerColor = DarkBackground
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Button(
+                            onClick = {
+                                if (announcementText.isNotBlank()) {
+                                    isPublishingAnnouncement = true
+                                    securityManager.publishAnnouncement(announcementText.trim()) { success ->
+                                        isPublishingAnnouncement = false
+                                        if (success) {
+                                            announcementText = ""
+                                            Toast.makeText(context, "Announcement broadcasted live to all devices!", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to broadcast. Check connection.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = announcementText.isNotBlank() && !isPublishingAnnouncement,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = CyberCyan),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Campaign, contentDescription = null, tint = Color(0xFF030712), modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isPublishingAnnouncement) "Broadcasting..." else "Broadcast to All Students",
+                                style = MaterialTheme.typography.labelLarge.copy(color = Color(0xFF030712), fontWeight = FontWeight.Bold)
+                            )
                         }
                     }
                 }
