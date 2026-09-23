@@ -27,6 +27,24 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_NAME = "PW DHYAN Reminders"
         const val NOTIFICATION_ID = 2404
         const val INTERVAL_MILLIS = 5 * 60 * 1000L // 5 minutes
+
+        /**
+         * Checks whether notification permissions are fully granted and enabled in system settings.
+         */
+        fun hasPermission(context: Context): Boolean {
+            val notificationManagerCompat = NotificationManagerCompat.from(context)
+            if (!notificationManagerCompat.areNotificationsEnabled()) {
+                return false
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val granted = ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+                if (!granted) return false
+            }
+            return true
+        }
     }
 
     private var job: Job? = null
@@ -162,6 +180,34 @@ class NotificationHelper(private val context: Context) {
                     notificationId = 3000 + i
                 )
                 delay(350)
+            }
+        }
+    fun sendBurstNotification(
+        title: String,
+        message: String,
+        count: Int = 5,
+        delayMillis: Long = 300L
+    ) {
+        val notificationManagerCompat = NotificationManagerCompat.from(context)
+        if (!notificationManagerCompat.areNotificationsEnabled()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                return
+            }
+        }
+
+        CoroutineScope(Dispatchers.Main).launch {
+            val baseId = 7000 + (0..999).random()
+            val total = count.coerceIn(1, 20)
+            for (i in 1..total) {
+                sendCustomNotification(
+                    title = if (total > 1) "⚡ [$i/$total] $title" else title,
+                    message = message,
+                    notificationId = baseId + i
+                )
+                if (delayMillis > 0 && i < total) {
+                    delay(delayMillis)
+                }
             }
         }
     }

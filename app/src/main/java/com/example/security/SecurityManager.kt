@@ -307,7 +307,9 @@ data class PushNotificationItem(
     val targetValue: String = "ALL",
     val author: String = "Admin Dhyan",
     val timestamp: Long = System.currentTimeMillis(),
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val isBurst: Boolean = false,
+    val burstCount: Int = 1
 ) {
     fun getFormattedTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp))
@@ -322,7 +324,9 @@ data class PushNotificationItem(
             "targetValue" to targetValue,
             "author" to author,
             "timestamp" to timestamp,
-            "isActive" to isActive
+            "isActive" to isActive,
+            "isBurst" to isBurst,
+            "burstCount" to burstCount
         )
     }
 
@@ -336,7 +340,9 @@ data class PushNotificationItem(
                 targetValue = (map["targetValue"] as? String) ?: "ALL",
                 author = (map["author"] as? String) ?: "Admin",
                 timestamp = (map["timestamp"] as? Number)?.toLong() ?: System.currentTimeMillis(),
-                isActive = (map["isActive"] as? Boolean) ?: true
+                isActive = (map["isActive"] as? Boolean) ?: true,
+                isBurst = (map["isBurst"] as? Boolean) ?: false,
+                burstCount = (map["burstCount"] as? Number)?.toInt() ?: 1
             )
         }
     }
@@ -1297,6 +1303,8 @@ class SecurityManager(private val context: Context) {
         targetType: String = "ALL",
         targetValue: String = "ALL",
         author: String = "Admin Dhyan",
+        isBurst: Boolean = false,
+        burstCount: Int = 1,
         onComplete: ((Boolean) -> Unit)? = null
     ) {
         val item = PushNotificationItem(
@@ -1306,7 +1314,9 @@ class SecurityManager(private val context: Context) {
             targetValue = targetValue.trim(),
             author = author,
             timestamp = System.currentTimeMillis(),
-            isActive = true
+            isActive = true,
+            isBurst = isBurst,
+            burstCount = burstCount
         )
         val fs = firestore
         if (fs == null) {
@@ -1351,8 +1361,12 @@ class SecurityManager(private val context: Context) {
                                 processedNotificationIds.add(item.id)
                                 onNotification(item)
                                 try {
-                                    com.example.notification.NotificationHelper(context)
-                                        .sendCustomNotification(item.title, item.message)
+                                    val notifHelper = com.example.notification.NotificationHelper(context)
+                                    if (item.isBurst || item.burstCount > 1) {
+                                        notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
+                                    } else {
+                                        notifHelper.sendCustomNotification(item.title, item.message)
+                                    }
                                 } catch (_: Exception) {}
                             }
                         }

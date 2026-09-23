@@ -1181,7 +1181,73 @@ fun AdminKeyDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                // Burst Motivation Notification Action Card
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = GoldenAccent.copy(alpha = 0.12f)),
+                    border = BorderStroke(1.dp, GoldenAccent.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "⚡ Burst Motivation Alerts",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = GoldenAccent,
+                                    fontSize = 12.sp
+                                )
+                            )
+                            Text(
+                                text = "Send a rapid burst of 5 high-priority study motivation alerts to student devices.",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextMuted,
+                                    fontSize = 10.sp,
+                                    lineHeight = 13.sp
+                                )
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                securityManager.sendPushNotification(
+                                    title = "🔥 WAKE UP & STUDY!",
+                                    message = "Selection is consistency! Complete your lecture target right now! 📚",
+                                    targetType = "ALL",
+                                    targetValue = "ALL",
+                                    isBurst = true,
+                                    burstCount = 5
+                                )
+                                com.example.notification.NotificationHelper(context)
+                                    .sendBatchMotivationSpam(coroutineScope, 5)
+                                Toast.makeText(context, "5x Burst Notification Fired!", Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp)
+                        ) {
+                            Text(
+                                text = "5x Burst",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF030712),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.5.sp
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Revoke Admin Access to Test as Normal User Card
                 Card(

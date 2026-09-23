@@ -23,6 +23,7 @@ import com.example.script.ScriptManager
 import com.example.security.SecurityManager
 import com.example.ui.BrowserScreen
 import com.example.ui.LockScreen
+import com.example.ui.NotificationRequiredScreen
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.MyApplicationTheme
 
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyApplicationTheme {
+                var hasNotificationAccess by remember { mutableStateOf(NotificationHelper.hasPermission(this@MainActivity)) }
                 var isUnlocked by remember { mutableStateOf(initialUnlocked) }
                 var isPermanentUnlocked by remember { mutableStateOf(alreadyPermanentlyUnlocked) }
 
@@ -81,7 +83,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = DarkBackground
                 ) {
-                    if (isUnlocked) {
+                    if (!hasNotificationAccess) {
+                        NotificationRequiredScreen(
+                            onPermissionGranted = {
+                                hasNotificationAccess = true
+                            }
+                        )
+                    } else if (isUnlocked) {
                         BrowserScreen(
                             securityManager = securityManager,
                             scriptManager = scriptManager,
