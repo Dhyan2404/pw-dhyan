@@ -67,24 +67,20 @@ jobs:
             build_output.txt
             app/build/reports/
 
-      - name: Push Build Log to branch
-        if: always()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan build-log 2>/dev/null || git checkout -B build-log
-          git rm -rf . 2>/dev/null || true
-          cp build_output.txt log.txt 2>/dev/null || echo "No build output" > log.txt
-          git add log.txt
-          git commit -m "Build log for ${{ github.sha }}" || true
-          git push -f origin build-log || true
-
       - name: Prepare Direct APK & ZIP
+        shell: bash
         run: |
+          set -e
           mkdir -p release_apk
-          cp app/build/outputs/apk/debug/*.apk release_apk/PW-DHYAN.apk
+          APK_SRC=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          if [ -z "$APK_SRC" ] || [ ! -f "$APK_SRC" ]; then
+            echo "::error::No APK found in app/build/outputs/apk/debug/"
+            exit 1
+          fi
+          cp "$APK_SRC" release_apk/PW-DHYAN.apk
           cd release_apk
           zip -9 PW-DHYAN-Direct.zip PW-DHYAN.apk
+          ls -lh
           cd ..
 
       - name: Upload Artifact (Backup APK & ZIP)
@@ -98,6 +94,8 @@ jobs:
       - name: Publish Direct APK & ZIP to GitHub Releases
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: "v1.0.${{ github.run_number }}"
           name: "PW DHYAN Official Release (Direct APK & ZIP)"
@@ -117,5 +115,23 @@ jobs:
           files: |
             release_apk/PW-DHYAN.apk
             release_apk/PW-DHYAN-Direct.zip
+          fail_on_unmatched_files: true
           prerelease: false
           make_latest: true
+
+      - name: Push Build Log to branch
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p /tmp/buildlog_work
+          cd /tmp/buildlog_work
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git init
+          git checkout -b build-log
+          cp "$GITHUB_WORKSPACE/build_output.txt" log.txt 2>/dev/null || echo "No build output" > log.txt
+          git add log.txt
+          git commit -m "Build log for ${{ github.sha }}" || true
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git push -f origin build-log || true
+
