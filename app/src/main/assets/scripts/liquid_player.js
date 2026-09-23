@@ -94,8 +94,16 @@
 
     const isPlayerPage = window.location.href.includes('player') ||
                          window.location.href.includes('live') ||
+                         window.location.href.includes('videoId=') ||
+                         window.location.href.includes('vUrl=') ||
                          (document.querySelector('video, #video-wrapper, .video-js') !== null);
     if (!isPlayerPage) return;
+
+    try {
+        if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
+            window.AndroidPlayerBridge.onLecturePlayerDetected(true);
+        }
+    } catch (e) { }
 
     /* 1. AUTH GATEWAY PASS-THROUGH */
     const originalFetch = window.fetch;

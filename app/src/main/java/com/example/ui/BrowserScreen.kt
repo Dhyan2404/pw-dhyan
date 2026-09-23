@@ -1,16 +1,21 @@
 package com.example.ui
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.DownloadManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -190,6 +195,44 @@ fun BrowserScreen(
         }
     }
 
+    fun isPlayerUrl(url: String?): Boolean {
+        if (url.isNullOrBlank()) return false
+        val lower = url.lowercase()
+        return lower.contains("/player") ||
+                lower.contains("player?") ||
+                lower.contains("videoid=") ||
+                lower.contains("vurl=") ||
+                lower.contains("lectureid=")
+    }
+
+    fun handlePlayerOrientation(isPlayer: Boolean) {
+        val activity = context as? Activity ?: return
+        if (isPlayer) {
+            // Force horizontal landscape initially for widescreen lecture viewing
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            // Release lock to FULL_SENSOR after 1.8s so user can auto-rotate to vertical whenever they want
+            Handler(Looper.getMainLooper()).postDelayed({
+                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+            }, 1800)
+        } else {
+            // Non-lecture screens return to normal portrait / sensor mode
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    fun toggleOrientation() {
+        val activity = context as? Activity ?: return
+        val current = activity.resources.configuration.orientation
+        if (current == Configuration.ORIENTATION_LANDSCAPE) {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+        Handler(Looper.getMainLooper()).postDelayed({
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }, 1800)
+    }
+
     fun showBlockedNotice(url: String) {
         blockedUrlNotice = "External navigation blocked: Restricted to secure workspace"
         CoroutineScope(Dispatchers.Main).launch {
@@ -279,6 +322,7 @@ fun BrowserScreen(
                             }
 
                             if (securityManager.isUrlAllowed(url)) {
+                                handlePlayerOrientation(isPlayerUrl(url))
                                 return false // Allow navigation within pw.studyparcham.in
                             } else {
                                 // Block external domain navigation!
@@ -291,6 +335,7 @@ fun BrowserScreen(
                             super.onPageStarted(view, url, favicon)
                             isLoading = true
                             currentUrl = url ?: SecurityManager.HOME_URL
+                            handlePlayerOrientation(isPlayerUrl(currentUrl))
                             // Inject early masterkey security pass-through
                             view?.let { scriptManager.injectPreloadSecurity(it) }
                         }
@@ -301,6 +346,7 @@ fun BrowserScreen(
                             swipeRefreshInstance?.isRefreshing = false
                             currentUrl = url ?: SecurityManager.HOME_URL
                             pageTitle = view?.title ?: "StudyParcham"
+                            handlePlayerOrientation(isPlayerUrl(currentUrl))
 
                             // Inject both scripts automatically on load/reload
                             view?.let { wv ->
@@ -338,15 +384,13 @@ fun BrowserScreen(
 
                         override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
                             super.onShowCustomView(view, callback)
-                            // Switch to horizontal landscape mode for full widescreen video viewing
-                            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            handlePlayerOrientation(true)
                             customVideoView = view
                         }
 
                         override fun onHideCustomView() {
                             super.onHideCustomView()
-                            // Return back to portrait mode when exiting fullscreen video
-                            (context as? android.app.Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            handlePlayerOrientation(false)
                             customVideoView = null
                         }
                     }
@@ -381,6 +425,23 @@ fun BrowserScreen(
                             }
                         }
                     }
+
+                    // Bridge to detect SPA player route changes and manual rotation
+                    addJavascriptInterface(object {
+                        @JavascriptInterface
+                        fun onLecturePlayerDetected(isPlayer: Boolean) {
+                            (context as? Activity)?.runOnUiThread {
+                                handlePlayerOrientation(isPlayer)
+                            }
+                        }
+
+                        @JavascriptInterface
+                        fun toggleOrientation() {
+                            (context as? Activity)?.runOnUiThread {
+                                toggleOrientation()
+                            }
+                        }
+                    }, "AndroidPlayerBridge")
 
                     // Initial Load
                     loadUrl(SecurityManager.HOME_URL)
@@ -691,6 +752,22 @@ fun BrowserScreen(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = "Direct APK Link",
                                     tint = CyberCyan,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+
+                            // Manual Rotate Toggle (Horizontal <-> Vertical)
+                            IconButton(
+                                onClick = {
+                                    toggleOrientation()
+                                    showToast("Screen rotation toggled")
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Rotate Screen",
+                                    tint = GoldenAccent,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }

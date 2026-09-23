@@ -709,4 +709,24 @@
     cyclePhoneWallpaper();
     setInterval(cyclePhoneWallpaper, 30000);
 
+    /* ==========================================================================
+       8. LECTURE PLAYER DETECTOR & DYNAMIC ORIENTATION BRIDGE
+       ========================================================================== */
+    function checkPlayerRoute() {
+        const href = window.location.href;
+        const isPlayer = href.includes('player') ||
+                         href.includes('videoId=') ||
+                         href.includes('vUrl=') ||
+                         href.includes('lectureId=') ||
+                         (document.querySelector('video') !== null);
+        try {
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
+                window.AndroidPlayerBridge.onLecturePlayerDetected(isPlayer);
+            }
+        } catch (e) { }
+    }
+    window.addEventListener('popstate', checkPlayerRoute);
+    window.addEventListener('hashchange', checkPlayerRoute);
+    setInterval(checkPlayerRoute, 1200);
+
 })();
