@@ -143,6 +143,15 @@ fun BrowserScreen(
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
     var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
 
+    // Auto-dismiss notices after 4 seconds
+    fun showToast(msg: String) {
+        toastMessage = msg
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(3500)
+            if (toastMessage == msg) toastMessage = null
+        }
+    }
+
     // Listen for live announcements, push notifications & maintenance mode from Admin
     DisposableEffect(securityManager) {
         val reg = securityManager.listenToAnnouncements { ann ->
@@ -197,15 +206,6 @@ fun BrowserScreen(
             } else {
                 (context as? android.app.Activity)?.moveTaskToBack(true)
             }
-        }
-    }
-
-    // Auto-dismiss notices after 4 seconds
-    fun showToast(msg: String) {
-        toastMessage = msg
-        CoroutineScope(Dispatchers.Main).launch {
-            delay(3500)
-            if (toastMessage == msg) toastMessage = null
         }
     }
 
