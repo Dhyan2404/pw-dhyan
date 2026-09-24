@@ -1486,10 +1486,10 @@ service cloud.firestore {
       }
 
       tbody.innerHTML = filtered.map(s => {
-        const lastPing = Math.max(s.lastHeartbeat || 0, s.lastActiveTime || 0);
-        const timeSinceActiveSec = Math.max(0, Math.round((Date.now() - lastPing) / 1000));
+        const lastPing = Math.max(s.lastHeartbeat || 0, s.lastActiveTime || 0, s.lastSeen || 0, s.loginTime || 0);
+        const timeSinceActiveSec = lastPing > 0 ? Math.max(0, Math.round((Date.now() - lastPing) / 1000)) : 999999999;
         // A device is truly online ONLY if isOnline is not explicitly false AND heartbeat was received within last 35 seconds
-        const isOnline = (s.isOnline !== false) && (timeSinceActiveSec < 35);
+        const isOnline = (s.isOnline !== false) && (lastPing > 0) && (timeSinceActiveSec < 35);
         const isSuspended = (s.suspendedUntil || 0) > Date.now();
         const isWatching = !!s.currentLecture && s.currentLecture.trim() !== '' && s.currentLecture !== 'null';
         const progress = Math.min(100, Math.max(0, s.currentProgressPercent || 0));
@@ -1546,7 +1546,7 @@ service cloud.firestore {
           `;
         }
 
-        const offlineLabel = timeSinceActiveSec > 60 ? `${Math.round(timeSinceActiveSec / 60)}m ago` : `${timeSinceActiveSec}s ago`;
+        const offlineLabel = lastPing === 0 ? 'Never' : (timeSinceActiveSec > 60 ? `${Math.round(timeSinceActiveSec / 60)}m ago` : `${timeSinceActiveSec}s ago`);
 
         const now = Date.now();
         let expiryHtml = '';
