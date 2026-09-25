@@ -17,6 +17,40 @@
     'use strict';
 
     /* ==========================================================================
+       0. GLOBAL FETCH & XHR NETWORK INTERCEPTOR (Prevents "Failed to fetch")
+       ========================================================================== */
+    const originalFetch = window.fetch;
+    if (typeof originalFetch === 'function') {
+        window.fetch = async function (resource, config) {
+            if (typeof resource === 'string') {
+                if (resource.startsWith('https://pwthor.live') || resource.startsWith('https://test.pwthor.live') || resource.startsWith('https://pwthor.site')) {
+                    try {
+                        const u = new URL(resource);
+                        resource = u.pathname + u.search + u.hash;
+                    } catch (_) {}
+                }
+            } else if (resource && typeof resource === 'object' && resource.url) {
+                try {
+                    if (resource.url.startsWith('https://pwthor.live') || resource.url.startsWith('https://test.pwthor.live') || resource.url.startsWith('https://pwthor.site')) {
+                        const u = new URL(resource.url);
+                        resource = new Request(u.pathname + u.search + u.hash, resource);
+                    }
+                } catch (_) {}
+            }
+            try {
+                return await originalFetch.call(this, resource, config);
+            } catch (err) {
+                if (typeof resource === 'string' && !resource.startsWith('/pwthor') && !resource.startsWith('http')) {
+                    try {
+                        return await originalFetch.call(this, '/pwthor' + (resource.startsWith('/') ? resource : '/' + resource), config);
+                    } catch (_) {}
+                }
+                throw err;
+            }
+        };
+    }
+
+    /* ==========================================================================
        1. ROUTE INTERCEPTOR & POPUP GUARD
        ========================================================================== */
     // If the user lands directly on or navigates to /contact, redirect to batches

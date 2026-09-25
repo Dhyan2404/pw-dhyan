@@ -1812,12 +1812,14 @@ class SecurityManager(private val context: Context) {
             return true
         }
 
-        // Main study portals (StudyParcham & PWThor Live)
+        // Main study portals (Server Sun: StudyParcham & Server Moon: PWThor Live Suite)
         if (lower.startsWith("https://pw.studyparcham.in") ||
             lower.startsWith("http://pw.studyparcham.in") ||
             lower.startsWith("pw.studyparcham.in") ||
             lower.contains("studyparcham.in") ||
+            lower.contains("pwthor") ||
             lower.contains("pwthor.live") ||
+            lower.contains("pwthor.site") ||
             lower.contains("allinoneregenuine.in")
         ) {
             return true
@@ -1825,6 +1827,7 @@ class SecurityManager(private val context: Context) {
 
         // Educational content CDN, notes, DPP, and video stream servers
         if (lower.contains("cloudfront.net") ||
+            lower.contains("cloudflareinsights.com") ||
             lower.contains("pw.live") ||
             lower.contains("physicswallah") ||
             lower.contains("penpencil") ||

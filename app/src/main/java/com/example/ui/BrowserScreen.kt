@@ -380,10 +380,18 @@ fun BrowserScreen(
                     setLayerType(View.LAYER_TYPE_HARDWARE, null)
                     setBackgroundColor(android.graphics.Color.BLACK)
 
+                    // Enable full modern cookies for PWThor direct login & cross-domain batch data
+                    try {
+                        val cookieManager = android.webkit.CookieManager.getInstance()
+                        cookieManager.setAcceptCookie(true)
+                        cookieManager.setAcceptThirdPartyCookies(this, true)
+                    } catch (_: Exception) {}
+
                     // Advanced WebSettings
                     settings.apply {
                         javaScriptEnabled = true
                         domStorageEnabled = true
+                        databaseEnabled = true
                         allowFileAccess = false
                         allowContentAccess = false
                         mediaPlaybackRequiresUserGesture = false
@@ -393,7 +401,13 @@ fun BrowserScreen(
                         builtInZoomControls = true
                         displayZoomControls = false
                         cacheMode = WebSettings.LOAD_DEFAULT
-                        userAgentString = "$userAgentString StudyBrowser/1.0"
+                        // Clean user-agent: match standard mobile Chrome to prevent Cloudflare bot blocking
+                        val cleanUa = userAgentString
+                            .replace("; wv", "")
+                            .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
+                            .replace("StudyBrowser/1.0", "")
+                            .trim()
+                        userAgentString = cleanUa
                         setSupportMultipleWindows(true)
                         javaScriptCanOpenWindowsAutomatically = true
                     }
