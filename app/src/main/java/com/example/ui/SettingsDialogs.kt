@@ -78,7 +78,7 @@ import com.example.ui.theme.TextPrimary
 fun AppSettingsDialog(
     securityManager: SecurityManager,
     currentPortal: SecurityManager.Portal,
-    portalConfig: SecurityManager.PortalConfig = securityManager.getPortalConfig(),
+    portalConfig: PortalConfig = securityManager.getPortalConfig(),
     onPortalSelected: (SecurityManager.Portal) -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenAdmin: () -> Unit,
