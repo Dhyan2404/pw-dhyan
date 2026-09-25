@@ -1828,6 +1828,8 @@ class SecurityManager(private val context: Context) {
         // Educational content CDN, notes, DPP, and video stream servers
         if (lower.contains("cloudfront.net") ||
             lower.contains("cloudflareinsights.com") ||
+            lower.contains("streamvideo.co.in") ||
+            lower.contains("streamvideo") ||
             lower.contains("pw.live") ||
             lower.contains("physicswallah") ||
             lower.contains("penpencil") ||

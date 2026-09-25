@@ -22,21 +22,32 @@
     const originalFetch = window.fetch;
     if (typeof originalFetch === 'function') {
         window.fetch = async function (resource, config) {
-            if (typeof resource === 'string') {
-                if (resource.startsWith('https://pwthor.live') || resource.startsWith('https://test.pwthor.live') || resource.startsWith('https://pwthor.site')) {
-                    try {
-                        const u = new URL(resource);
-                        resource = u.pathname + u.search + u.hash;
-                    } catch (_) {}
-                }
-            } else if (resource && typeof resource === 'object' && resource.url) {
+            let urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+
+            // Route streamvideo / penpencil API requests through local proxy on localhost
+            if (urlStr.includes('proxy.streamvideo.co.in') || urlStr.includes('api.penpencil.co')) {
                 try {
-                    if (resource.url.startsWith('https://pwthor.live') || resource.url.startsWith('https://test.pwthor.live') || resource.url.startsWith('https://pwthor.site')) {
-                        const u = new URL(resource.url);
-                        resource = new Request(u.pathname + u.search + u.hash, resource);
+                    const u = new URL(urlStr, window.location.origin);
+                    const sub = u.pathname + u.search + u.hash;
+                    const newUrl = '/streamvideo-proxy' + (sub.startsWith('/') ? sub : '/' + sub);
+                    if (typeof resource === 'string') {
+                        resource = newUrl;
+                    } else if (resource && resource.url) {
+                        resource = new Request(newUrl, resource);
+                    }
+                } catch (_) {}
+            } else if (urlStr.startsWith('https://pwthor.live') || urlStr.startsWith('https://test.pwthor.live') || urlStr.startsWith('https://pwthor.site')) {
+                try {
+                    const u = new URL(urlStr);
+                    const newUrl = u.pathname + u.search + u.hash;
+                    if (typeof resource === 'string') {
+                        resource = newUrl;
+                    } else if (resource && resource.url) {
+                        resource = new Request(newUrl, resource);
                     }
                 } catch (_) {}
             }
+
             try {
                 return await originalFetch.call(this, resource, config);
             } catch (err) {
