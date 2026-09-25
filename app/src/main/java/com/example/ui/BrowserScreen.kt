@@ -138,11 +138,7 @@ private fun isPlayerUrl(url: String?): Boolean {
     return lower.contains("/player") ||
             lower.contains("player?") ||
             lower.contains("/watch") ||
-            lower.contains("watch?") ||
-            lower.contains("videoid=") ||
-            lower.contains("childid=") ||
-            lower.contains("vurl=") ||
-            lower.contains("lectureid=")
+            lower.contains("watch?")
 }
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -518,6 +514,12 @@ fun BrowserScreen(
                             super.onPageStarted(view, url, favicon)
                             isLoading = true
                             currentUrl = url ?: securityManager.getCurrentPortalUrl()
+                            if (!isPlayerUrl(currentUrl)) {
+                                isVideoPlaying = false
+                                areControlsVisible = true
+                                isSettingsPillVisible = true
+                                lastInteractionTime = System.currentTimeMillis()
+                            }
                             // Inject early security pass-through (strictly isolated per portal)
                             view?.let { scriptManager.injectPreloadSecurity(it, currentUrl) }
                         }
@@ -535,6 +537,12 @@ fun BrowserScreen(
                             swipeRefreshInstance?.isRefreshing = false
                             currentUrl = url ?: securityManager.getCurrentPortalUrl()
                             pageTitle = view?.title ?: currentPortal.displayName
+                            if (!isPlayerUrl(currentUrl)) {
+                                isVideoPlaying = false
+                                areControlsVisible = true
+                                isSettingsPillVisible = true
+                                lastInteractionTime = System.currentTimeMillis()
+                            }
                             if (currentPortal == SecurityManager.Portal.PWTHOR) {
                                 portalFailureOffer = false
                             }
@@ -739,6 +747,13 @@ fun BrowserScreen(
                             }
                         }
                     }, "AndroidPlayerBridge")
+
+                    setOnTouchListener { _, event ->
+                        if (event.action == MotionEvent.ACTION_DOWN) {
+                            revealControls()
+                        }
+                        false
+                    }
 
                     // Initial Load
                     loadUrl(securityManager.getCurrentPortalUrl())

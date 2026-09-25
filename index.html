@@ -2167,6 +2167,11 @@ service cloud.firestore {
       };
 
       addDoc(collection(db, 'push_notifications'), notifItem).then(() => {
+        if (targetType === 'DEVICE' && targetValue && targetValue !== 'ALL') {
+          setDoc(doc(db, 'user_sessions', targetValue), {
+            pendingAlert: notifItem
+          }, { merge: true }).catch(() => {});
+        }
         const burstText = isBurst ? ` (⚡ ${burstCount}x Burst Mode)` : '';
         showToast(`Push Notification Sent to ${targetType} (${targetValue})${burstText}!`);
         document.getElementById('notif-message').value = '';

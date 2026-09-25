@@ -19,3 +19,4 @@ local.properties
 debug.keystore
 powershell.cmd
 powershell.bat
+scratch/

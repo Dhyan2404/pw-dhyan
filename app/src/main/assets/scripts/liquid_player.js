@@ -19,6 +19,20 @@
     'use strict';
     const win = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
 
+    // STRICT URL GATE: Liquid Player ONLY activates on actual video player / watch URLs!
+    // Never runs or modifies the DOM on home page, batch listings, or subjects!
+    const _pName = (window.location.pathname || '').toLowerCase();
+    const _pHref = (window.location.href || '').toLowerCase();
+    const _isPlayerUrl = _pName.includes('/player') ||
+                         _pName.includes('/watch') ||
+                         _pHref.includes('/player?') ||
+                         _pHref.includes('/player/') ||
+                         _pHref.includes('/watch?') ||
+                         _pHref.includes('/watch/');
+    if (!_isPlayerUrl) {
+        return; // Inactive on home page & non-player pages
+    }
+
     /* 0. ANTI-DEBUGGER & DEVTOOLS UNLOCKER */
     try {
         // Prevent anti-debugging scripts from wiping console
@@ -96,27 +110,27 @@
     // Embedded vector icon dictionary for 100% reliable offline / local / CSP-proof icon rendering
     const LQ_SVGS = {
         'fa-play': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
-        'fa-pause': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
-        'fa-step-backward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
-        'fa-step-forward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
+        'fa-pause': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="5" y="4" width="4.5" height="16" rx="1.5"/><rect x="14.5" y="4" width="4.5" height="16" rx="1.5"/></svg>',
+        'fa-step-backward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><rect x="5" y="4" width="2.5" height="16" rx="0.8"/></svg>',
+        'fa-step-forward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><rect x="16.5" y="4" width="2.5" height="16" rx="0.8"/></svg>',
         'fa-forward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>',
         'fa-backward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>',
-        'fa-undo-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
-        'fa-redo-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>',
-        'fa-expand': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>',
-        'fa-compress': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M14 10h6m-6 0V4m0 6l7-7M10 10H4m6 0V4m-6 6l7-7"/></svg>',
+        'fa-undo-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/><text x="12" y="15.5" font-size="7.5" font-weight="900" font-family="-apple-system, sans-serif" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>',
+        'fa-redo-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/><text x="12" y="15.5" font-size="7.5" font-weight="900" font-family="-apple-system, sans-serif" fill="currentColor" stroke="none" text-anchor="middle">10</text></svg>',
+        'fa-expand': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>',
+        'fa-compress': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M10 14l-7 7"/></svg>',
         'fa-cog': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
         'fa-sliders-h': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>',
-        'fa-volume-up': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
-        'fa-volume-down': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
-        'fa-volume-mute': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+        'fa-volume-up': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+        'fa-volume-down': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+        'fa-volume-mute': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
         'fa-list-ul': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
         'fa-exchange-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16l-4-4m0 0l4-4m-4 4h18m-4 4l4 4m0 0l-4 4m4-4H3"/></svg>',
         'fa-chevron-right': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
         'fa-chevron-left': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
         'fa-chevron-down': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
         'fa-chevron-up': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
-        'fa-file-pdf': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h1.5a1.5 1.5 0 0 0 0-3H9v6"/><path d="M17 10h-2.5v6H17"/><path d="M17 13h-2"/></svg>',
+        'fa-file-pdf': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>',
         'fa-file-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
         'fa-video': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7" fill="currentColor"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
         'fa-film': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>',
@@ -127,6 +141,7 @@
         'fa-clock': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
         'fa-history': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
         'fa-tachometer-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-10 10c0 4.14 2.5 7.69 6.09 9.24"/><path d="M21.91 12A10 10 0 0 0 12 2"/><path d="M12 12l4-4"/></svg>',
+        'fa-thumbtack': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.77V5h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v5.77a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24Z"/></svg>',
         'fa-spinner': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lq-spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>',
         'fa-times': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
         'fa-times-circle': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
@@ -169,9 +184,9 @@
                     i[data-svg-applied] svg {
                         display: inline-block !important;
                         vertical-align: middle !important;
-                        width: 1em !important;
-                        height: 1em !important;
-                        fill: currentColor !important;
+                        width: 1.15em !important;
+                        height: 1.15em !important;
+                        pointer-events: none !important;
                     }
                 `;
                 (document.head || document.documentElement || document.body)?.appendChild(iconStyle);
@@ -186,16 +201,18 @@
             const target = root || document;
             const icons = target.querySelectorAll ? target.querySelectorAll('i[class*="fa-"]') : [];
             icons.forEach(el => {
-                if (el.dataset.svgApplied) return;
                 const classes = Array.from(el.classList);
                 for (const cls of classes) {
                     if (LQ_SVGS[cls]) {
-                        el.innerHTML = LQ_SVGS[cls];
-                        el.style.display = 'inline-flex';
-                        el.style.alignItems = 'center';
-                        el.style.justifyContent = 'center';
-                        el.style.verticalAlign = 'middle';
-                        el.dataset.svgApplied = '1';
+                        if (el.dataset.svgClass !== cls) {
+                            el.innerHTML = LQ_SVGS[cls];
+                            el.style.display = 'inline-flex';
+                            el.style.alignItems = 'center';
+                            el.style.justifyContent = 'center';
+                            el.style.verticalAlign = 'middle';
+                            el.dataset.svgApplied = '1';
+                            el.dataset.svgClass = cls;
+                        }
                         break;
                     }
                 }
@@ -1188,70 +1205,380 @@
         }
         .lq-seek-ripple-zone.active .ripple-content { transform: scale(1.1); }
 
-        @media (max-width: 900px), (max-height: 520px) {
+        /* Responsive Layouts: Desktop Small, Mobile Portrait (Vertical 2-Row), Mobile Landscape (Ultra-Slim Dock) */
+        @media (max-width: 1024px) {
             #custom-player-hub {
-                bottom: 16px;
-                padding: 10px 20px;
-                gap: 12px;
                 width: min(1200px, calc(100vw - 20px));
-                border-radius: 9999px;
             }
-            .hub-btn { width: 38px; height: 38px; font-size: 1.15rem; }
-            #c-play-btn, #c-play { width: 42px; height: 42px; font-size: 1.25rem; color: #ffffff; }
-            #c-rwd, #c-fwd { display: flex !important; width: 38px !important; height: 38px !important; font-size: 1.05rem; }
-            .hub-time { font-size: 0.82rem; min-width: 42px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #ffffff; }
-            .hub-speed-badge { height: 32px !important; padding: 0 12px !important; font-size: 0.82rem !important; border-radius: 999px !important; }
-            .scrubber-track-container { height: 32px; }
-            .hub-track-bg { height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 999px; }
-            .hub-fill-bar { height: 6px; }
-            .hub-slider::-webkit-slider-thumb { width: 18px; height: 18px; background: #ffffff; border: 2.5px solid var(--lq-accent, #38bdf8); box-shadow: 0 0 10px var(--lq-accent-glow); }
             .shortcuts-grid { grid-template-columns: 1fr; }
+        }
+
+        /* 1. MOBILE PORTRAIT (VERTICAL ORIENTATION) - 2-ROW ERGONOMIC DOCK */
+        @media (max-width: 768px) and (orientation: portrait), (max-width: 600px) {
+            #custom-player-hub {
+                bottom: 12px !important;
+                left: 50% !important;
+                transform: translateX(-50%) translateY(70px) !important;
+                width: calc(100vw - 16px) !important;
+                max-width: calc(100vw - 16px) !important;
+                box-sizing: border-box !important;
+                padding: 10px 14px 8px 14px !important;
+                border-radius: 20px !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 0 !important;
+            }
+            #custom-player-hub.user-active, #custom-player-hub.keep-active {
+                transform: translateX(-50%) translateY(0) !important;
+            }
+
+            /* Row 1: Full-width Scrubber Progress Box */
+            #custom-player-hub .hub-progress-box {
+                order: 1 !important;
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                margin-bottom: 6px !important;
+            }
+            .hub-time {
+                font-size: 0.72rem !important;
+                min-width: 38px !important;
+                font-family: 'JetBrains Mono', monospace !important;
+                font-weight: 700 !important;
+                color: #ffffff !important;
+            }
+            .scrubber-track-container {
+                flex: 1 !important;
+                height: 28px !important;
+            }
+            .hub-track-bg {
+                height: 5px !important;
+                background: rgba(255, 255, 255, 0.2) !important;
+                border-radius: 999px !important;
+            }
+            .hub-fill-bar { height: 5px !important; }
+            .hub-buffer-bar { height: 5px !important; }
+            .hub-slider::-webkit-slider-thumb {
+                width: 16px !important;
+                height: 16px !important;
+                background: #ffffff !important;
+                border: 2px solid var(--lq-accent, #38bdf8) !important;
+                box-shadow: 0 0 10px var(--lq-accent-glow) !important;
+            }
+
+            /* Row 2: Playback Controls & Settings */
+            #custom-player-hub #c-rwd {
+                order: 2 !important;
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 0.95rem !important;
+                display: flex !important;
+            }
+            #custom-player-hub #c-play {
+                order: 3 !important;
+                width: 44px !important;
+                height: 44px !important;
+                font-size: 1.25rem !important;
+                color: #ffffff !important;
+            }
+            #custom-player-hub #c-fwd {
+                order: 4 !important;
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 0.95rem !important;
+                display: flex !important;
+            }
+            #custom-player-hub #c-speed-badge {
+                order: 5 !important;
+                height: 30px !important;
+                padding: 0 8px !important;
+                font-size: 0.72rem !important;
+                min-width: 36px !important;
+                border-radius: 999px !important;
+                font-family: 'JetBrains Mono', monospace !important;
+            }
+            #custom-player-hub #c-settings-wrapper, #custom-player-hub > div[style*="position:relative"] {
+                order: 6 !important;
+            }
+            #custom-player-hub #c-settings-btn {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 1rem !important;
+            }
+            #custom-player-hub #c-fullscreen {
+                order: 7 !important;
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 1rem !important;
+            }
+            /* Hide secondary buttons in compact portrait dock */
+            #custom-player-hub #c-slides-btn,
+            #custom-player-hub #c-notes-btn {
+                display: none !important;
+            }
+
+            /* Top HUD in Portrait */
             #lq-top-lecture-hud {
-                top: 14px;
-                left: 50%;
-                transform: translateX(-50%) translateY(-70px);
-                max-width: min(800px, calc(100vw - 20px));
-                padding: 8px 18px;
-                gap: 10px;
+                top: 10px !important;
+                left: 50% !important;
+                transform: translateX(-50%) translateY(-70px) !important;
+                width: calc(100vw - 16px) !important;
+                max-width: calc(100vw - 16px) !important;
+                box-sizing: border-box !important;
+                padding: 6px 10px !important;
+                gap: 6px !important;
+                border-radius: 999px !important;
             }
             #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud.active-dropdown {
                 transform: translateX(-50%) translateY(0) !important;
             }
-            .top-hud-title { max-width: 280px; font-size: 0.85rem; }
-            .top-hud-chip { font-size: 0.72rem; padding: 3px 10px; }
-            .top-hud-btn { width: 32px; height: 32px; font-size: 0.95rem; }
-            .top-hud-badge { font-size: 0.8rem; padding: 4px 12px; }
-            #lq-top-playlist-dropdown {
-                width: 340px;
-                max-height: 60vh;
-                overflow-y: auto;
+            .top-hud-btn { width: 30px !important; height: 30px !important; font-size: 0.9rem !important; }
+            .top-hud-chip { font-size: 0.68rem !important; padding: 2px 8px !important; }
+            .top-hud-title {
+                font-size: 0.78rem !important;
+                max-width: 150px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
             }
+            .top-hud-badge { font-size: 0.72rem !important; padding: 3px 8px !important; }
+
+            /* Settings Menu in Portrait */
             #c-settings-menu {
-                position: absolute !important;
-                bottom: 54px !important;
-                right: 0 !important;
-                width: 300px !important;
-                max-height: 75vh !important;
+                position: fixed !important;
+                bottom: 78px !important;
+                left: 12px !important;
+                right: 12px !important;
+                width: auto !important;
+                max-width: calc(100vw - 24px) !important;
+                max-height: 65vh !important;
                 overflow-y: auto !important;
-                border-radius: 22px !important;
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 20px !important;
                 padding: 14px 16px !important;
+                z-index: 9999999 !important;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
             }
+
+            /* Playlist Dropdown in Portrait */
+            #lq-top-playlist-dropdown {
+                position: fixed !important;
+                top: 54px !important;
+                left: 12px !important;
+                right: 12px !important;
+                width: auto !important;
+                max-width: calc(100vw - 24px) !important;
+                max-height: calc(100vh - 80px) !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 20px !important;
+                z-index: 9999999 !important;
+                transform: translateY(-8px) scale(0.98) !important;
+            }
+            #lq-top-playlist-dropdown.show {
+                transform: translateY(0) scale(1) !important;
+            }
+
+            /* Timeline Tray & Next Prompt */
             #custom-timeline-tray {
-                width: min(900px, calc(100vw - 20px));
-                bottom: 64px;
-                padding: 12px 16px;
-                max-height: 320px;
-                border-radius: 22px;
+                position: fixed !important;
+                bottom: 76px !important;
+                left: 12px !important;
+                right: 12px !important;
+                width: auto !important;
+                max-width: calc(100vw - 24px) !important;
+                padding: 10px 14px !important;
+                max-height: 260px !important;
+                border-radius: 20px !important;
             }
-            .tray-card { width: 130px; }
-            .tray-card img { height: 80px; }
+            .tray-card { width: 120px !important; }
+            .tray-card img { height: 75px !important; }
             #lq-next-lecture-prompt {
-                min-width: 280px;
-                max-width: calc(100vw - 24px);
-                bottom: 64px;
-                right: 14px;
+                position: fixed !important;
+                left: 12px !important;
+                right: 12px !important;
+                bottom: 76px !important;
+                width: auto !important;
+                max-width: calc(100vw - 24px) !important;
             }
-            #lq-osd-hud { top: 54px; font-size: 0.82rem; padding: 6px 14px; }
+            #lq-osd-hud { top: 50px !important; font-size: 0.78rem !important; padding: 5px 12px !important; }
+        }
+
+        /* 2. MOBILE LANDSCAPE (HORIZONTAL ORIENTATION) - ULTRA-SLIM AERODYNAMIC DOCK */
+        @media (orientation: landscape) and (max-height: 600px) {
+            #custom-player-hub {
+                bottom: 8px !important;
+                left: 50% !important;
+                transform: translateX(-50%) translateY(70px) !important;
+                width: min(960px, calc(100vw - 24px)) !important;
+                max-width: calc(100vw - 24px) !important;
+                height: 42px !important;
+                box-sizing: border-box !important;
+                padding: 0 14px !important;
+                gap: 8px !important;
+                border-radius: 9999px !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+            }
+            #custom-player-hub.user-active, #custom-player-hub.keep-active {
+                transform: translateX(-50%) translateY(0) !important;
+            }
+
+            .hub-btn {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 0.92rem !important;
+            }
+            #c-play-btn, #c-play {
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 1.1rem !important;
+                color: #ffffff !important;
+            }
+            #c-rwd, #c-fwd {
+                display: flex !important;
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 0.88rem !important;
+            }
+            .hub-progress-box {
+                flex: 1 1 auto !important;
+                gap: 8px !important;
+                min-width: 0 !important;
+            }
+            .hub-time {
+                font-size: 0.72rem !important;
+                min-width: 38px !important;
+                font-family: 'JetBrains Mono', monospace !important;
+                font-weight: 700 !important;
+                color: #ffffff !important;
+            }
+            .scrubber-track-container { height: 24px !important; }
+            .hub-track-bg {
+                height: 4px !important;
+                background: rgba(255, 255, 255, 0.2) !important;
+                border-radius: 999px !important;
+            }
+            .hub-fill-bar { height: 4px !important; }
+            .hub-buffer-bar { height: 4px !important; }
+            .hub-slider::-webkit-slider-thumb {
+                width: 14px !important;
+                height: 14px !important;
+                background: #ffffff !important;
+                border: 2px solid var(--lq-accent, #38bdf8) !important;
+                box-shadow: 0 0 8px var(--lq-accent-glow) !important;
+            }
+            .hub-speed-badge {
+                height: 26px !important;
+                padding: 0 8px !important;
+                font-size: 0.72rem !important;
+                border-radius: 999px !important;
+            }
+            #c-slides-btn, #c-notes-btn {
+                display: flex !important;
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 0.85rem !important;
+            }
+            #c-fullscreen {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 0.92rem !important;
+            }
+
+            /* Top HUD in Landscape */
+            #lq-top-lecture-hud {
+                top: 8px !important;
+                left: 50% !important;
+                transform: translateX(-50%) translateY(-60px) !important;
+                height: 34px !important;
+                padding: 0 12px !important;
+                gap: 8px !important;
+                max-width: min(760px, calc(100vw - 24px)) !important;
+                border-radius: 9999px !important;
+            }
+            #lq-top-lecture-hud.intro-show, #lq-top-lecture-hud.user-active, #lq-top-lecture-hud.active-dropdown {
+                transform: translateX(-50%) translateY(0) !important;
+            }
+            .top-hud-btn { width: 26px !important; height: 26px !important; font-size: 0.82rem !important; }
+            .top-hud-chip { font-size: 0.65rem !important; padding: 2px 7px !important; }
+            .top-hud-title {
+                font-size: 0.78rem !important;
+                max-width: 280px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .top-hud-badge { font-size: 0.72rem !important; padding: 2px 8px !important; }
+
+            /* Settings Menu in Landscape - FIXED so it never gets clipped at the top of the screen */
+            #c-settings-menu {
+                position: fixed !important;
+                bottom: 52px !important;
+                right: 14px !important;
+                left: auto !important;
+                width: 310px !important;
+                max-height: calc(100vh - 58px) !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 20px !important;
+                padding: 10px 14px !important;
+                gap: 8px !important;
+                z-index: 9999999 !important;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+            }
+            .lq-swatches-grid { max-height: 80px !important; }
+            .settings-row { font-size: 0.74rem !important; }
+
+            /* Playlist Dropdown in Landscape */
+            #lq-top-playlist-dropdown {
+                position: fixed !important;
+                top: 46px !important;
+                left: 50% !important;
+                transform: translateX(-50%) translateY(-6px) scale(0.97) !important;
+                width: min(420px, calc(100vw - 32px)) !important;
+                max-height: calc(100vh - 52px) !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                border-radius: 20px !important;
+                z-index: 9999999 !important;
+            }
+            #lq-top-playlist-dropdown.show {
+                transform: translateX(-50%) translateY(0) scale(1) !important;
+            }
+
+            /* Timeline Tray & Next Prompt in Landscape */
+            #custom-timeline-tray {
+                bottom: 52px !important;
+                max-height: 190px !important;
+                padding: 8px 14px !important;
+                border-radius: 20px !important;
+                width: min(800px, calc(100vw - 24px)) !important;
+            }
+            .tray-card { width: 110px !important; }
+            .tray-card img { height: 62px !important; }
+            #lq-next-lecture-prompt {
+                bottom: 50px !important;
+                right: 12px !important;
+                min-width: 240px !important;
+                max-width: 320px !important;
+                padding: 8px 12px !important;
+            }
+            #lq-osd-hud { top: 44px !important; font-size: 0.78rem !important; padding: 4px 12px !important; }
+        }
+
+        /* 3. ULTRA-COMPACT SCREENS (SCREEN WIDTH <= 380px) */
+        @media (max-width: 380px) {
+            #custom-player-hub { padding: 8px 10px 6px 10px !important; }
+            .hub-time { font-size: 0.68rem !important; min-width: 32px !important; }
+            .top-hud-title { max-width: 110px !important; }
+            #custom-player-hub #c-play { width: 40px !important; height: 40px !important; font-size: 1.15rem !important; }
+            #custom-player-hub #c-rwd, #custom-player-hub #c-fwd { width: 32px !important; height: 32px !important; }
         }
     `;
     (document.head || document.documentElement).appendChild(style);
@@ -1765,7 +2092,7 @@
 
             <button class="hub-btn hub-speed-badge" id="c-speed-badge" title="Playback Speed (Click to Toggle Settings)" style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; font-weight:800; min-width:38px; padding:0 6px; color:var(--lq-accent, #38bdf8);">1.0x</button>
 
-            <div style="position:relative;">
+            <div id="c-settings-wrapper" style="position:relative;">
                 <button class="hub-btn" id="c-settings-btn" title="Settings (Speed, Quality, Volume, Audio, Accent)"><i class="fas fa-cog"></i></button>
                 <div id="c-settings-menu">
                     ${GLASS_HTML}

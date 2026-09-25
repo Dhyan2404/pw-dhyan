@@ -76,51 +76,77 @@ class ScriptManager(private val context: Context) {
     }
 
     /**
+     * Checks if current URL is a video player route.
+     * Matches /player on StudyParcham and /watch on PWThor.
+     * Non-player pages (home page, batch listings, subjects) return false.
+     */
+    fun isPlayerRoute(url: String?): Boolean {
+        val u = url?.lowercase() ?: return false
+        return u.contains("/player") ||
+                u.contains("player?") ||
+                u.contains("/watch") ||
+                u.contains("watch?")
+    }
+
+    /**
      * Injects the appropriate script based on the target URL / domain.
-     * CRITICAL REQUIREMENT:
-     * - For pwthor.live (Server Moon): Main scripts (masterkey & liquid_player) do NOT apply! ONLY scripts-2/portel.js is injected.
-     * - For studyparcham.in (Server Sun): Injects masterkey and liquid_player scripts.
+     * - masterkey.js: Injected on StudyParcham pages for batch access.
+     * - portel.js: Injected on PWThor pages.
+     * - liquid_player.js: STRICTLY injected ONLY on player routes (/player on StudyParcham, /watch on PWThor).
+     *   NEVER injected on home page or batch browsing pages!
      */
     fun injectForUrl(webView: WebView, url: String?, onResult: ((Boolean) -> Unit)? = null) {
         val currentUrl = (url ?: webView.url)?.lowercase() ?: ""
+        val isPlayer = isPlayerRoute(currentUrl)
 
         if (currentUrl.contains("pwthor")) {
-            // PWThor Portal: Strictly portel.js ONLY
+            // PWThor Portal: Strictly portel.js, plus liquid_player only on /watch
             val pwthorPortal = getPWThorPortalScript()
-            if (pwthorPortal.isBlank()) {
-                onResult?.invoke(false)
-                return
-            }
 
             webView.post {
-                webView.evaluateJavascript(
-                    """
-                    (function() {
-                        try {
-                            $pwthorPortal
-                        } catch(e) {
-                            console.error('[PWThor Portal Injection Error]:', e);
-                        }
-                    })();
-                    """.trimIndent()
-                ) { result ->
-                    lastInjectionTime = System.currentTimeMillis()
-                    injectionCount++
-                    Log.d(TAG, "PWThor portel.js injected successfully (#$injectionCount), result: $result")
-                    onResult?.invoke(true)
+                if (pwthorPortal.isNotBlank()) {
+                    webView.evaluateJavascript(
+                        """
+                        (function() {
+                            try {
+                                $pwthorPortal
+                            } catch(e) {
+                                console.error('[PWThor Portal Injection Error]:', e);
+                            }
+                        })();
+                        """.trimIndent(),
+                        null
+                    )
                 }
+
+                if (isPlayer) {
+                    val liquidPlayer = getLiquidPlayerScript()
+                    if (liquidPlayer.isNotBlank()) {
+                        webView.evaluateJavascript(
+                            """
+                            (function() {
+                                try {
+                                    $liquidPlayer
+                                } catch(e) {
+                                    console.error('[PWThor LiquidPlayer Injection Error]:', e);
+                                }
+                            })();
+                            """.trimIndent(),
+                            null
+                        )
+                    }
+                }
+
+                lastInjectionTime = System.currentTimeMillis()
+                injectionCount++
+                Log.d(TAG, "PWThor scripts injected (isPlayer: $isPlayer, #$injectionCount)")
+                onResult?.invoke(true)
             }
             return
         }
 
-        // StudyParcham Portal (Default): Inject masterkey and liquid_player
+        // StudyParcham Portal (Default):
         val masterkey = getMasterkeyScript()
-        val liquidPlayer = getLiquidPlayerScript()
-
-        if (masterkey.isBlank() && liquidPlayer.isBlank()) {
-            onResult?.invoke(false)
-            return
-        }
 
         webView.post {
             if (masterkey.isNotBlank()) {
@@ -137,24 +163,33 @@ class ScriptManager(private val context: Context) {
                     null
                 )
             }
-            if (liquidPlayer.isNotBlank()) {
-                webView.evaluateJavascript(
-                    """
-                    (function() {
-                        try {
-                            $liquidPlayer
-                        } catch(e) {
-                            console.error('[LiquidPlayer Injection Error]:', e);
-                        }
-                    })();
-                    """.trimIndent()
-                ) { result ->
-                    lastInjectionTime = System.currentTimeMillis()
-                    injectionCount++
-                    Log.d(TAG, "LiquidPlayer injected successfully (#$injectionCount), result: $result")
+
+            // LiquidPlayer ONLY injected on player pages (e.g. /player?...), NEVER on home page!
+            if (isPlayer) {
+                val liquidPlayer = getLiquidPlayerScript()
+                if (liquidPlayer.isNotBlank()) {
+                    webView.evaluateJavascript(
+                        """
+                        (function() {
+                            try {
+                                $liquidPlayer
+                            } catch(e) {
+                                console.error('[LiquidPlayer Injection Error]:', e);
+                            }
+                        })();
+                        """.trimIndent()
+                    ) { result ->
+                        lastInjectionTime = System.currentTimeMillis()
+                        injectionCount++
+                        Log.d(TAG, "LiquidPlayer injected on player route (#$injectionCount), result: $result")
+                        onResult?.invoke(true)
+                    }
+                } else {
                     onResult?.invoke(true)
                 }
             } else {
+                lastInjectionTime = System.currentTimeMillis()
+                injectionCount++
                 onResult?.invoke(true)
             }
         }

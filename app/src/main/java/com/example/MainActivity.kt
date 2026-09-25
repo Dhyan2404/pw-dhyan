@@ -92,6 +92,7 @@ class MainActivity : ComponentActivity() {
 
         // Start silent background sync service for cloud push alerts & bursts
         PushNotificationService.start(this)
+        PushNotificationService.checkPendingNotifications(this)
 
         val initialUnlocked = securityManager.isSessionActive()
         val alreadyPermanentlyUnlocked = securityManager.isPermanentUnlocked()
@@ -234,6 +235,7 @@ class MainActivity : ComponentActivity() {
         }
         securityManager.ensureDeviceRegistered()
         securityManager.sendHeartbeat()
+        PushNotificationService.checkPendingNotifications(this)
     }
 
     override fun onStop() {
