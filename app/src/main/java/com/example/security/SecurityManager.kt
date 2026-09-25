@@ -112,7 +112,10 @@ data class UserSession(
     val isOnline: Boolean = true,
     val lastHeartbeat: Long = System.currentTimeMillis(),
     val currentUrl: String? = null,
-    val currentPageTitle: String? = null
+    val currentPageTitle: String? = null,
+    val currentPortal: String = "studyparcham",
+    val assignedPortal: String? = null,
+    val blockedPortal: String? = null
 ) {
     val isCurrentlyOnline: Boolean get() = isOnline && (System.currentTimeMillis() - maxOf(lastHeartbeat, lastActiveTime) < 35000L)
 
@@ -157,13 +160,16 @@ data class UserSession(
             "isPermanentAdmin" to isPermanentAdmin,
             "appVersion" to appVersion,
             "isOnline" to isOnline,
-            "lastHeartbeat" to lastHeartbeat
+            "lastHeartbeat" to lastHeartbeat,
+            "currentPortal" to currentPortal
         )
         currentLecture?.let { map["currentLecture"] = it }
         currentSubject?.let { map["currentSubject"] = it }
         currentChapter?.let { map["currentChapter"] = it }
         currentUrl?.let { map["currentUrl"] = it }
         currentPageTitle?.let { map["currentPageTitle"] = it }
+        assignedPortal?.let { map["assignedPortal"] = it }
+        blockedPortal?.let { map["blockedPortal"] = it }
         return map
     }
 
@@ -189,7 +195,10 @@ data class UserSession(
                 isOnline = (map["isOnline"] as? Boolean) ?: true,
                 lastHeartbeat = (map["lastHeartbeat"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 currentUrl = map["currentUrl"] as? String,
-                currentPageTitle = map["currentPageTitle"] as? String
+                currentPageTitle = map["currentPageTitle"] as? String,
+                currentPortal = (map["currentPortal"] as? String) ?: "studyparcham",
+                assignedPortal = map["assignedPortal"] as? String,
+                blockedPortal = map["blockedPortal"] as? String
             )
         }
     }
@@ -396,6 +405,35 @@ data class AppMaintenanceInfo(
     val message: String = "Server maintenance is underway. Please check back shortly!"
 )
 
+/**
+ * Individual Portal Maintenance state synced in Firestore under system_config/portal_config.
+ */
+data class PortalMaintenanceInfo(
+    val isActive: Boolean = false,
+    val message: String = "This portal is currently under maintenance. Please switch to the other portal!"
+)
+
+/**
+ * Central Portal Configuration synced in real time across Android, Web, and Admin.
+ */
+data class PortalConfig(
+    val defaultPortalId: String = "studyparcham",
+    val studyparchamMaintenance: PortalMaintenanceInfo = PortalMaintenanceInfo(message = "StudyParcham is undergoing maintenance. Please switch to PWThor Live!"),
+    val pwthorMaintenance: PortalMaintenanceInfo = PortalMaintenanceInfo(message = "PWThor Live is undergoing maintenance. Please switch to StudyParcham!"),
+    val blockedPortals: List<String> = emptyList()
+) {
+    val defaultPortal: SecurityManager.Portal get() = SecurityManager.Portal.values().find { it.id == defaultPortalId } ?: SecurityManager.Portal.STUDYPARCHAM
+    fun isMaintenance(portal: SecurityManager.Portal): Boolean = when(portal) {
+        SecurityManager.Portal.STUDYPARCHAM -> studyparchamMaintenance.isActive
+        SecurityManager.Portal.PWTHOR -> pwthorMaintenance.isActive
+    }
+    fun getMaintenanceMessage(portal: SecurityManager.Portal): String = when(portal) {
+        SecurityManager.Portal.STUDYPARCHAM -> studyparchamMaintenance.message
+        SecurityManager.Portal.PWTHOR -> pwthorMaintenance.message
+    }
+    fun isBlocked(portal: SecurityManager.Portal): Boolean = blockedPortals.contains(portal.id)
+}
+
 sealed class UnlockResult {
     data object PermanentUnlocked : UnlockResult()
     data class KeyUnlocked(val key: AccessKey) : UnlockResult()
@@ -420,6 +458,11 @@ class SecurityManager(private val context: Context) {
     private val sessionStateListeners = mutableListOf<(Boolean) -> Unit>()
     private val processedNotificationIds = mutableSetOf<String>()
 
+    // Portal state and listeners
+    private var cachedPortalConfig = PortalConfig()
+    private val portalConfigListeners = mutableListOf<(PortalConfig) -> Unit>()
+    private val portalChangeListeners = mutableListOf<(portal: Portal, reason: String) -> Unit>()
+
     companion object {
         const val MASTER_PERMANENT_CODE = "240411"
         private const val KEY_PERMANENT_UNLOCKED = "is_permanent_unlocked"
@@ -442,6 +485,7 @@ class SecurityManager(private val context: Context) {
         private const val FIRESTORE_COLLECTION_NOTIFICATIONS = "push_notifications"
         private const val ANNOUNCEMENT_DOC_ID = "latest_announcement"
         private const val MAINTENANCE_DOC_ID = "maintenance_mode"
+        private const val PORTAL_CONFIG_DOC_ID = "portal_config"
         private const val TAG = "FirestoreSecurity"
     }
 
@@ -450,13 +494,47 @@ class SecurityManager(private val context: Context) {
         PWTHOR("pwthor", "PWThor Live", "https://pwthor.live/study", "pwthor.live")
     }
 
+    fun addPortalChangeListener(listener: (portal: Portal, reason: String) -> Unit) {
+        portalChangeListeners.add(listener)
+    }
+
+    fun removePortalChangeListener(listener: (portal: Portal, reason: String) -> Unit) {
+        portalChangeListeners.remove(listener)
+    }
+
+    fun notifyPortalChanged(portal: Portal, reason: String) {
+        Handler(Looper.getMainLooper()).post {
+            portalChangeListeners.forEach { it.invoke(portal, reason) }
+        }
+    }
+
+    fun addPortalConfigListener(listener: (PortalConfig) -> Unit) {
+        portalConfigListeners.add(listener)
+        listener(cachedPortalConfig)
+    }
+
+    fun removePortalConfigListener(listener: (PortalConfig) -> Unit) {
+        portalConfigListeners.remove(listener)
+    }
+
+    fun getPortalConfig(): PortalConfig = cachedPortalConfig
+
+    fun hasUserExplicitlyChosenPortal(): Boolean = prefs.contains(KEY_SELECTED_PORTAL)
+
     fun getSelectedPortal(): Portal {
-        val id = prefs.getString(KEY_SELECTED_PORTAL, Portal.STUDYPARCHAM.id)
-        return Portal.values().find { it.id == id } ?: Portal.STUDYPARCHAM
+        if (!hasUserExplicitlyChosenPortal()) {
+            return cachedPortalConfig.defaultPortal
+        }
+        val id = prefs.getString(KEY_SELECTED_PORTAL, cachedPortalConfig.defaultPortalId)
+        return Portal.values().find { it.id == id } ?: cachedPortalConfig.defaultPortal
     }
 
     fun setSelectedPortal(portal: Portal) {
         prefs.edit().putString(KEY_SELECTED_PORTAL, portal.id).apply()
+        try {
+            val myDeviceId = getDeviceId()
+            firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(myDeviceId)?.update("currentPortal", portal.id)
+        } catch (_: Exception) {}
     }
 
     fun getCurrentPortalUrl(): String {
@@ -610,6 +688,58 @@ class SecurityManager(private val context: Context) {
                     }
                 }
 
+            // Real-time listener for Portal Configuration (Default portal, Maintenance per portal, Blocked portals)
+            fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(PORTAL_CONFIG_DOC_ID)
+                .addSnapshotListener { doc, err ->
+                    if (err != null || doc == null || !doc.exists()) return@addSnapshotListener
+                    try {
+                        val defPortalId = doc.getString("defaultPortal") ?: "studyparcham"
+                        val spMap = doc.get("studyparchamMaintenance") as? Map<String, Any?>
+                        val pwMap = doc.get("pwthorMaintenance") as? Map<String, Any?>
+                        val blockedList = (doc.get("blockedPortals") as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
+
+                        val spMaint = PortalMaintenanceInfo(
+                            isActive = spMap?.get("isActive") as? Boolean ?: false,
+                            message = (spMap?.get("message") as? String) ?: "StudyParcham is undergoing maintenance. Please switch to PWThor Live!"
+                        )
+                        val pwMaint = PortalMaintenanceInfo(
+                            isActive = pwMap?.get("isActive") as? Boolean ?: false,
+                            message = (pwMap?.get("message") as? String) ?: "PWThor Live is undergoing maintenance. Please switch to StudyParcham!"
+                        )
+
+                        cachedPortalConfig = PortalConfig(
+                            defaultPortalId = defPortalId,
+                            studyparchamMaintenance = spMaint,
+                            pwthorMaintenance = pwMaint,
+                            blockedPortals = blockedList
+                        )
+
+                        Handler(Looper.getMainLooper()).post {
+                            portalConfigListeners.forEach { it.invoke(cachedPortalConfig) }
+                        }
+
+                        // First time user: if user hasn't manually chosen a portal yet, automatically apply the admin's default portal
+                        if (!hasUserExplicitlyChosenPortal()) {
+                            val def = cachedPortalConfig.defaultPortal
+                            setSelectedPortal(def)
+                            notifyPortalChanged(def, "Default Portal Initialized")
+                        }
+
+                        // If user's currently selected portal is globally blocked, switch to the other portal!
+                        val cur = getSelectedPortal()
+                        if (cachedPortalConfig.isBlocked(cur)) {
+                            val alt = if (cur == Portal.STUDYPARCHAM) Portal.PWTHOR else Portal.STUDYPARCHAM
+                            if (!cachedPortalConfig.isBlocked(alt)) {
+                                setSelectedPortal(alt)
+                                notifyPortalChanged(alt, "${cur.displayName} is blocked by Admin. Switched to ${alt.displayName}.")
+                                showToast("${cur.displayName} is disabled by Admin. Switched to ${alt.displayName}.")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error parsing portal config: ${e.message}")
+                    }
+                }
+
             // Real-time listener for this specific device's session document
             // Enables Admin to grant custom hours or extend access remotely without user login!
             val myDeviceId = getDeviceId()
@@ -646,6 +776,29 @@ class SecurityManager(private val context: Context) {
                             notifySessionStateChanged(true)
                         }
                     }
+
+                    // Admin Remote Portal Assignment for this user
+                    val remoteAssignedPortalId = data["assignedPortal"] as? String
+                    if (!remoteAssignedPortalId.isNullOrBlank()) {
+                        val assignedPortal = Portal.values().find { it.id == remoteAssignedPortalId }
+                        if (assignedPortal != null && assignedPortal != getSelectedPortal()) {
+                            setSelectedPortal(assignedPortal)
+                            notifyPortalChanged(assignedPortal, "Admin changed your portal to ${assignedPortal.displayName}")
+                            showToast("Admin switched your portal to ${assignedPortal.displayName}")
+                        }
+                    }
+
+                    // Admin Remote Block for specific portal for this user
+                    val userBlockedPortalId = data["blockedPortal"] as? String
+                    if (!userBlockedPortalId.isNullOrBlank()) {
+                        val cur = getSelectedPortal()
+                        if (cur.id == userBlockedPortalId) {
+                            val alt = if (cur == Portal.STUDYPARCHAM) Portal.PWTHOR else Portal.STUDYPARCHAM
+                            setSelectedPortal(alt)
+                            notifyPortalChanged(alt, "${cur.displayName} has been blocked for this device. Switched to ${alt.displayName}.")
+                            showToast("${cur.displayName} is blocked by Admin. Switched to ${alt.displayName}.")
+                        }
+                    }
                 }
         } catch (e: Exception) {
             Log.e(TAG, "Error attaching Firestore listener", e)
@@ -668,7 +821,8 @@ class SecurityManager(private val context: Context) {
             "lastActiveTime" to now,
             "lastHeartbeat" to now,
             "isOnline" to true,
-            "appVersion" to "2.0.0"
+            "appVersion" to "2.0.0",
+            "currentPortal" to getSelectedPortal().id
         )
         if (isAct) {
             base["passkey"] = prefs.getString(KEY_SESSION_CODE, if (isInf) "Master Admin" else "Active Session") ?: "Active Session"
@@ -1028,7 +1182,8 @@ class SecurityManager(private val context: Context) {
             lastHeartbeat = now,
             isOnline = true,
             isPermanentAdmin = isInf,
-            appVersion = "2.0.0"
+            appVersion = "2.0.0",
+            currentPortal = getSelectedPortal().id
         )
     }
 
@@ -1050,7 +1205,8 @@ class SecurityManager(private val context: Context) {
             lastHeartbeat = now,
             isOnline = true,
             isPermanentAdmin = isInf,
-            appVersion = "2.0.0"
+            appVersion = "2.0.0",
+            currentPortal = getSelectedPortal().id
         )
 
         try {
@@ -1095,7 +1251,8 @@ class SecurityManager(private val context: Context) {
         val update = mutableMapOf<String, Any>(
             "lastActiveTime" to now,
             "lastHeartbeat" to now,
-            "isOnline" to true
+            "isOnline" to true,
+            "currentPortal" to getSelectedPortal().id
         )
         if (!currentUrl.isNullOrBlank()) update["currentUrl"] = currentUrl
         if (!currentPageTitle.isNullOrBlank()) update["currentPageTitle"] = currentPageTitle
@@ -1315,6 +1472,122 @@ class SecurityManager(private val context: Context) {
         } catch (e: Exception) {
             null
         }
+    }
+
+    /**
+     * Admin remotely changes the portal assignment of any specific user device.
+     */
+    fun assignUserPortal(targetDeviceId: String, portal: Portal, onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(targetDeviceId)
+            .update("assignedPortal", portal.id)
+            .addOnSuccessListener {
+                showToast("User portal assigned to ${portal.displayName}")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed to assign portal: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    /**
+     * Admin blocks or unblocks a specific portal for a specific user device.
+     */
+    fun blockUserPortal(targetDeviceId: String, portalId: String?, onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        val updateMap = mutableMapOf<String, Any?>("blockedPortal" to portalId)
+        fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(targetDeviceId)
+            .set(updateMap, SetOptions.merge())
+            .addOnSuccessListener {
+                showToast(if (portalId == null) "Portal unblocked for device" else "Portal $portalId blocked for device")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Error: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    /**
+     * Admin sets a specific portal in or out of maintenance independently.
+     */
+    fun setPortalMaintenance(portal: Portal, isActive: Boolean, message: String, onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        val fieldName = if (portal == Portal.STUDYPARCHAM) "studyparchamMaintenance" else "pwthorMaintenance"
+        val payload = mapOf(
+            fieldName to mapOf(
+                "isActive" to isActive,
+                "message" to message.ifBlank { "${portal.displayName} is currently undergoing maintenance." },
+                "updatedAt" to System.currentTimeMillis()
+            )
+        )
+        fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(PORTAL_CONFIG_DOC_ID)
+            .set(payload, SetOptions.merge())
+            .addOnSuccessListener {
+                showToast("${portal.displayName} Maintenance ${if (isActive) "ACTIVATED" else "DEACTIVATED"}")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    /**
+     * Admin configures the global default portal for new/unassigned users.
+     */
+    fun setGlobalDefaultPortal(portal: Portal, onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(PORTAL_CONFIG_DOC_ID)
+            .set(mapOf("defaultPortal" to portal.id), SetOptions.merge())
+            .addOnSuccessListener {
+                showToast("Default portal set to ${portal.displayName}")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    /**
+     * Admin globally disables/blocks a portal for all students.
+     */
+    fun setGlobalBlockedPortal(portal: Portal, isBlocked: Boolean, onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        val currentBlocked = cachedPortalConfig.blockedPortals.toMutableSet()
+        if (isBlocked) currentBlocked.add(portal.id) else currentBlocked.remove(portal.id)
+        fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(PORTAL_CONFIG_DOC_ID)
+            .set(mapOf("blockedPortals" to currentBlocked.toList()), SetOptions.merge())
+            .addOnSuccessListener {
+                showToast("${portal.displayName} ${if (isBlocked) "BLOCKED" else "UNBLOCKED"} globally")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed: ${e.message}")
+                onComplete?.invoke(false)
+            }
     }
 
     /**

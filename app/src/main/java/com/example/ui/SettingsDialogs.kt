@@ -39,6 +39,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,6 +76,7 @@ import com.example.ui.theme.TextPrimary
 fun AppSettingsDialog(
     securityManager: SecurityManager,
     currentPortal: SecurityManager.Portal,
+    portalConfig: SecurityManager.PortalConfig = securityManager.getPortalConfig(),
     onPortalSelected: (SecurityManager.Portal) -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenAdmin: () -> Unit,
@@ -162,26 +165,42 @@ fun AppSettingsDialog(
                     )
 
                     // Server 1: StudyParcham
+                    val spMaint = portalConfig.isMaintenance(SecurityManager.Portal.STUDYPARCHAM)
+                    val spBlocked = portalConfig.isBlocked(SecurityManager.Portal.STUDYPARCHAM)
                     PortalServerCard(
                         title = "StudyParcham",
-                        subtitle = "Current Study Portal",
+                        subtitle = if (spMaint) portalConfig.getMaintenanceMessage(SecurityManager.Portal.STUDYPARCHAM) else "Current Study Portal",
                         url = SecurityManager.Portal.STUDYPARCHAM.url,
                         isSelected = currentPortal == SecurityManager.Portal.STUDYPARCHAM,
                         accentColor = CyberCyan,
+                        isMaintenance = spMaint,
+                        isBlocked = spBlocked,
                         onClick = {
-                            onPortalSelected(SecurityManager.Portal.STUDYPARCHAM)
+                            if (spBlocked) {
+                                Toast.makeText(context, "StudyParcham is currently disabled by Admin.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                onPortalSelected(SecurityManager.Portal.STUDYPARCHAM)
+                            }
                         }
                     )
 
                     // Server 2: PWThor Live
+                    val pwMaint = portalConfig.isMaintenance(SecurityManager.Portal.PWTHOR)
+                    val pwBlocked = portalConfig.isBlocked(SecurityManager.Portal.PWTHOR)
                     PortalServerCard(
                         title = "PWThor Live",
-                        subtitle = "Fast Stream & Study Server",
+                        subtitle = if (pwMaint) portalConfig.getMaintenanceMessage(SecurityManager.Portal.PWTHOR) else "Fast Stream & Study Server",
                         url = SecurityManager.Portal.PWTHOR.url,
                         isSelected = currentPortal == SecurityManager.Portal.PWTHOR,
                         accentColor = GoldenAccent,
+                        isMaintenance = pwMaint,
+                        isBlocked = pwBlocked,
                         onClick = {
-                            onPortalSelected(SecurityManager.Portal.PWTHOR)
+                            if (pwBlocked) {
+                                Toast.makeText(context, "PWThor Live is currently disabled by Admin.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                onPortalSelected(SecurityManager.Portal.PWTHOR)
+                            }
                         }
                     )
                 }
@@ -343,15 +362,27 @@ fun PortalServerCard(
     url: String,
     isSelected: Boolean,
     accentColor: Color,
+    isMaintenance: Boolean = false,
+    isBlocked: Boolean = false,
     onClick: () -> Unit
 ) {
+    val borderColor = when {
+        isBlocked -> CrimsonAlert.copy(alpha = 0.6f)
+        isMaintenance -> GoldenAccent.copy(alpha = 0.6f)
+        isSelected -> accentColor.copy(alpha = 0.8f)
+        else -> GlassBorder
+    }
+    val cardBg = when {
+        isBlocked -> DarkSurfaceVariant.copy(alpha = 0.35f)
+        isMaintenance -> GoldenAccent.copy(alpha = 0.08f)
+        isSelected -> accentColor.copy(alpha = 0.12f)
+        else -> DarkSurfaceVariant.copy(alpha = 0.50f)
+    }
+
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) accentColor.copy(alpha = 0.12f) else DarkSurfaceVariant.copy(alpha = 0.50f),
-        border = BorderStroke(
-            if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) accentColor.copy(alpha = 0.8f) else GlassBorder
-        ),
+        color = cardBg,
+        border = BorderStroke(if (isSelected || isMaintenance || isBlocked) 1.5.dp else 1.dp, borderColor),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
@@ -371,11 +402,43 @@ fun PortalServerCard(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleSmall.copy(
-                            color = if (isSelected) accentColor else TextPrimary,
+                            color = if (isBlocked) TextMuted else if (isSelected) accentColor else TextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                     )
-                    if (isSelected) {
+                    if (isBlocked) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = CrimsonAlert.copy(alpha = 0.22f),
+                            border = BorderStroke(0.5.dp, CrimsonAlert.copy(alpha = 0.6f))
+                        ) {
+                            Text(
+                                text = "BLOCKED",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = CrimsonAlert,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 9.sp
+                                ),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    } else if (isMaintenance) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = GoldenAccent.copy(alpha = 0.22f),
+                            border = BorderStroke(0.5.dp, GoldenAccent.copy(alpha = 0.6f))
+                        ) {
+                            Text(
+                                text = "MAINTENANCE",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = GoldenAccent,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 9.sp
+                                ),
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    } else if (isSelected) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = accentColor.copy(alpha = 0.22f),
@@ -397,7 +460,7 @@ fun PortalServerCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = TextMuted,
+                        color = if (isMaintenance) GoldenAccent else TextMuted,
                         fontSize = 11.sp
                     )
                 )
@@ -413,14 +476,15 @@ fun PortalServerCard(
                 )
             }
 
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Selected",
-                    tint = accentColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            RadioButton(
+                selected = isSelected && !isBlocked,
+                onClick = { onClick() },
+                colors = RadioButtonDefaults.colors(
+                    selectedColor = accentColor,
+                    unselectedColor = TextMuted.copy(alpha = 0.4f)
+                ),
+                enabled = !isBlocked
+            )
         }
     }
 }

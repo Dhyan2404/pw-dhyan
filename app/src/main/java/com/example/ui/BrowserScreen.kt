@@ -19,7 +19,9 @@ import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -27,10 +29,13 @@ import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,6 +79,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -161,6 +167,9 @@ fun BrowserScreen(
     var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
     var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
+    var portalFailureOffer by remember { mutableStateOf(false) }
+    var portalFailureMsg by remember { mutableStateOf("") }
+    var portalConfig by remember { mutableStateOf(securityManager.getPortalConfig()) }
 
     // Direct download helper saving files to user mobile's Downloads folder
     fun downloadFileToDownloads(url: String, suggestedName: String? = null) {
@@ -233,10 +242,27 @@ fun BrowserScreen(
         val pReg = securityManager.listenToPushNotifications { notif ->
             showToast("🔔 ${notif.title}: ${notif.message}")
         }
+        val portalListener: (SecurityManager.Portal, String) -> Unit = { newPortal, reason ->
+            currentPortal = newPortal
+            currentUrl = newPortal.url
+            pageTitle = newPortal.displayName
+            portalFailureOffer = false
+            webViewInstance?.loadUrl(newPortal.url)
+            showToast("Switched to ${newPortal.displayName}")
+        }
+        securityManager.addPortalChangeListener(portalListener)
+
+        val cfgListener: (SecurityManager.PortalConfig) -> Unit = { cfg ->
+            portalConfig = cfg
+        }
+        securityManager.addPortalConfigListener(cfgListener)
+
         onDispose {
             reg?.remove()
             mReg?.remove()
             pReg?.remove()
+            securityManager.removePortalChangeListener(portalListener)
+            securityManager.removePortalConfigListener(cfgListener)
         }
     }
 
@@ -448,6 +474,9 @@ fun BrowserScreen(
                             swipeRefreshInstance?.isRefreshing = false
                             currentUrl = url ?: securityManager.getCurrentPortalUrl()
                             pageTitle = view?.title ?: currentPortal.displayName
+                            if (currentPortal == SecurityManager.Portal.PWTHOR) {
+                                portalFailureOffer = false
+                            }
                             securityManager.sendHeartbeat(
                                 currentUrl = currentUrl,
                                 currentPageTitle = pageTitle
@@ -463,6 +492,28 @@ fun BrowserScreen(
                                     if (success) {
                                         scriptInjectionCount = scriptManager.injectionCount
                                     }
+                                }
+                            }
+                        }
+
+                        override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
+                            super.onReceivedError(view, request, error)
+                            if (request?.isForMainFrame == true) {
+                                val reqUrl = request.url?.toString() ?: ""
+                                if (currentPortal == SecurityManager.Portal.STUDYPARCHAM || reqUrl.contains("studyparcham")) {
+                                    portalFailureOffer = true
+                                    portalFailureMsg = "Portal 1 (StudyParcham) is not responding or unreachable."
+                                }
+                            }
+                        }
+
+                        override fun onReceivedHttpError(view: WebView?, request: WebResourceRequest?, errorResponse: WebResourceResponse?) {
+                            super.onReceivedHttpError(view, request, errorResponse)
+                            if (request?.isForMainFrame == true) {
+                                val code = errorResponse?.statusCode ?: 200
+                                if (code >= 500 && currentPortal == SecurityManager.Portal.STUDYPARCHAM) {
+                                    portalFailureOffer = true
+                                    portalFailureMsg = "Portal 1 (StudyParcham) returned server error $code."
                                 }
                             }
                         }
@@ -997,6 +1048,165 @@ fun BrowserScreen(
             }
         }
 
+        // Portal 1 Unreachable / Connection Fallback Banner
+        AnimatedVisibility(
+            visible = portalFailureOffer && currentPortal == SecurityManager.Portal.STUDYPARCHAM,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 56.dp, start = 12.dp, end = 12.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = DarkSurface.copy(alpha = 0.95f),
+                border = BorderStroke(1.5.dp, GoldenAccent),
+                shadowElevation = 10.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Warning",
+                            tint = GoldenAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Portal 1 (StudyParcham) is not responding",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { portalFailureOffer = false },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Dismiss",
+                                tint = TextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = if (portalFailureMsg.isNotBlank()) portalFailureMsg else "Portal 1 is currently unreachable. You can switch to PWThor Live (Portal 2) from settings or tap below to continue your studies without interruption.",
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                securityManager.setSelectedPortal(SecurityManager.Portal.PWTHOR)
+                                currentPortal = SecurityManager.Portal.PWTHOR
+                                currentUrl = SecurityManager.Portal.PWTHOR.url
+                                portalFailureOffer = false
+                                webViewInstance?.loadUrl(SecurityManager.Portal.PWTHOR.url)
+                                showToast("Switched to PWThor Live (Portal 2)")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = DarkBackground, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Switch to Portal 2", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                portalFailureOffer = false
+                                showSettingsDialog = true
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, GlassBorder)
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = null, tint = CyberCyan, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Settings", color = CyberCyan, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Individual Portal Maintenance Mode Alert Banner
+        AnimatedVisibility(
+            visible = portalConfig.isMaintenance(currentPortal) && !isPermanentUnlocked && !maintenanceInfo.isActive,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 56.dp, start = 12.dp, end = 12.dp)
+        ) {
+            val altPortal = if (currentPortal == SecurityManager.Portal.STUDYPARCHAM) SecurityManager.Portal.PWTHOR else SecurityManager.Portal.STUDYPARCHAM
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = DarkSurface.copy(alpha = 0.95f),
+                border = BorderStroke(1.5.dp, GoldenAccent),
+                shadowElevation = 10.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = "Maintenance",
+                            tint = GoldenAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "${currentPortal.displayName} Under Maintenance",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Text(
+                        text = portalConfig.getMaintenanceMessage(currentPortal),
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
+                    )
+
+                    if (!portalConfig.isMaintenance(altPortal) && !portalConfig.isBlocked(altPortal)) {
+                        Button(
+                            onClick = {
+                                securityManager.setSelectedPortal(altPortal)
+                                currentPortal = altPortal
+                                currentUrl = altPortal.url
+                                webViewInstance?.loadUrl(altPortal.url)
+                                showToast("Switched to ${altPortal.displayName}")
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Switch to ${altPortal.displayName}", color = DarkBackground, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
         // Floating Mini Navigation Bar (Discreet frosted glass pill for notes, assignments, DPPs & batches)
         if (customVideoView == null && !isPlayerUrl(currentUrl)) {
             Box(
@@ -1159,6 +1369,7 @@ fun BrowserScreen(
             AppSettingsDialog(
                 securityManager = securityManager,
                 currentPortal = currentPortal,
+                portalConfig = portalConfig,
                 onPortalSelected = { selected ->
                     securityManager.setSelectedPortal(selected)
                     currentPortal = selected

@@ -753,13 +753,14 @@ service cloud.firestore {
                 <th>Status</th>
                 <th>Device Model / ID</th>
                 <th>Passkey & Label</th>
+                <th>Active Portal</th>
                 <th>Session Expiry / Login</th>
                 <th>Currently Watching & Progress</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="devices-table-body">
-              <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Listening to live devices...</td></tr>
+              <tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Listening to live devices...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1098,6 +1099,73 @@ service cloud.firestore {
           </div>
         </div>
 
+        <!-- PORTAL SERVER MANAGEMENT & REMOTE CONTROL -->
+        <div class="glass-panel" style="padding:24px; grid-column: 1 / -1;">
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-network-wired" style="color:var(--emerald); margin-right:8px;"></i> Dual Portal Server Management & Remote Control</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Control default portal for all students, toggle independent maintenance modes, or block specific portals remotely</p>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+            
+            <!-- Global Default Portal -->
+            <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
+              <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-star" style="color:var(--amber);"></i> Global Default Portal
+              </div>
+              <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">First-time students and unassigned devices will open this portal automatically.</p>
+              
+              <div style="display:flex; gap:14px; margin-bottom:16px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+                  <input type="radio" name="defaultPortalRadio" value="studyparcham" id="radio-def-sp" checked />
+                  <span style="font-weight:600; color:var(--cyan);"><i class="fas fa-server"></i> StudyParcham (1)</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
+                  <input type="radio" name="defaultPortalRadio" value="pwthor" id="radio-def-pw" />
+                  <span style="font-weight:600; color:var(--emerald);"><i class="fas fa-bolt"></i> PWThor Live (2)</span>
+                </label>
+              </div>
+
+              <button class="btn btn-primary btn-sm" onclick="saveDefaultPortalFromWeb()"><i class="fas fa-save"></i> Save Default Portal</button>
+            </div>
+
+            <!-- Portal 1 (StudyParcham) Maintenance & Blocking -->
+            <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
+              <div style="font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                <span><i class="fas fa-server"></i> Portal 1: StudyParcham</span>
+                <span id="badge-sp-status" class="status-badge" style="font-size:10px; padding:2px 8px;">Active</span>
+              </div>
+              
+              <div style="margin-bottom:10px;">
+                <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE MESSAGE</label>
+                <input type="text" id="sp-maint-msg" class="form-control" value="StudyParcham is undergoing maintenance. Please switch to PWThor Live!" style="font-size:12px;" />
+              </div>
+
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="btn-toggle-sp-maint" class="btn btn-secondary btn-sm" onclick="togglePortalMaintenanceFromWeb('studyparcham')"><i class="fas fa-wrench"></i> Toggle Maintenance</button>
+                <button id="btn-toggle-sp-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('studyparcham')"><i class="fas fa-ban"></i> Block Portal 1</button>
+              </div>
+            </div>
+
+            <!-- Portal 2 (PWThor Live) Maintenance & Blocking -->
+            <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
+              <div style="font-size:13px; font-weight:700; color:var(--emerald); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                <span><i class="fas fa-bolt"></i> Portal 2: PWThor Live</span>
+                <span id="badge-pw-status" class="status-badge" style="font-size:10px; padding:2px 8px;">Active</span>
+              </div>
+              
+              <div style="margin-bottom:10px;">
+                <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE MESSAGE</label>
+                <input type="text" id="pw-maint-msg" class="form-control" value="PWThor Live is undergoing maintenance. Please switch to StudyParcham!" style="font-size:12px;" />
+              </div>
+
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button id="btn-toggle-pw-maint" class="btn btn-secondary btn-sm" onclick="togglePortalMaintenanceFromWeb('pwthor')"><i class="fas fa-wrench"></i> Toggle Maintenance</button>
+                <button id="btn-toggle-pw-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('pwthor')"><i class="fas fa-ban"></i> Block Portal 2</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1151,6 +1219,12 @@ service cloud.firestore {
     let pushNotifications = [];
     let smsMessages = [];
     let maintenanceActive = false;
+    let portalConfig = {
+      defaultPortal: 'studyparcham',
+      studyparchamMaintenance: { isActive: false, message: '' },
+      pwthorMaintenance: { isActive: false, message: '' },
+      blockedPortals: []
+    };
 
     // Fetch cloud admin PIN from Firestore system_config/admin_auth
     try {
@@ -1427,6 +1501,21 @@ service cloud.firestore {
           }
         }
       }, err => console.error("Maintenance sync error", err));
+
+      // 8. Dual Portal Server Config Listener
+      onSnapshot(doc(db, 'system_config', 'portal_config'), snapshot => {
+        if (snapshot.exists()) {
+          portalConfig = snapshot.data();
+        } else {
+          portalConfig = {
+            defaultPortal: 'studyparcham',
+            studyparchamMaintenance: { isActive: false, message: '' },
+            pwthorMaintenance: { isActive: false, message: '' },
+            blockedPortals: []
+          };
+        }
+        updatePortalConfigUI();
+      }, err => console.error("Portal config sync error", err));
     }
 
     // Formatting Helpers
@@ -1481,7 +1570,7 @@ service cloud.firestore {
       );
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">No devices found matching query.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No devices found matching query.</td></tr>`;
         return;
       }
 
@@ -1563,6 +1652,9 @@ service cloud.firestore {
           }
         }
 
+        const curPortal = s.currentPortal || 'studyparcham';
+        const isP2 = curPortal === 'pwthor';
+
         return `
           <tr>
             <td>
@@ -1578,6 +1670,32 @@ service cloud.firestore {
             <td>
               <span class="code-chip">${escapeHtml(s.passkey || 'Admin')}</span>
               <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${escapeHtml(s.label || 'Student')}</div>
+            </td>
+            <td>
+              <div>
+                <span class="status-badge" style="${isP2 ? 'background:rgba(217,70,239,0.15); border-color:rgba(217,70,239,0.4); color:var(--purple);' : 'background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.4); color:var(--blue);'}">
+                  <i class="${isP2 ? 'fas fa-bolt' : 'fas fa-graduation-cap'}" style="margin-right:4px;"></i>
+                  ${isP2 ? 'Portal 2 (PWThor)' : 'Portal 1 (StudyParcham)'}
+                </span>
+              </div>
+              ${s.assignedPortal ? `
+                <div style="font-size:10px; color:var(--amber); font-weight:600; margin-top:3px;">
+                  <i class="fas fa-exchange-alt"></i> Assigned: ${s.assignedPortal === 'pwthor' ? 'Portal 2' : 'Portal 1'}
+                </div>
+              ` : ''}
+              ${s.blockedPortal ? `
+                <div style="font-size:10px; color:var(--crimson); font-weight:700; margin-top:2px;">
+                  <i class="fas fa-ban"></i> Blocked: ${s.blockedPortal === 'pwthor' ? 'Portal 2' : 'Portal 1'}
+                </div>
+              ` : ''}
+              <div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:2px 6px;" onclick="switchUserPortal('${s.deviceId}', '${isP2 ? 'studyparcham' : 'pwthor'}')" title="Force switch to ${isP2 ? 'StudyParcham' : 'PWThor Live'}">
+                  <i class="fas fa-random"></i> ${isP2 ? 'Switch P1' : 'Switch P2'}
+                </button>
+                <button class="btn ${s.blockedPortal ? 'btn-emerald' : 'btn-danger'} btn-sm" style="font-size:10px; padding:2px 6px;" onclick="promptBlockUserPortal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${s.blockedPortal || ''}')" title="${s.blockedPortal ? 'Remove portal block' : 'Block a portal for this user'}">
+                  <i class="fas ${s.blockedPortal ? 'fa-unlock' : 'fa-ban'}"></i> ${s.blockedPortal ? 'Unblock' : 'Block...'}
+                </button>
+              </div>
             </td>
             <td>
               ${expiryHtml}
@@ -2216,6 +2334,191 @@ service cloud.firestore {
       }).catch(err => handleFirestoreError("Maintenance Mode", err));
     }
     window.toggleMaintenanceFromWeb = toggleMaintenanceFromWeb;
+
+    // DUAL PORTAL MANAGEMENT FUNCTIONS
+    function updatePortalConfigUI() {
+      // Default portal radio
+      const defSp = document.getElementById('radio-def-sp');
+      const defPw = document.getElementById('radio-def-pw');
+      if (defSp && defPw) {
+        if (portalConfig.defaultPortal === 'pwthor') {
+          defPw.checked = true;
+        } else {
+          defSp.checked = true;
+        }
+      }
+
+      // StudyParcham status & buttons
+      const spBadge = document.getElementById('badge-sp-status');
+      const btnSpMaint = document.getElementById('btn-toggle-sp-maint');
+      const btnSpBlock = document.getElementById('btn-toggle-sp-block');
+      const inputSpMsg = document.getElementById('sp-maint-msg');
+
+      const isSpMaint = !!(portalConfig.studyparchamMaintenance && portalConfig.studyparchamMaintenance.isActive);
+      const isSpBlocked = Array.isArray(portalConfig.blockedPortals) && portalConfig.blockedPortals.includes('studyparcham');
+
+      if (spBadge) {
+        if (isSpBlocked) {
+          spBadge.innerText = 'BLOCKED';
+          spBadge.className = 'status-badge';
+          spBadge.style.cssText = 'font-size:10px; padding:2px 8px; background:rgba(239,68,68,0.2); border-color:var(--crimson); color:var(--crimson);';
+        } else if (isSpMaint) {
+          spBadge.innerText = 'MAINTENANCE';
+          spBadge.className = 'status-badge';
+          spBadge.style.cssText = 'font-size:10px; padding:2px 8px; background:rgba(245,158,11,0.2); border-color:var(--amber); color:var(--amber);';
+        } else {
+          spBadge.innerText = 'ACTIVE';
+          spBadge.className = 'status-badge';
+          spBadge.style.cssText = 'font-size:10px; padding:2px 8px; background:rgba(16,185,129,0.2); border-color:var(--emerald); color:var(--emerald);';
+        }
+      }
+      if (btnSpMaint) {
+        btnSpMaint.innerHTML = `<i class="fas fa-wrench"></i> ${isSpMaint ? 'Exit Maintenance' : 'Set Maintenance'}`;
+        btnSpMaint.className = isSpMaint ? 'btn btn-emerald btn-sm' : 'btn btn-secondary btn-sm';
+      }
+      if (btnSpBlock) {
+        btnSpBlock.innerHTML = `<i class="fas fa-ban"></i> ${isSpBlocked ? 'Unblock Portal 1' : 'Block Portal 1'}`;
+        btnSpBlock.className = isSpBlocked ? 'btn btn-emerald btn-sm' : 'btn btn-danger btn-sm';
+      }
+      if (inputSpMsg && portalConfig.studyparchamMaintenance && portalConfig.studyparchamMaintenance.message) {
+        inputSpMsg.value = portalConfig.studyparchamMaintenance.message;
+      }
+
+      // PWThor status & buttons
+      const pwBadge = document.getElementById('badge-pw-status');
+      const btnPwMaint = document.getElementById('btn-toggle-pw-maint');
+      const btnPwBlock = document.getElementById('btn-toggle-pw-block');
+      const inputPwMsg = document.getElementById('pw-maint-msg');
+
+      const isPwMaint = !!(portalConfig.pwthorMaintenance && portalConfig.pwthorMaintenance.isActive);
+      const isPwBlocked = Array.isArray(portalConfig.blockedPortals) && portalConfig.blockedPortals.includes('pwthor');
+
+      if (pwBadge) {
+        if (isPwBlocked) {
+          pwBadge.innerText = 'BLOCKED';
+          pwBadge.className = 'status-badge';
+          pwBadge.style.cssText = 'font-size:10px; padding:2px 8px; background:rgba(239,68,68,0.2); border-color:var(--crimson); color:var(--crimson);';
+        } else if (isPwMaint) {
+          pwBadge.innerText = 'MAINTENANCE';
+          pwBadge.className = 'status-badge';
+          pwBadge.style.cssText = 'font-size:10px; padding:2px 8px; background:rgba(245,158,11,0.2); border-color:var(--amber); color:var(--amber);';
+        } else {
+          pwBadge.innerText = 'ACTIVE';
+          pwBadge.className = 'status-badge';
+          pwBadge.style.cssText = 'font-size:10px; padding:2px 8px; background:rgba(16,185,129,0.2); border-color:var(--emerald); color:var(--emerald);';
+        }
+      }
+      if (btnPwMaint) {
+        btnPwMaint.innerHTML = `<i class="fas fa-wrench"></i> ${isPwMaint ? 'Exit Maintenance' : 'Set Maintenance'}`;
+        btnPwMaint.className = isPwMaint ? 'btn btn-emerald btn-sm' : 'btn btn-secondary btn-sm';
+      }
+      if (btnPwBlock) {
+        btnPwBlock.innerHTML = `<i class="fas fa-ban"></i> ${isPwBlocked ? 'Unblock Portal 2' : 'Block Portal 2'}`;
+        btnPwBlock.className = isPwBlocked ? 'btn btn-emerald btn-sm' : 'btn btn-danger btn-sm';
+      }
+      if (inputPwMsg && portalConfig.pwthorMaintenance && portalConfig.pwthorMaintenance.message) {
+        inputPwMsg.value = portalConfig.pwthorMaintenance.message;
+      }
+    }
+    window.updatePortalConfigUI = updatePortalConfigUI;
+
+    function saveDefaultPortalFromWeb() {
+      const selected = document.querySelector('input[name="defaultPortalRadio"]:checked');
+      const defVal = selected ? selected.value : 'studyparcham';
+      setDoc(doc(db, 'system_config', 'portal_config'), {
+        defaultPortal: defVal,
+        updatedAt: Date.now()
+      }, { merge: true }).then(() => {
+        showToast(`Default portal updated to: ${defVal === 'pwthor' ? 'Portal 2 (PWThor)' : 'Portal 1 (StudyParcham)'}`);
+      }).catch(err => handleFirestoreError("Save Default Portal", err));
+    }
+    window.saveDefaultPortalFromWeb = saveDefaultPortalFromWeb;
+
+    function togglePortalMaintenanceFromWeb(portalId) {
+      const isSp = portalId === 'studyparcham';
+      const key = isSp ? 'studyparchamMaintenance' : 'pwthorMaintenance';
+      const current = portalConfig[key] || { isActive: false, message: '' };
+      const nextActive = !current.isActive;
+      const msgInputId = isSp ? 'sp-maint-msg' : 'pw-maint-msg';
+      const msg = document.getElementById(msgInputId)?.value?.trim() || `${isSp ? 'StudyParcham' : 'PWThor Live'} is undergoing scheduled maintenance.`;
+
+      const updateData = {};
+      updateData[key] = {
+        isActive: nextActive,
+        message: msg
+      };
+      updateData.updatedAt = Date.now();
+
+      setDoc(doc(db, 'system_config', 'portal_config'), updateData, { merge: true }).then(() => {
+        showToast(`${isSp ? 'Portal 1' : 'Portal 2'} Maintenance ${nextActive ? 'ACTIVATED' : 'DEACTIVATED'}`);
+      }).catch(err => handleFirestoreError("Portal Maintenance", err));
+    }
+    window.togglePortalMaintenanceFromWeb = togglePortalMaintenanceFromWeb;
+
+    function toggleGlobalPortalBlockFromWeb(portalId) {
+      const currentBlocked = Array.isArray(portalConfig.blockedPortals) ? [...portalConfig.blockedPortals] : [];
+      let nextBlocked;
+      const isCurrentlyBlocked = currentBlocked.includes(portalId);
+      if (isCurrentlyBlocked) {
+        nextBlocked = currentBlocked.filter(p => p !== portalId);
+      } else {
+        nextBlocked = [...currentBlocked, portalId];
+      }
+
+      setDoc(doc(db, 'system_config', 'portal_config'), {
+        blockedPortals: nextBlocked,
+        updatedAt: Date.now()
+      }, { merge: true }).then(() => {
+        showToast(`${portalId === 'pwthor' ? 'Portal 2' : 'Portal 1'} ${isCurrentlyBlocked ? 'UNBLOCKED' : 'BLOCKED globally'}`);
+      }).catch(err => handleFirestoreError("Portal Global Block", err));
+    }
+    window.toggleGlobalPortalBlockFromWeb = toggleGlobalPortalBlockFromWeb;
+
+    function switchUserPortal(deviceId, targetPortal) {
+      if (!deviceId) return;
+      const portalName = targetPortal === 'pwthor' ? 'Portal 2 (PWThor Live)' : 'Portal 1 (StudyParcham)';
+      if (!confirm(`Switch device "${deviceId}" to ${portalName}? This will instantly re-route the student's active portal.`)) return;
+
+      setDoc(doc(db, 'user_sessions', deviceId), {
+        assignedPortal: targetPortal,
+        updatedAt: Date.now()
+      }, { merge: true }).then(() => {
+        showToast(`Device ${deviceId} assigned to ${portalName}`);
+      }).catch(err => handleFirestoreError("Switch User Portal", err));
+    }
+    window.switchUserPortal = switchUserPortal;
+
+    function promptBlockUserPortal(deviceId, model, currentBlocked) {
+      if (!deviceId) return;
+      if (currentBlocked) {
+        if (confirm(`Unblock ${currentBlocked === 'pwthor' ? 'Portal 2 (PWThor)' : 'Portal 1 (StudyParcham)'} for ${model || deviceId}?`)) {
+          setDoc(doc(db, 'user_sessions', deviceId), {
+            blockedPortal: null,
+            updatedAt: Date.now()
+          }, { merge: true }).then(() => {
+            showToast(`Portal unblocked for device ${deviceId}.`);
+          }).catch(err => handleFirestoreError("Unblock User Portal", err));
+        }
+      } else {
+        const choice = prompt(`Block portal for ${model || deviceId}:\n1 = Block StudyParcham (Portal 1)\n2 = Block PWThor Live (Portal 2)\nEnter 1 or 2:`);
+        if (!choice) return;
+        let blockTarget = null;
+        if (choice.trim() === '1') blockTarget = 'studyparcham';
+        else if (choice.trim() === '2') blockTarget = 'pwthor';
+        else {
+          alert('Invalid choice. Enter 1 or 2.');
+          return;
+        }
+
+        setDoc(doc(db, 'user_sessions', deviceId), {
+          blockedPortal: blockTarget,
+          updatedAt: Date.now()
+        }, { merge: true }).then(() => {
+          showToast(`Blocked ${blockTarget === 'pwthor' ? 'Portal 2' : 'Portal 1'} for device ${deviceId}.`);
+        }).catch(err => handleFirestoreError("Block User Portal", err));
+      }
+    }
+    window.promptBlockUserPortal = promptBlockUserPortal;
 
     // Render Tab 6: Captured SMS Inbox
     function renderSmsTable() {
