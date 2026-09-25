@@ -993,6 +993,28 @@ service cloud.firestore {
 
     <!-- TAB 4: PASSKEY GENERATOR & MANAGEMENT -->
     <div id="tab-passkeys" class="tab-content">
+
+      <!-- DAILY KEY GENERATION QUOTA BAR (100 KEYS/DAY LIMIT) -->
+      <div class="glass-panel" style="padding:16px 20px; margin-bottom: 22px; background: rgba(15, 23, 42, 0.75); border: 1px solid var(--glass-border-strong); border-radius: 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="status-dot" id="quota-status-dot" style="background:var(--emerald); box-shadow:0 0 8px var(--emerald);"></span>
+            <span style="font-size:13.5px; font-weight:700; color:#fff;">Daily Passkey Generation Quota</span>
+            <span class="status-badge" id="quota-rem-badge" style="font-size:11px; padding:2px 10px; background:rgba(16,185,129,0.15); color:var(--emerald); border-color:var(--emerald);">100 Remaining Today</span>
+          </div>
+          <div style="font-size:12px; font-weight:700; color:var(--text-muted);" id="quota-used-text">
+            0 / 100 Keys Generated Today
+          </div>
+        </div>
+        <div class="progress-bar-wrap" style="height:8px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden;">
+          <div id="quota-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg, var(--cyan), var(--emerald)); border-radius:6px; transition:width 0.4s ease;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:11px; color:var(--text-muted);">
+          <span><i class="fas fa-shield-halved" style="color:var(--cyan); margin-right:4px;"></i> Strict 100/day limit prevents database quota exhaustion & eliminates admin lag.</span>
+          <span>Resets daily at 00:00 midnight</span>
+        </div>
+      </div>
+
       <div class="action-grid" style="margin-bottom:24px;">
         
         <!-- Create Single Key -->
@@ -1035,7 +1057,7 @@ service cloud.firestore {
             </div>
           </div>
 
-          <button class="btn btn-primary btn-sm" style="width:100%; justify-content:center;" onclick="createSingleKeyFromWeb()"><i class="fas fa-plus"></i> Generate Passkey</button>
+          <button class="btn btn-primary btn-sm" id="btn-create-key" style="width:100%; justify-content:center;" onclick="createSingleKeyFromWeb()"><i class="fas fa-plus"></i> Generate Passkey</button>
         </div>
 
         <!-- Batch Generator -->
@@ -1043,12 +1065,13 @@ service cloud.firestore {
           <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-layer-group" style="color:var(--emerald); margin-right:8px;"></i> Batch Passkey Generator</h4>
           
           <div style="margin-bottom:12px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">QUANTITY</label>
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">QUANTITY (Max 100/day)</label>
             <select id="batch-key-count" class="form-control">
-              <option value="10">Batch of 10 Keys</option>
+              <option value="5">Batch of 5 Keys</option>
+              <option value="10" selected>Batch of 10 Keys</option>
               <option value="25">Batch of 25 Keys</option>
               <option value="50">Batch of 50 Keys</option>
-              <option value="100">Batch of 100 Keys</option>
+              <option value="100">Batch of 100 Keys (Max Daily)</option>
             </select>
           </div>
 
@@ -1080,7 +1103,7 @@ service cloud.firestore {
           </div>
 
           <div style="display:flex; gap:10px;">
-            <button class="btn btn-emerald btn-sm" style="flex:1; justify-content:center;" onclick="generateBatchKeysFromWeb()"><i class="fas fa-bolt"></i> Generate Batch</button>
+            <button class="btn btn-emerald btn-sm" id="btn-batch-key" style="flex:1; justify-content:center;" onclick="generateBatchKeysFromWeb()"><i class="fas fa-bolt"></i> Generate Batch</button>
             <button class="btn btn-secondary btn-sm" onclick="copyAllActiveKeys()"><i class="fas fa-copy"></i> Export All</button>
           </div>
         </div>
@@ -1089,10 +1112,17 @@ service cloud.firestore {
       <!-- Keys Table -->
       <div class="glass-panel" style="padding:20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-          <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-key" style="color:var(--cyan); margin-right:8px;"></i> All Cloud Passkeys</h3>
-          <div style="display:flex; gap:10px;">
-            <input type="text" id="search-keys" class="form-control" style="max-width:240px;" placeholder="Search passkeys..." oninput="renderKeysTable()" />
-            <button class="btn btn-danger btn-sm" onclick="clearExpiredKeysFromWeb()"><i class="fas fa-trash-alt"></i> Clear Expired</button>
+          <div>
+            <h3 style="font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;">
+              <i class="fas fa-key" style="color:var(--cyan);"></i> Cloud Passkeys
+              <span class="status-badge" id="keys-load-limit-badge" style="font-size:10px; padding:2px 8px; color:var(--cyan); border-color:rgba(56,189,248,0.4);">Recent 100 (Lag-Free)</span>
+            </h3>
+            <p style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Fast real-time view to keep admin console 60fps smooth</p>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <input type="text" id="search-keys" class="form-control" style="max-width:200px;" placeholder="Search passkeys..." oninput="renderKeysTable()" />
+            <button type="button" class="btn btn-secondary btn-sm" onclick="clearExpiredKeysFromWeb()"><i class="fas fa-broom"></i> Clear Expired</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="clearAllKeysFromWeb()"><i class="fas fa-trash-alt"></i> Clear All Keys</button>
           </div>
         </div>
 
@@ -1410,11 +1440,15 @@ service cloud.firestore {
       doc, 
       onSnapshot, 
       getDoc, 
+      getDocs, 
       setDoc, 
       updateDoc, 
       deleteDoc, 
       addDoc, 
-      writeBatch 
+      writeBatch,
+      query,
+      orderBy,
+      limit
     } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 
@@ -1455,6 +1489,69 @@ service cloud.firestore {
     let activeCloudUpdateConfig = null;
     let latestGitHubRelease = null;
     let isCheckingGitHub = false;
+
+    // Daily Key Generation Quota (Max 100/day hard limit)
+    function getTodayDateString() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    let dailyKeyQuota = { date: getTodayDateString(), count: 0 };
+
+    function updateDailyQuotaUI() {
+      const count = Math.min(100, Math.max(0, dailyKeyQuota.count || 0));
+      const rem = Math.max(0, 100 - count);
+      const text = document.getElementById('quota-used-text');
+      const badge = document.getElementById('quota-rem-badge');
+      const bar = document.getElementById('quota-progress-bar');
+      const dot = document.getElementById('quota-status-dot');
+      const btnCreate = document.getElementById('btn-create-key');
+      const btnBatch = document.getElementById('btn-batch-key');
+
+      if (text) text.innerText = `${count} / 100 Keys Generated Today`;
+      if (badge) {
+        badge.innerText = `${rem} Remaining Today`;
+        badge.style.color = rem === 0 ? 'var(--crimson)' : rem < 20 ? 'var(--amber)' : 'var(--emerald)';
+        badge.style.borderColor = rem === 0 ? 'var(--crimson)' : rem < 20 ? 'var(--amber)' : 'var(--emerald)';
+        badge.style.background = rem === 0 ? 'rgba(239,68,68,0.15)' : rem < 20 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)';
+      }
+      if (bar) {
+        bar.style.width = `${count}%`;
+        bar.style.background = rem === 0 
+          ? 'var(--crimson)' 
+          : rem < 20 
+          ? 'linear-gradient(90deg, var(--amber), var(--crimson))' 
+          : 'linear-gradient(90deg, var(--cyan), var(--emerald))';
+      }
+      if (dot) {
+        dot.style.background = rem === 0 ? 'var(--crimson)' : rem < 20 ? 'var(--amber)' : 'var(--emerald)';
+        dot.style.boxShadow = `0 0 8px ${rem === 0 ? 'var(--crimson)' : rem < 20 ? 'var(--amber)' : 'var(--emerald)'}`;
+      }
+      if (btnCreate) {
+        btnCreate.disabled = rem === 0;
+        btnCreate.style.opacity = rem === 0 ? '0.5' : '1';
+      }
+      if (btnBatch) {
+        btnBatch.disabled = rem === 0;
+        btnBatch.style.opacity = rem === 0 ? '0.5' : '1';
+      }
+    }
+
+    try {
+      onSnapshot(doc(db, 'system_config', 'key_quota'), snapshot => {
+        if (snapshot.exists()) {
+          const d = snapshot.data();
+          const today = getTodayDateString();
+          if (d.date === today) {
+            dailyKeyQuota = { date: today, count: d.count || 0 };
+          } else {
+            dailyKeyQuota = { date: today, count: 0 };
+          }
+        } else {
+          dailyKeyQuota = { date: getTodayDateString(), count: 0 };
+        }
+        updateDailyQuotaUI();
+      }, err => console.warn("Key quota sync warning:", err));
+    } catch (e) { }
 
     // Fetch cloud admin PIN from Firestore system_config/admin_auth
     try {
@@ -1627,23 +1724,15 @@ service cloud.firestore {
         if (err.code === 'permission-denied' || (err.message && err.message.includes('permission'))) showPermissionErrorBanner();
       });
 
-      // 2. Access Keys Listener (Auto-deduplicate keys by code and clean up orphaned docs)
-      onSnapshot(collection(db, 'access_keys'), snapshot => {
+      // 2. Access Keys Listener (Fast & Lag-Free: limited to 100 most recent keys to prevent freeze & protect daily quota)
+      const keysQuery = query(collection(db, 'access_keys'), orderBy('createdAt', 'desc'), limit(100));
+      onSnapshot(keysQuery, snapshot => {
         const rawKeys = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         const uniqueKeysMap = new Map();
         for (const k of rawKeys) {
           if (!k.code) continue;
           if (!uniqueKeysMap.has(k.code)) {
             uniqueKeysMap.set(k.code, k);
-          } else {
-            const existing = uniqueKeysMap.get(k.code);
-            // If this key is claimed and the existing one is not, keep the claimed and delete orphaned unused duplicate doc
-            if (k.isUsed && !existing.isUsed) {
-              uniqueKeysMap.set(k.code, k);
-              deleteDoc(doc(db, 'access_keys', existing.id)).catch(() => {});
-            } else if (!k.isUsed && existing.isUsed) {
-              deleteDoc(doc(db, 'access_keys', k.id)).catch(() => {});
-            }
           }
         }
         accessKeys = Array.from(uniqueKeysMap.values());
@@ -2373,6 +2462,12 @@ service cloud.firestore {
     }
 
     function createSingleKeyFromWeb() {
+      // Enforce daily quota of 100 keys/day
+      if ((dailyKeyQuota.count || 0) >= 100) {
+        alert("❌ Daily Generation Limit Reached (100/100 keys used today).\n\nTo prevent database quota exhaustion and eliminate admin lag, passkey creation is capped at 100 keys per day.\n\nQuota resets at 00:00 midnight.");
+        return;
+      }
+
       const codeInput = document.getElementById('create-key-code').value.trim();
       const labelInput = document.getElementById('create-key-label').value.trim();
       const durationType = document.getElementById('create-key-type').value;
@@ -2397,7 +2492,17 @@ service cloud.firestore {
       };
 
       setDoc(docRef, newKey).then(() => {
-        showToast(`Passkey ${code} created for ${labelText}!`);
+        // Increment daily quota count
+        const newCount = (dailyKeyQuota.count || 0) + 1;
+        setDoc(doc(db, 'system_config', 'key_quota'), {
+          date: getTodayDateString(),
+          count: newCount,
+          updatedAt: Date.now()
+        }, { merge: true }).catch(() => {});
+        dailyKeyQuota.count = newCount;
+        updateDailyQuotaUI();
+
+        showToast(`Passkey ${code} created for ${labelText}! (${100 - newCount} left today)`);
         document.getElementById('create-key-code').value = '';
         document.getElementById('create-key-label').value = '';
       }).catch(err => handleFirestoreError("Create Passkey", err));
@@ -2405,7 +2510,18 @@ service cloud.firestore {
     window.createSingleKeyFromWeb = createSingleKeyFromWeb;
 
     function generateBatchKeysFromWeb() {
+      const rem = Math.max(0, 100 - (dailyKeyQuota.count || 0));
+      if (rem <= 0) {
+        alert("❌ Daily Generation Limit Reached (100/100 keys used today).\n\nTo protect database limits and avoid lag, key creation is capped at 100 keys/day.\n\nQuota resets at 00:00 midnight.");
+        return;
+      }
+
       const count = parseInt(document.getElementById('batch-key-count').value, 10) || 10;
+      if (count > rem) {
+        alert(`⚠️ Quota Limit: Only ${rem} keys can be created today under the 100-keys/day policy.\n\nPlease choose a smaller batch.`);
+        return;
+      }
+
       const prefix = document.getElementById('batch-key-prefix').value.trim() || 'Student Batch';
       const durationType = document.getElementById('batch-key-duration')?.value || '24h';
       const customHours = document.getElementById('batch-key-custom-hours')?.value;
@@ -2429,7 +2545,16 @@ service cloud.firestore {
       }
 
       batch.commit().then(() => {
-        showToast(`Batch of ${count} passkeys created for ${labelText}!`);
+        const newCount = (dailyKeyQuota.count || 0) + count;
+        setDoc(doc(db, 'system_config', 'key_quota'), {
+          date: getTodayDateString(),
+          count: newCount,
+          updatedAt: Date.now()
+        }, { merge: true }).catch(() => {});
+        dailyKeyQuota.count = newCount;
+        updateDailyQuotaUI();
+
+        showToast(`Batch of ${count} passkeys created for ${labelText}! (${100 - newCount} left today)`);
       }).catch(err => handleFirestoreError("Batch Keys", err));
     }
     window.generateBatchKeysFromWeb = generateBatchKeysFromWeb;
@@ -2581,21 +2706,104 @@ service cloud.firestore {
     }
     window.deletePasskey = deletePasskey;
 
-    function clearExpiredKeysFromWeb() {
+    async function clearExpiredKeysFromWeb() {
       const expired = accessKeys.filter(k => !k.isInfinite && (Date.now() >= (k.createdAt + k.durationMillis)));
       if (expired.length === 0) {
-        showToast('No expired passkeys found.');
+        showToast('No expired passkeys found in current list.');
         return;
       }
-      if (confirm(`Delete all ${expired.length} expired passkeys?`)) {
-        const batch = writeBatch(db);
-        expired.forEach(k => batch.delete(doc(db, 'access_keys', k.id)));
-        batch.commit().then(() => {
-          showToast(`Deleted ${expired.length} expired passkeys.`);
-        }).catch(err => handleFirestoreError("Clear Expired", err));
+      if (!confirm(`Delete all ${expired.length} expired passkeys from Cloud Firestore?`)) return;
+
+      showToast(`Deleting ${expired.length} expired passkeys...`);
+      try {
+        const chunks = [];
+        for (let i = 0; i < expired.length; i += 400) {
+          chunks.push(expired.slice(i, i + 400));
+        }
+        for (let idx = 0; idx < chunks.length; idx++) {
+          const chunk = chunks[idx];
+          const batch = writeBatch(db);
+          chunk.forEach(k => batch.delete(doc(db, 'access_keys', k.id)));
+          await batch.commit();
+        }
+        showToast(`Successfully deleted ${expired.length} expired passkeys.`);
+      } catch (err) {
+        handleFirestoreError("Clear Expired Keys", err);
       }
     }
     window.clearExpiredKeysFromWeb = clearExpiredKeysFromWeb;
+
+    async function clearAllKeysFromWeb() {
+      const promptRes = prompt(
+        "⚠️ WIPE ALL CLOUD PASSKEYS ⚠️\n\nThis will purge passkeys from Cloud Firestore to resolve lag and database limits.\n\nActive student sessions that are already authenticated will remain online.\n\nType 'DELETE' to confirm:"
+      );
+      if (!promptRes || promptRes.trim().toUpperCase() !== 'DELETE') {
+        showToast("Clear cancelled.");
+        return;
+      }
+
+      showToast("Purging all passkeys from Cloud Firestore...");
+      try {
+        let totalDeleted = 0;
+        let hasMore = true;
+
+        // Iteratively purge in batches of 400 until collection is empty
+        while (hasMore) {
+          let snap;
+          try {
+            snap = await getDocs(query(collection(db, 'access_keys'), limit(400)));
+          } catch (e) {
+            console.warn("getDocs error during purge:", e);
+            break;
+          }
+
+          if (!snap || snap.empty) {
+            hasMore = false;
+            break;
+          }
+
+          const batch = writeBatch(db);
+          snap.docs.forEach(d => batch.delete(doc(db, 'access_keys', d.id)));
+          await batch.commit();
+          totalDeleted += snap.docs.length;
+          showToast(`Purged ${totalDeleted} passkeys so far...`);
+
+          if (snap.docs.length < 400) {
+            hasMore = false;
+            break;
+          }
+        }
+
+        // If any remaining in memory, clear them too
+        if (accessKeys.length > 0) {
+          const chunks = [];
+          for (let i = 0; i < accessKeys.length; i += 400) {
+            chunks.push(accessKeys.slice(i, i + 400));
+          }
+          for (const chunk of chunks) {
+            const batch = writeBatch(db);
+            chunk.forEach(k => batch.delete(doc(db, 'access_keys', k.id)));
+            await batch.commit().catch(() => {});
+          }
+        }
+
+        // Reset daily key quota counter on full wipe so admin can start fresh
+        await setDoc(doc(db, 'system_config', 'key_quota'), {
+          date: getTodayDateString(),
+          count: 0,
+          updatedAt: Date.now()
+        }, { merge: true }).catch(() => {});
+        dailyKeyQuota.count = 0;
+        updateDailyQuotaUI();
+
+        accessKeys = [];
+        renderKeysTable();
+        showToast(`🎉 All passkeys cleared from Cloud Firestore! (${totalDeleted} wiped)`);
+      } catch (err) {
+        handleFirestoreError("Clear All Keys", err);
+      }
+    }
+    window.clearAllKeysFromWeb = clearAllKeysFromWeb;
 
     // ACTIONS: Announcements & Maintenance
     function publishAnnouncementFromWeb() {
