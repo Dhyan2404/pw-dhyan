@@ -11,13 +11,11 @@ class ScriptManager(private val context: Context) {
         private const val LIQUID_PLAYER_PATH = "scripts/liquid_player.js"
         private const val PWTHOR_PORTAL_PATH = "scripts-2/portel.js"
         private const val PWTHOR_PORTAL_FALLBACK = "scripts/portel.js"
-        private const val PWTHOR_PLAYER_PATH = "scripts/pwthor_player.js"
     }
 
     private var masterkeyCache: String? = null
     private var liquidPlayerCache: String? = null
     private var pwthorPortalCache: String? = null
-    private var pwthorPlayerCache: String? = null
 
     var lastInjectionTime: Long = 0
         private set
@@ -78,72 +76,37 @@ class ScriptManager(private val context: Context) {
     }
 
     /**
-     * Loads the PWThor Live player script from assets.
-     */
-    fun getPWThorPlayerScript(): String {
-        return pwthorPlayerCache ?: run {
-            try {
-                context.assets.open(PWTHOR_PLAYER_PATH).bufferedReader().use { it.readText() }.also {
-                    pwthorPlayerCache = it
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to read $PWTHOR_PLAYER_PATH", e)
-                ""
-            }
-        }
-    }
-
-    /**
      * Injects the appropriate script based on the target URL / domain.
      * CRITICAL REQUIREMENT:
-     * - For pwthor.live: Main scripts (masterkey & liquid_player) do NOT apply! Only PWThor script is injected.
-     * - For studyparcham.in: Injects masterkey and liquid_player scripts.
+     * - For pwthor.live (Server Moon): Main scripts (masterkey & liquid_player) do NOT apply! ONLY scripts-2/portel.js is injected.
+     * - For studyparcham.in (Server Sun): Injects masterkey and liquid_player scripts.
      */
     fun injectForUrl(webView: WebView, url: String?, onResult: ((Boolean) -> Unit)? = null) {
         val currentUrl = (url ?: webView.url)?.lowercase() ?: ""
 
-        if (currentUrl.contains("pwthor.live")) {
-            // PWThor Portal: Inject PWThor portal and player scripts
+        if (currentUrl.contains("pwthor")) {
+            // PWThor Portal: Strictly portel.js ONLY
             val pwthorPortal = getPWThorPortalScript()
-            val pwthorPlayer = getPWThorPlayerScript()
-            if (pwthorPortal.isBlank() && pwthorPlayer.isBlank()) {
+            if (pwthorPortal.isBlank()) {
                 onResult?.invoke(false)
                 return
             }
 
             webView.post {
-                if (pwthorPortal.isNotBlank()) {
-                    webView.evaluateJavascript(
-                        """
-                        (function() {
-                            try {
-                                $pwthorPortal
-                            } catch(e) {
-                                console.error('[PWThor Portal Injection Error]:', e);
-                            }
-                        })();
-                        """.trimIndent(),
-                        null
-                    )
-                }
-                if (pwthorPlayer.isNotBlank()) {
-                    webView.evaluateJavascript(
-                        """
-                        (function() {
-                            try {
-                                $pwthorPlayer
-                            } catch(e) {
-                                console.error('[PWThor Player Injection Error]:', e);
-                            }
-                        })();
-                        """.trimIndent()
-                    ) { result ->
-                        lastInjectionTime = System.currentTimeMillis()
-                        injectionCount++
-                        Log.d(TAG, "PWThor scripts injected successfully (#$injectionCount), result: $result")
-                        onResult?.invoke(true)
-                    }
-                } else {
+                webView.evaluateJavascript(
+                    """
+                    (function() {
+                        try {
+                            $pwthorPortal
+                        } catch(e) {
+                            console.error('[PWThor Portal Injection Error]:', e);
+                        }
+                    })();
+                    """.trimIndent()
+                ) { result ->
+                    lastInjectionTime = System.currentTimeMillis()
+                    injectionCount++
+                    Log.d(TAG, "PWThor portel.js injected successfully (#$injectionCount), result: $result")
                     onResult?.invoke(true)
                 }
             }

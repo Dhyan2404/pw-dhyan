@@ -115,7 +115,8 @@ data class UserSession(
     val currentPageTitle: String? = null,
     val currentPortal: String = "studyparcham",
     val assignedPortal: String? = null,
-    val blockedPortal: String? = null
+    val blockedPortal: String? = null,
+    val accessRevoked: Boolean = false
 ) {
     val isCurrentlyOnline: Boolean get() = isOnline && (System.currentTimeMillis() - maxOf(lastHeartbeat, lastActiveTime) < 35000L)
 
@@ -155,6 +156,7 @@ data class UserSession(
             "lastActiveTime" to lastActiveTime,
             "suspendedUntil" to suspendedUntil,
             "isRevoked" to isRevoked,
+            "accessRevoked" to accessRevoked,
             "currentProgressPercent" to currentProgressPercent,
             "totalWatchTimeSeconds" to totalWatchTimeSeconds,
             "isPermanentAdmin" to isPermanentAdmin,
@@ -185,6 +187,7 @@ data class UserSession(
                 lastActiveTime = (map["lastActiveTime"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 suspendedUntil = (map["suspendedUntil"] as? Number)?.toLong() ?: 0L,
                 isRevoked = (map["isRevoked"] as? Boolean) ?: false,
+                accessRevoked = (map["accessRevoked"] as? Boolean) ?: false,
                 currentLecture = map["currentLecture"] as? String,
                 currentSubject = map["currentSubject"] as? String,
                 currentChapter = map["currentChapter"] as? String,
@@ -749,7 +752,8 @@ class SecurityManager(private val context: Context) {
                     val data = doc.data ?: return@addSnapshotListener
 
                     val isRevoked = data["isRevoked"] as? Boolean ?: false
-                    if (isRevoked) {
+                    val accessRevoked = data["accessRevoked"] as? Boolean ?: false
+                    if (isRevoked || accessRevoked) {
                         clearSession()
                         notifySessionStateChanged(false)
                         return@addSnapshotListener
@@ -1011,14 +1015,29 @@ class SecurityManager(private val context: Context) {
         return generatedList
     }
 
-    fun removeKey(keyId: String): Boolean {
+    fun removeKey(keyId: String, onComplete: ((Boolean) -> Unit)? = null): Boolean {
         val fs = firestore ?: return false
-        fs.collection(FIRESTORE_COLLECTION_KEYS).document(keyId).delete()
+        val key = cloudKeysList.find { it.id == keyId }
+        val claimedDeviceId = key?.deviceId
+
+        val batch = fs.batch()
+        batch.delete(fs.collection(FIRESTORE_COLLECTION_KEYS).document(keyId))
+        if (!claimedDeviceId.isNullOrBlank()) {
+            batch.set(fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(claimedDeviceId), mapOf(
+                "accessRevoked" to true,
+                "sessionExpiry" to 0L,
+                "passkey" to "Passkey Revoked"
+            ), SetOptions.merge())
+        }
+        batch.commit()
             .addOnSuccessListener {
-                Log.d(TAG, "Key $keyId deleted from Firestore")
+                Log.d(TAG, "Key $keyId removed and claimed device session reset (No ban)")
+                showToast("Passkey taken back! Student access reset (No ban).")
+                onComplete?.invoke(true)
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to delete key from Firestore", e)
+                Log.e(TAG, "Failed to delete key: ${e.message}")
+                onComplete?.invoke(false)
             }
         return true
     }
@@ -1329,6 +1348,35 @@ class SecurityManager(private val context: Context) {
         firestore?.collection(FIRESTORE_COLLECTION_SESSIONS)?.document(deviceId)
             ?.set(mapOf("isRevoked" to true, "isOnline" to false), SetOptions.merge())
             ?.addOnCompleteListener { onComplete?.invoke(true) }
+    }
+
+    /**
+     * Admin takes back granted access for a user/device WITHOUT banning them.
+     * Resets their active session in Firestore so their phone immediately locks.
+     * The student is NOT banned; they simply need a new passkey to unlock.
+     */
+    fun revokeAccessNoBan(deviceId: String, onComplete: ((Boolean) -> Unit)? = null) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        val update = mapOf(
+            "accessRevoked" to true,
+            "sessionExpiry" to 0L,
+            "isOnline" to false,
+            "passkey" to "Revoked by Admin"
+        )
+        fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(deviceId)
+            .set(update, SetOptions.merge())
+            .addOnSuccessListener {
+                showToast("Access taken back! Student screen locked (No ban).")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed: ${e.message}")
+                onComplete?.invoke(false)
+            }
     }
 
     fun suspendDevice(deviceId: String, durationMinutes: Int = 5, onComplete: ((Boolean) -> Unit)? = null) {

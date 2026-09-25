@@ -316,23 +316,19 @@ fun BrowserScreen(
         }
     }
 
-    fun handlePlayerOrientation(isPlayer: Boolean) {
+    fun handlePlayerOrientation(isFullscreenVideo: Boolean) {
         val activity = context as? Activity ?: return
         val window = activity.window ?: return
         val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
-        if (isPlayer) {
-            // Force horizontal landscape initially for widescreen lecture viewing
+        if (isFullscreenVideo) {
+            // Fullscreen video: Landscape with hidden status bars
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             insetsController.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             insetsController.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             swipeRefreshInstance?.isEnabled = false
-            // Release lock to FULL_SENSOR after 1.8s so user can auto-rotate to vertical whenever they want
-            Handler(Looper.getMainLooper()).postDelayed({
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-            }, 1800)
         } else {
-            // Non-lecture screens return to normal portrait / sensor mode
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // Strictly locked to Portrait for normal browsing across both portals
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             insetsController.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             swipeRefreshInstance?.isEnabled = true
         }
@@ -346,9 +342,6 @@ fun BrowserScreen(
         } else {
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
-        Handler(Looper.getMainLooper()).postDelayed({
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-        }, 1800)
     }
 
     fun showBlockedNotice(url: String) {
@@ -459,7 +452,6 @@ fun BrowserScreen(
                             }
 
                             if (securityManager.isUrlAllowed(url)) {
-                                handlePlayerOrientation(isPlayerUrl(url))
                                 return false // Allow navigation within allowed portals
                             } else {
                                 // Block external domain navigation!
@@ -472,7 +464,6 @@ fun BrowserScreen(
                             super.onPageStarted(view, url, favicon)
                             isLoading = true
                             currentUrl = url ?: securityManager.getCurrentPortalUrl()
-                            handlePlayerOrientation(isPlayerUrl(currentUrl))
                             // Inject early security pass-through (strictly isolated per portal)
                             view?.let { scriptManager.injectPreloadSecurity(it, currentUrl) }
                         }
@@ -497,7 +488,6 @@ fun BrowserScreen(
                                 currentUrl = currentUrl,
                                 currentPageTitle = pageTitle
                             )
-                            handlePlayerOrientation(isPlayerUrl(currentUrl))
                             try {
                                 android.webkit.CookieManager.getInstance().flush()
                             } catch (_: Exception) {}
@@ -631,9 +621,7 @@ fun BrowserScreen(
 
                         @JavascriptInterface
                         fun onLecturePlayerDetected(isPlayer: Boolean) {
-                            (context as? Activity)?.runOnUiThread {
-                                handlePlayerOrientation(isPlayer)
-                            }
+                            // Orientation is strictly managed via fullscreen video or manual toggle
                         }
 
                         @JavascriptInterface

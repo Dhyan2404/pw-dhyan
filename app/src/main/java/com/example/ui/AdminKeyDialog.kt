@@ -839,9 +839,14 @@ fun AdminKeyDialog(
                                 items(filteredUserSessions, key = { it.deviceId }) { session ->
                                     UserDeviceCard(
                                         session = session,
+                                        onTakeBackAccess = {
+                                            securityManager.revokeAccessNoBan(session.deviceId) {
+                                                Toast.makeText(context, "Access taken back from ${session.deviceModel} (No ban)!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
                                         onRevoke = {
                                             securityManager.revokeDevice(session.deviceId) {
-                                                Toast.makeText(context, "Device ${session.deviceModel} access revoked!", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "Device ${session.deviceModel} banned!", Toast.LENGTH_SHORT).show()
                                             }
                                         },
                                         onSuspend = {
@@ -1485,6 +1490,7 @@ private fun KeyCard(
 @Composable
 private fun UserDeviceCard(
     session: UserSession,
+    onTakeBackAccess: () -> Unit,
     onRevoke: () -> Unit,
     onSuspend: () -> Unit,
     onUnsuspend: () -> Unit
@@ -1552,6 +1558,7 @@ private fun UserDeviceCard(
                                 shape = RoundedCornerShape(4.dp),
                                 color = when {
                                     session.isRevoked -> CrimsonAlert.copy(alpha = 0.2f)
+                                    session.accessRevoked -> GoldenAccent.copy(alpha = 0.2f)
                                     session.isSuspended() -> GoldenAccent.copy(alpha = 0.2f)
                                     isOnlineNow -> EmeraldSuccess.copy(alpha = 0.2f)
                                     else -> TextMuted.copy(alpha = 0.15f)
@@ -1560,6 +1567,7 @@ private fun UserDeviceCard(
                                 Text(
                                     text = when {
                                         session.isRevoked -> "REVOKED"
+                                        session.accessRevoked -> "KEY REVOKED"
                                         session.isSuspended() -> "TIMEOUT (${session.getRemainingSuspensionFormatted()})"
                                         isOnlineNow -> "ONLINE"
                                         else -> "OFFLINE"
@@ -1568,6 +1576,7 @@ private fun UserDeviceCard(
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = when {
                                             session.isRevoked -> CrimsonAlert
+                                            session.accessRevoked -> GoldenAccent
                                             session.isSuspended() -> GoldenAccent
                                             isOnlineNow -> EmeraldSuccess
                                             else -> TextMuted
@@ -1619,6 +1628,20 @@ private fun UserDeviceCard(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 1. Take Back Access (No Ban - Locks student screen immediately)
+                    Button(
+                        onClick = onTakeBackAccess,
+                        colors = ButtonDefaults.buttonColors(containerColor = CyberCyan.copy(alpha = 0.18f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(28.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Text("Take Back Key", style = MaterialTheme.typography.labelSmall.copy(color = CyberCyan, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     if (session.isSuspended()) {
                         Button(
                             onClick = onUnsuspend,
@@ -1653,7 +1676,7 @@ private fun UserDeviceCard(
                         modifier = Modifier.height(28.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp)
                     ) {
-                        Text("Kick", style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                        Text("Ban Device", style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold, fontSize = 10.sp))
                     }
                 }
             }

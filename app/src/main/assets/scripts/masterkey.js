@@ -769,24 +769,10 @@
     setInterval(cyclePhoneWallpaper, 30000);
 
     /* ==========================================================================
-       8. LECTURE PLAYER DETECTOR & DYNAMIC ORIENTATION BRIDGE
+       8. LECTURE PLAYER DETECTOR & DYNAMIC ORIENTATION BRIDGE (STABLE MODE)
        ========================================================================== */
-    function checkPlayerRoute() {
-        const href = window.location.href;
-        const isPlayer = href.includes('player') ||
-                         href.includes('videoId=') ||
-                         href.includes('vUrl=') ||
-                         href.includes('lectureId=') ||
-                         (document.querySelector('video') !== null);
-        try {
-            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
-                window.AndroidPlayerBridge.onLecturePlayerDetected(isPlayer);
-            }
-        } catch (e) { }
-    }
-    window.addEventListener('popstate', checkPlayerRoute);
-    window.addEventListener('hashchange', checkPlayerRoute);
-    setInterval(checkPlayerRoute, 1200);
+    // Auto-rotation polling disabled: Stable portrait browsing enforced by Dhyan.
+    // Screen rotation activates only during native fullscreen video.
 
     /* ==========================================================================
        9. LIVE BROWSING & URL TELEMETRY (EVERY 10 SECONDS TO CLOUD)

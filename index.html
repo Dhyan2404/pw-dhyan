@@ -1660,7 +1660,7 @@ service cloud.firestore {
             <td>
               <span class="status-badge" style="${isOnline ? '' : 'background:rgba(148,163,184,0.1); border-color:rgba(148,163,184,0.3); color:var(--text-muted);'}">
                 <div class="status-dot" style="${isOnline ? '' : 'background:#94a3b8; box-shadow:none; animation:none;'}"></div>
-                ${isSuspended ? '⏱️ Timeout' : isOnline ? 'Online' : `Offline (${offlineLabel})`}
+                ${isSuspended ? '⏱️ Timeout' : s.accessRevoked ? '🔑 Key Taken Back' : isOnline ? 'Online' : `Offline (${offlineLabel})`}
               </span>
             </td>
             <td>
@@ -1707,12 +1707,13 @@ service cloud.firestore {
             <td>
               <div style="display:flex; gap:6px; flex-wrap:nowrap;">
                 <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${escapeHtml(s.label || 'Student')}')" title="Grant or Extend Custom Access Hours (No login needed)"><i class="fas fa-hourglass-half"></i> Grant Hours</button>
+                ${!s.isRevoked ? `<button class="btn btn-warning btn-sm" onclick="takeBackAccess('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Take Back Access (Instantly locks phone screen without banning)"><i class="fas fa-undo-alt"></i> Take Back Key</button>` : ''}
                 <button class="btn btn-primary btn-sm" onclick="promptDirectAlert('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Send direct notification"><i class="fas fa-bell"></i></button>
                 ${(isSuspended || s.isRevoked) 
                   ? `<button class="btn btn-emerald btn-sm" onclick="unsuspendDevice('${s.deviceId}')" title="Unban / Reactivate Device"><i class="fas fa-check-circle"></i> Unban</button>`
                   : `<button class="btn btn-secondary btn-sm" onclick="suspendDevice('${s.deviceId}', 5)" title="5-Min Cooldown"><i class="fas fa-clock"></i></button>`
                 }
-                ${!s.isRevoked ? `<button class="btn btn-danger btn-sm" onclick="revokeDevice('${s.deviceId}')" title="Revoke Device"><i class="fas fa-ban"></i></button>` : ''}
+                ${!s.isRevoked ? `<button class="btn btn-danger btn-sm" onclick="revokeDevice('${s.deviceId}')" title="Revoke Device (Ban permanently)"><i class="fas fa-ban"></i></button>` : ''}
                 <button class="btn btn-secondary btn-sm" onclick="deleteDeviceSession('${s.deviceId}')" title="Delete Session Record"><i class="fas fa-trash-alt"></i></button>
               </div>
             </td>
@@ -2033,6 +2034,20 @@ service cloud.firestore {
     }
     window.unsuspendDevice = unsuspendDevice;
 
+    function takeBackAccess(deviceId, deviceModel = 'Device') {
+      if (confirm(`Take back access from ${deviceModel} (${deviceId})?\n\nThis will immediately lock their phone screen and take back their passkey / granted hours WITHOUT banning them.\n\nThe student will be able to log in again later if you grant another key.`)) {
+        setDoc(doc(db, 'user_sessions', deviceId), {
+          accessRevoked: true,
+          sessionExpiry: 0,
+          isOnline: false,
+          passkey: 'Revoked by Admin'
+        }, { merge: true }).then(() => {
+          showToast(`Access taken back from ${deviceModel}. Phone screen locked.`);
+        }).catch(err => handleFirestoreError("Take Back Access", err));
+      }
+    }
+    window.takeBackAccess = takeBackAccess;
+
     function revokeDevice(deviceId) {
       if (confirm(`Revoke and block access for device ${deviceId}?`)) {
         setDoc(doc(db, 'user_sessions', deviceId), { isRevoked: true, isOnline: false }, { merge: true }).then(() => {
@@ -2225,6 +2240,7 @@ service cloud.firestore {
         durationMillis: durationMillis,
         isPermanentAdmin: isInfinite,
         isRevoked: false,
+        accessRevoked: false,
         suspendedUntil: 0,
         isOnline: true,
         passkey: isInfinite ? 'Master Admin' : `Admin Granted (${hours}h)`,
@@ -2273,8 +2289,21 @@ service cloud.firestore {
 
     function deletePasskey(docId, code) {
       if (confirm(`Delete passkey ${code}?`)) {
+        const keyObj = accessKeys.find(k => k.id === docId || k.code === code);
+        const deviceId = keyObj ? (keyObj.deviceId || keyObj.claimedBy) : null;
+
         deleteDoc(doc(db, 'access_keys', docId)).then(() => {
-          showToast(`Passkey ${code} deleted.`);
+          if (deviceId) {
+            setDoc(doc(db, 'user_sessions', deviceId), {
+              accessRevoked: true,
+              sessionExpiry: 0,
+              isOnline: false,
+              passkey: 'Key Deleted by Admin'
+            }, { merge: true }).catch(e => console.warn('Could not reset session on key delete:', e));
+            showToast(`Passkey ${code} deleted & student access taken back.`);
+          } else {
+            showToast(`Passkey ${code} deleted.`);
+          }
         }).catch(err => handleFirestoreError("Delete Passkey", err));
       }
     }
