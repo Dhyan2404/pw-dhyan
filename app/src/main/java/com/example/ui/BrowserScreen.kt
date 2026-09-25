@@ -14,6 +14,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -47,8 +48,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -96,6 +99,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -164,7 +169,8 @@ fun BrowserScreen(
     var showAdminAuthDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showDownloadsDialog by remember { mutableStateOf(false) }
-    var isSettingsPillVisible by remember { mutableStateOf(true) }
+    var areControlsVisible by remember { mutableStateOf(true) }
+    var isSettingsPillVisible by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
@@ -286,15 +292,25 @@ fun BrowserScreen(
         }
     }
 
-    // Auto-hide settings pill after 5 seconds of inactivity on main page
-    LaunchedEffect(lastInteractionTime) {
-        delay(5000)
-        isSettingsPillVisible = false
+    fun revealControls() {
+        areControlsVisible = true
+        lastInteractionTime = System.currentTimeMillis()
     }
 
     fun revealSettingsPill() {
+        areControlsVisible = true
         isSettingsPillVisible = true
         lastInteractionTime = System.currentTimeMillis()
+    }
+
+    // Auto-hide floating navigation & settings after 3.5 seconds of inactivity
+    // User request: "it has time out of 4 sec if i dont click on screen for 3 sec it fades out and disables"
+    LaunchedEffect(lastInteractionTime, areControlsVisible) {
+        if (areControlsVisible) {
+            delay(3500)
+            areControlsVisible = false
+            isSettingsPillVisible = false
+        }
     }
 
     // System Back Handler
@@ -356,6 +372,25 @@ fun BrowserScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
+            .then(
+                if (customVideoView == null) {
+                    Modifier
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                } else {
+                    Modifier
+                }
+            )
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.pressed }) {
+                            revealControls()
+                        }
+                    }
+                }
+            }
     ) {
         // Main WebView Layer with Native Pull to Refresh
         AndroidView(
@@ -368,6 +403,13 @@ fun BrowserScreen(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+
+                    setOnTouchListener { _, event ->
+                        if (event.action == MotionEvent.ACTION_DOWN) {
+                            revealControls()
+                        }
+                        false
+                    }
 
                     // Enable Hardware Acceleration & dark canvas to prevent white flash
                     setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -681,6 +723,13 @@ fun BrowserScreen(
 
                     addView(webView)
 
+                    setOnTouchListener { _, event ->
+                        if (event.action == MotionEvent.ACTION_DOWN) {
+                            revealControls()
+                        }
+                        false
+                    }
+
                     setOnRefreshListener {
                         webView.reload()
                         showToast("Refreshing page & scripts...")
@@ -879,24 +928,27 @@ fun BrowserScreen(
             }
         }
 
-        // Floating Quick Admin & Security Controls (Auto-fades after 5 seconds, hidden in video player)
-        if (customVideoView == null) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 10.dp, end = 12.dp)
-            ) {
+        // Floating Quick Admin & Security Controls (Auto-fades after 3.5 seconds of inactivity)
+        AnimatedVisibility(
+            visible = areControlsVisible && customVideoView == null,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 }),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 10.dp, end = 12.dp)
+        ) {
+            Box {
                 // Expanded Pill
                 AnimatedVisibility(
                     visible = isSettingsPillVisible,
-                    enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
-                    exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 })
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
                     Surface(
                         shape = RoundedCornerShape(18.dp),
-                        color = DarkSurface.copy(alpha = 0.92f),
+                        color = DarkSurface.copy(alpha = 0.94f),
                         border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.45f)),
-                        modifier = Modifier.clickable { revealSettingsPill() }
+                        modifier = Modifier.clickable { revealControls() }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
@@ -927,7 +979,7 @@ fun BrowserScreen(
                                 border = androidx.compose.foundation.BorderStroke(1.dp, GoldenAccent.copy(alpha = 0.5f)),
                                 modifier = Modifier
                                     .clickable {
-                                        revealSettingsPill()
+                                        revealControls()
                                         showSettingsDialog = true
                                     }
                                     .testTag("browser_settings_btn")
@@ -956,7 +1008,7 @@ fun BrowserScreen(
                             // Quick Downloads Folder Button
                             IconButton(
                                 onClick = {
-                                    revealSettingsPill()
+                                    revealControls()
                                     showDownloadsDialog = true
                                 },
                                 modifier = Modifier.size(28.dp)
@@ -972,6 +1024,7 @@ fun BrowserScreen(
                             // Direct APK Download / Share button
                             IconButton(
                                 onClick = {
+                                    revealControls()
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     val clip = ClipData.newPlainText("PW Dhyan Direct APK Link", SecurityManager.DIRECT_APK_DOWNLOAD_URL)
                                     clipboard.setPrimaryClip(clip)
@@ -990,6 +1043,7 @@ fun BrowserScreen(
                             // Manual Rotate Toggle (Horizontal <-> Vertical)
                             IconButton(
                                 onClick = {
+                                    revealControls()
                                     toggleOrientation()
                                     showToast("Screen rotation toggled")
                                 },
@@ -1005,7 +1059,10 @@ fun BrowserScreen(
 
                             // Lock Screen return button
                             IconButton(
-                                onClick = onLockRequested,
+                                onClick = {
+                                    revealControls()
+                                    onLockRequested()
+                                },
                                 modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
@@ -1019,7 +1076,7 @@ fun BrowserScreen(
                     }
                 }
 
-                // Discreet Mini Trigger (Visible when pill fades away)
+                // Discreet Mini Trigger (Visible when pill is collapsed)
                 AnimatedVisibility(
                     visible = !isSettingsPillVisible,
                     enter = fadeIn(),
@@ -1027,8 +1084,8 @@ fun BrowserScreen(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = DarkSurface.copy(alpha = 0.70f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.35f)),
+                        color = DarkSurface.copy(alpha = 0.80f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.45f)),
                         modifier = Modifier
                             .size(36.dp)
                             .clickable { revealSettingsPill() }
@@ -1037,7 +1094,7 @@ fun BrowserScreen(
                             Icon(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = "Show Settings",
-                                tint = GoldenAccent.copy(alpha = 0.85f),
+                                tint = GoldenAccent.copy(alpha = 0.90f),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1205,86 +1262,91 @@ fun BrowserScreen(
             }
         }
 
-        // Floating Mini Navigation Bar (Discreet frosted glass pill for notes, assignments, DPPs & batches)
-        if (customVideoView == null && !isPlayerUrl(currentUrl)) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 14.dp)
+        // Floating Mini Navigation Bar (Auto-fades out after 3.5 seconds of inactivity)
+        AnimatedVisibility(
+            visible = areControlsVisible && customVideoView == null && !isPlayerUrl(currentUrl),
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 14.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = Color(0xFF070B16).copy(alpha = 0.94f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.35f)),
+                shadowElevation = 10.dp
             ) {
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = Color(0xFF070B16).copy(alpha = 0.92f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CyberCyan.copy(alpha = 0.35f)),
-                    shadowElevation = 10.dp
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    IconButton(
+                        onClick = {
+                            revealControls()
+                            if (webViewInstance?.canGoBack() == true) {
+                                webViewInstance?.goBack()
+                            }
+                        },
+                        enabled = webViewInstance?.canGoBack() == true,
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        IconButton(
-                            onClick = {
-                                if (webViewInstance?.canGoBack() == true) {
-                                    webViewInstance?.goBack()
-                                }
-                            },
-                            enabled = webViewInstance?.canGoBack() == true,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                tint = if (webViewInstance?.canGoBack() == true) CyberCyan else TextMuted.copy(alpha = 0.4f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = if (webViewInstance?.canGoBack() == true) CyberCyan else TextMuted.copy(alpha = 0.4f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
 
-                        IconButton(
-                            onClick = {
-                                if (webViewInstance?.canGoForward() == true) {
-                                    webViewInstance?.goForward()
-                                }
-                            },
-                            enabled = webViewInstance?.canGoForward() == true,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "Forward",
-                                tint = if (webViewInstance?.canGoForward() == true) CyberCyan else TextMuted.copy(alpha = 0.4f),
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                    IconButton(
+                        onClick = {
+                            revealControls()
+                            if (webViewInstance?.canGoForward() == true) {
+                                webViewInstance?.goForward()
+                            }
+                        },
+                        enabled = webViewInstance?.canGoForward() == true,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = "Forward",
+                            tint = if (webViewInstance?.canGoForward() == true) CyberCyan else TextMuted.copy(alpha = 0.4f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
 
-                        IconButton(
-                            onClick = {
-                                webViewInstance?.loadUrl(securityManager.getCurrentPortalUrl())
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = "Home",
-                                tint = GoldenAccent,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                    IconButton(
+                        onClick = {
+                            revealControls()
+                            webViewInstance?.loadUrl(securityManager.getCurrentPortalUrl())
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Home",
+                            tint = GoldenAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
 
-                        IconButton(
-                            onClick = {
-                                webViewInstance?.reload()
-                                showToast("Reloading portal...")
-                            },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Reload",
-                                tint = EmeraldSuccess,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                    IconButton(
+                        onClick = {
+                            revealControls()
+                            webViewInstance?.reload()
+                            showToast("Reloading portal...")
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reload",
+                            tint = EmeraldSuccess,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }

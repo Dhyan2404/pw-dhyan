@@ -331,8 +331,14 @@
             font-size: 1.15rem;
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
             user-select: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #lq-portal-theme-fab.visible {
+            opacity: 1 !important;
+            pointer-events: auto !important;
         }
         #lq-portal-theme-fab:hover {
             transform: scale(1.15) rotate(20deg);
@@ -431,6 +437,30 @@
 
         document.body.appendChild(fab);
         document.body.appendChild(panel);
+
+        let fabTimer = null;
+        function pingFabVisibility() {
+            if (!fab) return;
+            const isVideoActive = document.querySelector('video') || 
+                                  window.location.href.includes('/player') || 
+                                  window.location.href.includes('/watch') ||
+                                  window.location.href.includes('lecture');
+            if (isVideoActive && (!panel || !panel.classList.contains('show'))) {
+                fab.classList.remove('visible');
+                return;
+            }
+            fab.classList.add('visible');
+            clearTimeout(fabTimer);
+            fabTimer = setTimeout(() => {
+                if (panel && !panel.classList.contains('show')) {
+                    fab.classList.remove('visible');
+                }
+            }, 3500);
+        }
+
+        window.addEventListener('touchstart', pingFabVisibility, { passive: true });
+        window.addEventListener('mousedown', pingFabVisibility, { passive: true });
+        pingFabVisibility();
 
         const swatchesGrid = panel.querySelector('#lq-portal-swatches');
         THEMES.forEach(t => {
