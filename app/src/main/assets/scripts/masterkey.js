@@ -17,12 +17,181 @@
 
     // Strict Domain Restriction Guard
     const host = window.location.hostname.toLowerCase();
-    const isAllowedHost = host === 'studyparcham.in' ||
-        host === 'www.studyparcham.in' ||
-        host === 'pw.studyparcham.in';
+    const isAllowedHost = host.includes('studyparcham') ||
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '0.0.0.0' ||
+        host === '';
 
     if (!isAllowedHost) {
         return;
+    }
+
+    /* ==========================================================================
+       0. STUDYPARCHAM GATEKEEPER & AUTH OVERRIDE (Eradicate Lock Screen & Generate.html)
+       ========================================================================== */
+    try {
+        const farFuture = (Date.now() + 365 * 24 * 60 * 60 * 1000).toString();
+        const nowStr = Date.now().toString();
+
+        // 0.1 Seed localStorage with unlimited VIP authorization
+        localStorage.setItem('pw_system_off', 'true');
+        localStorage.setItem('pw_system_off_time', nowStr);
+        localStorage.setItem('nt_system_off', 'true');
+        localStorage.setItem('nt_system_off_time', nowStr);
+        localStorage.setItem('mj_system_off', 'true');
+        localStorage.setItem('mj_system_off_time', nowStr);
+
+        ['pw', 'nt', 'mj'].forEach(prefix => {
+            localStorage.setItem(`${prefix}_access_key`, 'PW_DHYAN_VIP_ACCESS');
+            localStorage.setItem(`${prefix}_key_expires`, farFuture);
+            localStorage.setItem(`pw_reminded_${prefix}_1`, 'true');
+            localStorage.setItem(`pw_reminded_${prefix}_12`, 'true');
+            localStorage.setItem(`pw_reminded_${prefix}_24`, 'true');
+        });
+
+        // 0.2 Intercept getItem so gatekeeper always reads valid keys & system_off = true
+        const _origGetItem = localStorage.getItem.bind(localStorage);
+        localStorage.getItem = function (k) {
+            if (!k) return null;
+            const keyStr = String(k).toLowerCase();
+            if (keyStr.includes('system_off_time')) return Date.now().toString();
+            if (keyStr.includes('system_off')) return 'true';
+            if (keyStr.includes('access_key')) return 'PW_DHYAN_VIP_ACCESS';
+            if (keyStr.includes('key_expires')) return farFuture;
+            return _origGetItem(k);
+        };
+
+        // 0.3 Intercept removeItem so gatekeeper cannot wipe system_off or credentials
+        const _origRemoveItem = localStorage.removeItem.bind(localStorage);
+        localStorage.removeItem = function (k) {
+            const keyStr = String(k || '').toLowerCase();
+            if (keyStr.includes('system_off') || keyStr.includes('access_key') || keyStr.includes('key_expires')) {
+                return;
+            }
+            return _origRemoveItem(k);
+        };
+
+        // 0.4 Intercept innerHTML & outerHTML on all DOM elements to reject lock screen injection
+        const origInnerHtmlDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+        if (origInnerHtmlDesc && origInnerHtmlDesc.set) {
+            Object.defineProperty(Element.prototype, 'innerHTML', {
+                set: function (val) {
+                    if (typeof val === 'string' && (
+                        val.includes('lock-card') ||
+                        val.includes('Session Authentication Required') ||
+                        val.includes('generate.html?platform=')
+                    )) {
+                        console.warn('[PW DHYAN] Blocked renderLockScreen innerHTML wipe attempt');
+                        return;
+                    }
+                    return origInnerHtmlDesc.set.call(this, val);
+                },
+                get: origInnerHtmlDesc.get,
+                configurable: true
+            });
+        }
+
+        const origOuterHtmlDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML');
+        if (origOuterHtmlDesc && origOuterHtmlDesc.set) {
+            Object.defineProperty(Element.prototype, 'outerHTML', {
+                set: function (val) {
+                    if (typeof val === 'string' && (
+                        val.includes('lock-card') ||
+                        val.includes('Session Authentication Required') ||
+                        val.includes('generate.html?platform=')
+                    )) {
+                        console.warn('[PW DHYAN] Blocked renderLockScreen outerHTML wipe attempt');
+                        return;
+                    }
+                    return origOuterHtmlDesc.set.call(this, val);
+                },
+                get: origOuterHtmlDesc.get,
+                configurable: true
+            });
+        }
+
+        // 0.5 Intercept document.createElement to neutralize <script src="gatekeeper.js">
+        const origCreateElement = document.createElement.bind(document);
+        document.createElement = function (tagName, options) {
+            const el = origCreateElement(tagName, options);
+            if (String(tagName).toLowerCase() === 'script') {
+                const origSetAttr = el.setAttribute.bind(el);
+                el.setAttribute = function (name, val) {
+                    if (name === 'src' && String(val).toLowerCase().includes('gatekeeper.js')) {
+                        console.log('[PW DHYAN] Neutralized gatekeeper script src');
+                        return;
+                    }
+                    return origSetAttr(name, val);
+                };
+                Object.defineProperty(el, 'src', {
+                    set: function (v) {
+                        if (String(v).toLowerCase().includes('gatekeeper.js')) {
+                            console.log('[PW DHYAN] Neutralized gatekeeper script src');
+                            return;
+                        }
+                        el.setAttribute('src', v);
+                    },
+                    get: function () { return el.getAttribute('src') || ''; },
+                    configurable: true
+                });
+            }
+            return el;
+        };
+
+        // 0.6 Instant CSS Lock Screen Eradication (injected immediately)
+        const killStyle = document.createElement('style');
+        killStyle.id = 'pw-lock-screen-killer';
+        killStyle.innerHTML = `
+            .lock-card,
+            [class*="lock-card"],
+            a[href*="generate.html"],
+            iframe[src*="recaptcha"] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                position: absolute !important;
+                left: -9999px !important;
+                top: -9999px !important;
+                width: 0 !important;
+                height: 0 !important;
+            }
+        `;
+        const parentElem = document.head || document.documentElement;
+        if (parentElem) {
+            parentElem.appendChild(killStyle);
+        } else {
+            document.addEventListener('DOMContentLoaded', () => {
+                (document.head || document.documentElement).appendChild(killStyle);
+            });
+        }
+
+        // 0.7 If currently trapped on the lock screen or generate.html, auto-rescue!
+        const rescueFromLockScreen = () => {
+            const lockCard = document.querySelector('.lock-card');
+            const isLockTitle = document.title && document.title.includes('Authentication Required');
+            const isGenPage = window.location.pathname.toLowerCase().includes('generate.html');
+
+            if (lockCard || isLockTitle || isGenPage) {
+                console.log('[PW DHYAN] Trapped on lock screen, rescuing to home portal...');
+                if (lockCard) lockCard.remove();
+                if (isGenPage) {
+                    window.location.replace('/studyparcham/#home-view');
+                } else if (!document.querySelector('#app') && !document.querySelector('.batch-card') && !document.querySelector('main')) {
+                    window.location.replace('/studyparcham/#home-view');
+                }
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', rescueFromLockScreen);
+        } else {
+            rescueFromLockScreen();
+        }
+        setInterval(rescueFromLockScreen, 1500);
+
+    } catch (e) {
+        console.error('[PW DHYAN Lock Bypass Error]:', e);
     }
 
     /* ==========================================================================
@@ -96,8 +265,8 @@
         const href = a.getAttribute('href') || a.dataset?.url || a.dataset?.href || '';
         const h = href.toLowerCase();
 
-        // Prevent telegram, youtube, whatsapp spam
-        if (h.includes('t.me') || h.includes('telegram') || h.includes('youtube.com') || h.includes('whatsapp')) {
+        // Prevent telegram, youtube, whatsapp spam and lock redirects
+        if (h.includes('t.me') || h.includes('telegram') || h.includes('youtube.com') || h.includes('whatsapp') || h.includes('generate.html')) {
             e.preventDefault();
             e.stopPropagation();
             return;
@@ -119,10 +288,19 @@
         }
     }, true);
 
-    // Dynamic observer to eradicate AI widget & Telegram overlays immediately
+    // Dynamic observer to eradicate AI widget, Telegram overlays, and Lock Screen immediately
     const purgeObserver = new MutationObserver(() => {
-        const killList = document.querySelectorAll('#ai-fab-btn, #ai-window, .ai-fab, .ai-window, #tg-overlay, #tg-box, #donation-modal, #bruno-peeking-bear, .onesignal-slidedown-dialog');
-        killList.forEach(el => el.remove());
+        const killList = document.querySelectorAll('#ai-fab-btn, #ai-window, .ai-fab, .ai-window, #tg-overlay, #tg-box, #donation-modal, #bruno-peeking-bear, .onesignal-slidedown-dialog, .lock-card, a[href*="generate.html"], iframe[src*="recaptcha"]');
+        if (killList.length > 0) {
+            killList.forEach(el => {
+                const parent = el.closest('.lock-card') || el;
+                parent.remove();
+            });
+            if (document.title.includes('Authentication Required')) {
+                document.title = 'StudyParcham • PW DHYAN';
+                window.location.replace('/studyparcham/#home-view');
+            }
+        }
     });
     purgeObserver.observe(document.documentElement || document.body, { childList: true, subtree: true });
 
@@ -142,26 +320,65 @@
     // 1.4 Intercept and approve authentication checks permanently
     const originalFetch = window.fetch;
     window.fetch = async function (resource, init) {
-        const url = typeof resource === 'string' ? resource : resource?.url || '';
+        let url = '';
+        if (typeof resource === 'string') url = resource;
+        else if (resource && resource.url) url = resource.url;
+        const u = url.toLowerCase();
 
         // Neutralize push notification endpoints
-        if (url.includes('/api/notify') || url.includes('onesignal')) {
+        if (u.includes('/api/notify') || u.includes('onesignal')) {
             return new Response(JSON.stringify({ success: true, bypassed: true }), { status: 200 });
         }
 
-        if (url.includes('/api/auth')) {
-            try {
-                const body = init?.body ? JSON.parse(init.body) : {};
-                if (body.action === 'verify_key' || body.action === 'check_access') {
-                    return new Response(JSON.stringify({ success: true, system_off: true, access: 'unlimited', author: 'Dhyan' }), {
-                        status: 200,
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                }
-            } catch (e) { }
+        // Neutralize all StudyParcham authentication and pass-verification endpoints
+        if (u.includes('/api/auth') || u.includes('action=verify_key') || u.includes('verify_key')) {
+            return new Response(JSON.stringify({
+                success: true,
+                valid: true,
+                system_off: true,
+                status: 'active',
+                access: 'unlimited',
+                expires: Date.now() + 365 * 24 * 3600 * 1000,
+                key: 'PW_DHYAN_VIP',
+                author: 'Dhyan'
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
         return originalFetch.apply(this, arguments);
     };
+
+    // Also hook XMLHttpRequest for /api/auth
+    try {
+        const origOpen = XMLHttpRequest.prototype.open;
+        const origSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+            this._reqUrl = String(url || '').toLowerCase();
+            return origOpen.call(this, method, url, ...rest);
+        };
+        XMLHttpRequest.prototype.send = function (body) {
+            if (this._reqUrl && (this._reqUrl.includes('/api/auth') || this._reqUrl.includes('verify_key'))) {
+                Object.defineProperty(this, 'readyState', { value: 4, writable: false });
+                Object.defineProperty(this, 'status', { value: 200, writable: false });
+                const authResp = JSON.stringify({
+                    success: true,
+                    valid: true,
+                    system_off: true,
+                    access: 'unlimited',
+                    expires: Date.now() + 365 * 24 * 3600 * 1000
+                });
+                Object.defineProperty(this, 'responseText', { value: authResp, writable: false });
+                Object.defineProperty(this, 'response', { value: authResp, writable: false });
+                setTimeout(() => {
+                    if (typeof this.onreadystatechange === 'function') this.onreadystatechange();
+                    if (typeof this.onload === 'function') this.onload();
+                }, 0);
+                return;
+            }
+            return origSend.apply(this, arguments);
+        };
+    } catch (_) {}
 
     // 1.5 Keep localStorage permanently authorized
     const farFuture = Date.now() + (365 * 24 * 60 * 60 * 1000);

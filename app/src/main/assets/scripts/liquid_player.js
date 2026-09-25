@@ -33,6 +33,76 @@
         return; // Inactive on home page & non-player pages
     }
 
+    /* ==========================================================================
+       0. STUDYPARCHAM GATEKEEPER & AUTH OVERRIDE (Eradicate Lock Screen in Player)
+       ========================================================================== */
+    try {
+        const farFuture = (Date.now() + 365 * 24 * 60 * 60 * 1000).toString();
+        const nowStr = Date.now().toString();
+
+        localStorage.setItem('pw_system_off', 'true');
+        localStorage.setItem('pw_system_off_time', nowStr);
+        ['pw', 'nt', 'mj'].forEach(prefix => {
+            localStorage.setItem(`${prefix}_access_key`, 'PW_DHYAN_VIP_ACCESS');
+            localStorage.setItem(`${prefix}_key_expires`, farFuture);
+        });
+
+        const _origGetItem = localStorage.getItem.bind(localStorage);
+        localStorage.getItem = function (k) {
+            if (!k) return null;
+            const keyStr = String(k).toLowerCase();
+            if (keyStr.includes('system_off_time')) return Date.now().toString();
+            if (keyStr.includes('system_off')) return 'true';
+            if (keyStr.includes('access_key')) return 'PW_DHYAN_VIP_ACCESS';
+            if (keyStr.includes('key_expires')) return farFuture;
+            return _origGetItem(k);
+        };
+
+        const _origRemoveItem = localStorage.removeItem.bind(localStorage);
+        localStorage.removeItem = function (k) {
+            const keyStr = String(k || '').toLowerCase();
+            if (keyStr.includes('system_off') || keyStr.includes('access_key') || keyStr.includes('key_expires')) return;
+            return _origRemoveItem(k);
+        };
+
+        const origInnerHtmlDesc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+        if (origInnerHtmlDesc && origInnerHtmlDesc.set) {
+            Object.defineProperty(Element.prototype, 'innerHTML', {
+                set: function (val) {
+                    if (typeof val === 'string' && (val.includes('lock-card') || val.includes('Session Authentication Required') || val.includes('generate.html?platform='))) {
+                        console.warn('[PW DHYAN Player] Blocked renderLockScreen innerHTML wipe attempt');
+                        return;
+                    }
+                    return origInnerHtmlDesc.set.call(this, val);
+                },
+                get: origInnerHtmlDesc.get,
+                configurable: true
+            });
+        }
+
+        const killStyle = document.createElement('style');
+        killStyle.id = 'pw-player-lock-killer';
+        killStyle.innerHTML = `
+            .lock-card, [class*="lock-card"], a[href*="generate.html"], iframe[src*="recaptcha"] {
+                display: none !important; visibility: hidden !important; opacity: 0 !important;
+                pointer-events: none !important; width: 0 !important; height: 0 !important;
+                position: absolute !important; left: -9999px !important; top: -9999px !important;
+            }
+        `;
+        (document.head || document.documentElement).appendChild(killStyle);
+
+        const purgeLock = () => {
+            const lc = document.querySelector('.lock-card');
+            if (lc) lc.remove();
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', purgeLock);
+        } else {
+            purgeLock();
+        }
+        setInterval(purgeLock, 1500);
+    } catch (_) {}
+
     /* 0. ANTI-DEBUGGER & DEVTOOLS UNLOCKER */
     try {
         // Prevent anti-debugging scripts from wiping console
