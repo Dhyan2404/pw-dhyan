@@ -429,6 +429,7 @@ class SecurityManager(private val context: Context) {
         private const val KEY_SESSION_CODE = "session_code"
         private const val KEY_SESSION_LABEL = "session_label"
         private const val KEY_SESSION_IS_INFINITE = "session_is_infinite"
+        private const val KEY_SELECTED_PORTAL = "selected_portal_id"
         const val HOME_URL = "https://pw.studyparcham.in/#home-view"
         const val ALLOWED_DOMAIN = "pw.studyparcham.in"
         const val DIRECT_APK_DOWNLOAD_URL = "https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk"
@@ -442,6 +443,24 @@ class SecurityManager(private val context: Context) {
         private const val ANNOUNCEMENT_DOC_ID = "latest_announcement"
         private const val MAINTENANCE_DOC_ID = "maintenance_mode"
         private const val TAG = "FirestoreSecurity"
+    }
+
+    enum class Portal(val id: String, val displayName: String, val url: String, val domain: String) {
+        STUDYPARCHAM("studyparcham", "StudyParcham", "https://pw.studyparcham.in/#home-view", "pw.studyparcham.in"),
+        PWTHOR("pwthor", "PWThor Live", "https://pwthor.live/study", "pwthor.live")
+    }
+
+    fun getSelectedPortal(): Portal {
+        val id = prefs.getString(KEY_SELECTED_PORTAL, Portal.STUDYPARCHAM.id)
+        return Portal.values().find { it.id == id } ?: Portal.STUDYPARCHAM
+    }
+
+    fun setSelectedPortal(portal: Portal) {
+        prefs.edit().putString(KEY_SELECTED_PORTAL, portal.id).apply()
+    }
+
+    fun getCurrentPortalUrl(): String {
+        return getSelectedPortal().url
     }
 
     init {
@@ -1520,16 +1539,18 @@ class SecurityManager(private val context: Context) {
             return true
         }
 
-        // Main study portal
+        // Main study portals (StudyParcham & PWThor Live)
         if (lower.startsWith("https://pw.studyparcham.in") ||
             lower.startsWith("http://pw.studyparcham.in") ||
             lower.startsWith("pw.studyparcham.in") ||
-            lower.contains("studyparcham.in")
+            lower.contains("studyparcham.in") ||
+            lower.contains("pwthor.live") ||
+            lower.contains("allinoneregenuine.in")
         ) {
             return true
         }
 
-        // Educational content CDN, notes, DPP and Google Docs viewers
+        // Educational content CDN, notes, DPP, and video stream servers
         if (lower.contains("cloudfront.net") ||
             lower.contains("pw.live") ||
             lower.contains("physicswallah") ||
@@ -1540,7 +1561,10 @@ class SecurityManager(private val context: Context) {
             lower.contains("googleusercontent.com") ||
             lower.contains("akamaized.net") ||
             lower.contains("fastly.net") ||
-            lower.contains("jwplayer.com")
+            lower.contains("jwplayer.com") ||
+            lower.contains("cdnjs.cloudflare.com") ||
+            lower.contains("cloudflare.com") ||
+            lower.contains("mux.dev")
         ) {
             return true
         }

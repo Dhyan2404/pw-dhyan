@@ -39,7 +39,7 @@
         return originalAlert.apply(this, arguments);
     };
 
-    // 1.2 Prevent external popups & Telegram redirects
+    // 1.2 Prevent external popups & Telegram redirects, route PDF/notes to download manager
     let nativeOpen = window.open;
     const safeWindowOpen = function (url, target, features) {
         const urlStr = String(url || '').toLowerCase();
@@ -58,6 +58,27 @@
             return null;
         }
 
+        // Intercept notes, PDFs, or study attachment popups to download directly
+        if (
+            urlStr.includes('.pdf') ||
+            urlStr.includes('static.pw.live') ||
+            urlStr.includes('attachment') ||
+            urlStr.includes('download')
+        ) {
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) {
+                let guessedName = 'PW_Notes.pdf';
+                try {
+                    const cleanUrl = urlStr.split('?')[0];
+                    const parts = cleanUrl.split('/');
+                    const lastPart = parts[parts.length - 1];
+                    if (lastPart && lastPart.length > 3) guessedName = decodeURIComponent(lastPart);
+                    if (!guessedName.toLowerCase().endsWith('.pdf')) guessedName += '.pdf';
+                } catch (e) {}
+                window.AndroidPlayerBridge.downloadFile(url, guessedName);
+                return null;
+            }
+        }
+
         return nativeOpen.call(window, url, target, features);
     };
 
@@ -67,14 +88,33 @@
         configurable: false
     });
 
-    // Intercept direct <a> clicks to prevent telegram redirects
+    // Intercept direct <a> or button clicks to prevent telegram redirects and handle View/PDF downloads
     document.addEventListener('click', function (e) {
-        const a = e.target && e.target.closest ? e.target.closest('a') : null;
-        if (a && a.href) {
-            const h = a.href.toLowerCase();
-            if (h.includes('t.me') || h.includes('telegram') || h.includes('youtube.com') || h.includes('whatsapp')) {
+        const a = e.target && e.target.closest ? e.target.closest('a, button, [role="button"]') : null;
+        if (!a) return;
+
+        const href = a.getAttribute('href') || a.dataset?.url || a.dataset?.href || '';
+        const h = href.toLowerCase();
+
+        // Prevent telegram, youtube, whatsapp spam
+        if (h.includes('t.me') || h.includes('telegram') || h.includes('youtube.com') || h.includes('whatsapp')) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        // Intercept View, notes, DPP or PDF download clicks
+        const text = (a.innerText || a.textContent || '').trim().toLowerCase();
+        const isPdfUrl = h.includes('.pdf') || h.includes('static.pw.live') || h.includes('/attachment');
+
+        if (isPdfUrl && href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) {
                 e.preventDefault();
                 e.stopPropagation();
+                let docTitle = (a.getAttribute('download') || a.getAttribute('title') || text || 'Notes').trim();
+                docTitle = docTitle.replace(/[/\\?%*:|"<>]/g, '_');
+                if (!docTitle.toLowerCase().endsWith('.pdf')) docTitle += '.pdf';
+                window.AndroidPlayerBridge.downloadFile(href, docTitle);
             }
         }
     }, true);

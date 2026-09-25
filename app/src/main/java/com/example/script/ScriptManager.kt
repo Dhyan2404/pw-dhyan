@@ -9,10 +9,15 @@ class ScriptManager(private val context: Context) {
         private const val TAG = "ScriptManager"
         private const val MASTERKEY_PATH = "scripts/masterkey.js"
         private const val LIQUID_PLAYER_PATH = "scripts/liquid_player.js"
+        private const val PWTHOR_PORTAL_PATH = "scripts-2/portel.js"
+        private const val PWTHOR_PORTAL_FALLBACK = "scripts/portel.js"
+        private const val PWTHOR_PLAYER_PATH = "scripts/pwthor_player.js"
     }
 
     private var masterkeyCache: String? = null
     private var liquidPlayerCache: String? = null
+    private var pwthorPortalCache: String? = null
+    private var pwthorPlayerCache: String? = null
 
     var lastInjectionTime: Long = 0
         private set
@@ -20,7 +25,7 @@ class ScriptManager(private val context: Context) {
         private set
 
     /**
-     * Loads the Admin Masterkey script from assets.
+     * Loads the Admin Masterkey script from assets (for StudyParcham).
      */
     fun getMasterkeyScript(): String {
         return masterkeyCache ?: run {
@@ -36,7 +41,7 @@ class ScriptManager(private val context: Context) {
     }
 
     /**
-     * Loads the Liquid Glass Player script from assets.
+     * Loads the Liquid Glass Player script from assets (for StudyParcham).
      */
     fun getLiquidPlayerScript(): String {
         return liquidPlayerCache ?: run {
@@ -52,10 +57,100 @@ class ScriptManager(private val context: Context) {
     }
 
     /**
-     * Injects both scripts into the given WebView.
-     * Wrapped in an IIFE to prevent variable leakage and ensure safe re-injection on reload.
+     * Loads the PWThor Live portal script from assets.
      */
-    fun injectAll(webView: WebView, onResult: ((Boolean) -> Unit)? = null) {
+    fun getPWThorPortalScript(): String {
+        return pwthorPortalCache ?: run {
+            try {
+                val stream = try {
+                    context.assets.open(PWTHOR_PORTAL_PATH)
+                } catch (_: Exception) {
+                    context.assets.open(PWTHOR_PORTAL_FALLBACK)
+                }
+                stream.bufferedReader().use { it.readText() }.also {
+                    pwthorPortalCache = it
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to read PWThor portal script", e)
+                ""
+            }
+        }
+    }
+
+    /**
+     * Loads the PWThor Live player script from assets.
+     */
+    fun getPWThorPlayerScript(): String {
+        return pwthorPlayerCache ?: run {
+            try {
+                context.assets.open(PWTHOR_PLAYER_PATH).bufferedReader().use { it.readText() }.also {
+                    pwthorPlayerCache = it
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to read $PWTHOR_PLAYER_PATH", e)
+                ""
+            }
+        }
+    }
+
+    /**
+     * Injects the appropriate script based on the target URL / domain.
+     * CRITICAL REQUIREMENT:
+     * - For pwthor.live: Main scripts (masterkey & liquid_player) do NOT apply! Only PWThor script is injected.
+     * - For studyparcham.in: Injects masterkey and liquid_player scripts.
+     */
+    fun injectForUrl(webView: WebView, url: String?, onResult: ((Boolean) -> Unit)? = null) {
+        val currentUrl = (url ?: webView.url)?.lowercase() ?: ""
+
+        if (currentUrl.contains("pwthor.live")) {
+            // PWThor Portal: Inject PWThor portal and player scripts
+            val pwthorPortal = getPWThorPortalScript()
+            val pwthorPlayer = getPWThorPlayerScript()
+            if (pwthorPortal.isBlank() && pwthorPlayer.isBlank()) {
+                onResult?.invoke(false)
+                return
+            }
+
+            webView.post {
+                if (pwthorPortal.isNotBlank()) {
+                    webView.evaluateJavascript(
+                        """
+                        (function() {
+                            try {
+                                $pwthorPortal
+                            } catch(e) {
+                                console.error('[PWThor Portal Injection Error]:', e);
+                            }
+                        })();
+                        """.trimIndent(),
+                        null
+                    )
+                }
+                if (pwthorPlayer.isNotBlank()) {
+                    webView.evaluateJavascript(
+                        """
+                        (function() {
+                            try {
+                                $pwthorPlayer
+                            } catch(e) {
+                                console.error('[PWThor Player Injection Error]:', e);
+                            }
+                        })();
+                        """.trimIndent()
+                    ) { result ->
+                        lastInjectionTime = System.currentTimeMillis()
+                        injectionCount++
+                        Log.d(TAG, "PWThor scripts injected successfully (#$injectionCount), result: $result")
+                        onResult?.invoke(true)
+                    }
+                } else {
+                    onResult?.invoke(true)
+                }
+            }
+            return
+        }
+
+        // StudyParcham Portal (Default): Inject masterkey and liquid_player
         val masterkey = getMasterkeyScript()
         val liquidPlayer = getLiquidPlayerScript()
 
@@ -103,10 +198,41 @@ class ScriptManager(private val context: Context) {
     }
 
     /**
+     * Backward-compatible injectAll delegating to injectForUrl using the WebView's active URL.
+     */
+    fun injectAll(webView: WebView, onResult: ((Boolean) -> Unit)? = null) {
+        injectForUrl(webView, webView.url, onResult)
+    }
+
+    /**
      * Injects early masterkey script for onPageStarted to ensure native window.open
      * and auth endpoints are intercepted before the DOM starts rendering.
+     * Note: Skipped for pwthor.live so main script does not interfere with PWThor.
      */
-    fun injectPreloadSecurity(webView: WebView) {
+    fun injectPreloadSecurity(webView: WebView, url: String? = null) {
+        val currentUrl = (url ?: webView.url)?.lowercase() ?: ""
+        if (currentUrl.contains("pwthor.live")) {
+            // For PWThor: Do NOT inject StudyParcham masterkey! Inject PWThor portal script early
+            val pwthorPortal = getPWThorPortalScript()
+            if (pwthorPortal.isNotBlank()) {
+                webView.post {
+                    webView.evaluateJavascript(
+                        """
+                        (function() {
+                            try {
+                                $pwthorPortal
+                            } catch(e) {
+                                console.warn('[PWThor Preload Warning]:', e);
+                            }
+                        })();
+                        """.trimIndent(),
+                        null
+                    )
+                }
+            }
+            return
+        }
+
         val masterkey = getMasterkeyScript()
         if (masterkey.isBlank()) return
 

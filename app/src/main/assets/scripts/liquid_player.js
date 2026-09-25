@@ -93,14 +93,164 @@
         }, true);
     } catch (e) { }
 
+    // Embedded vector icon dictionary for 100% reliable offline / local / CSP-proof icon rendering
+    const LQ_SVGS = {
+        'fa-play': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
+        'fa-pause': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+        'fa-step-backward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
+        'fa-step-forward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>',
+        'fa-forward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>',
+        'fa-backward': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>',
+        'fa-undo-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+        'fa-redo-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>',
+        'fa-expand': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>',
+        'fa-compress': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M14 10h6m-6 0V4m0 6l7-7M10 10H4m6 0V4m-6 6l7-7"/></svg>',
+        'fa-cog': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+        'fa-sliders-h': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>',
+        'fa-volume-up': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+        'fa-volume-down': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+        'fa-volume-mute': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+        'fa-list-ul': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+        'fa-exchange-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16l-4-4m0 0l4-4m-4 4h18m-4 4l4 4m0 0l-4 4m4-4H3"/></svg>',
+        'fa-chevron-right': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+        'fa-chevron-left': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+        'fa-chevron-down': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+        'fa-chevron-up': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>',
+        'fa-file-pdf': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h1.5a1.5 1.5 0 0 0 0-3H9v6"/><path d="M17 10h-2.5v6H17"/><path d="M17 13h-2"/></svg>',
+        'fa-file-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+        'fa-video': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7" fill="currentColor"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
+        'fa-film': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>',
+        'fa-images': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+        'fa-bolt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+        'fa-check-circle': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+        'fa-hourglass-half': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>',
+        'fa-clock': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+        'fa-history': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+        'fa-tachometer-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-10 10c0 4.14 2.5 7.69 6.09 9.24"/><path d="M21.91 12A10 10 0 0 0 12 2"/><path d="M12 12l4-4"/></svg>',
+        'fa-spinner': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lq-spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>',
+        'fa-times': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+        'fa-times-circle': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        'fa-exclamation-triangle': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        'fa-exclamation-circle': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        'fa-info-circle': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+        'fa-download': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+        'fa-external-link-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+        'fa-palette': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>',
+        'fa-keyboard': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6" y2="8.01"/><line x1="10" y1="8" x2="10" y2="8.01"/><line x1="14" y1="8" x2="14" y2="8.01"/><line x1="18" y1="8" x2="18" y2="8.01"/><line x1="6" y1="12" x2="6" y2="12.01"/><line x1="18" y1="12" x2="18" y2="12.01"/><line x1="10" y1="16" x2="14" y2="16"/></svg>',
+        'fa-clone': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        'fa-folder-open': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polygon points="22 19 19 9 2 9 5 19 22 19"/></svg>',
+        'fa-book-open': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+        'fa-layer-group': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+        'fa-chalkboard-teacher': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+        'fa-microphone-alt': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+        'fa-microphone-slash': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>',
+        'fa-arrow-left': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+        'fa-arrow-right': '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
+    };
+
+    function ensureSvgStyles() {
+        try {
+            if (!document.getElementById('lq-svg-icon-styles')) {
+                const iconStyle = document.createElement('style');
+                iconStyle.id = 'lq-svg-icon-styles';
+                iconStyle.textContent = `
+                    i[data-svg-applied]::before, i[data-svg-applied]::after {
+                        content: none !important;
+                        display: none !important;
+                    }
+                    i[data-svg-applied] {
+                        font-style: normal !important;
+                        line-height: 1 !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        vertical-align: middle !important;
+                    }
+                    i[data-svg-applied] svg {
+                        display: inline-block !important;
+                        vertical-align: middle !important;
+                        width: 1em !important;
+                        height: 1em !important;
+                        fill: currentColor !important;
+                    }
+                `;
+                (document.head || document.documentElement || document.body)?.appendChild(iconStyle);
+            }
+        } catch (e) { }
+    }
+    ensureSvgStyles();
+
+    function applySvgIcons(root) {
+        ensureSvgStyles();
+        try {
+            const target = root || document;
+            const icons = target.querySelectorAll ? target.querySelectorAll('i[class*="fa-"]') : [];
+            icons.forEach(el => {
+                if (el.dataset.svgApplied) return;
+                const classes = Array.from(el.classList);
+                for (const cls of classes) {
+                    if (LQ_SVGS[cls]) {
+                        el.innerHTML = LQ_SVGS[cls];
+                        el.style.display = 'inline-flex';
+                        el.style.alignItems = 'center';
+                        el.style.justifyContent = 'center';
+                        el.style.verticalAlign = 'middle';
+                        el.dataset.svgApplied = '1';
+                        break;
+                    }
+                }
+            });
+        } catch (e) { }
+    }
+
+    try {
+        const _iconObserver = new MutationObserver(() => applySvgIcons());
+        _iconObserver.observe(document.documentElement || document.body, { childList: true, subtree: true });
+    } catch (e) { }
+
+    // Ensure FontAwesome 6 CDN stylesheet is present for all UI icons (with instant SVG fallback)
+    function ensureFontAwesome() {
+        applySvgIcons(document);
+        try {
+            if (!document.querySelector('link[href*="font-awesome"], link[href*="fontawesome"]')) {
+                const target = document.head || document.documentElement || document.body;
+                if (!target) return;
+                const faLink = document.createElement('link');
+                faLink.rel = 'stylesheet';
+                faLink.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css';
+                faLink.crossOrigin = 'anonymous';
+                faLink.referrerPolicy = 'no-referrer';
+                faLink.onerror = () => {
+                    try {
+                        const fallbackLink = document.createElement('link');
+                        fallbackLink.rel = 'stylesheet';
+                        fallbackLink.href = 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css';
+                        fallbackLink.crossOrigin = 'anonymous';
+                        target.appendChild(fallbackLink);
+                    } catch (err) { }
+                };
+                target.appendChild(faLink);
+            }
+        } catch (e) { }
+    }
+    ensureFontAwesome();
+    document.addEventListener('DOMContentLoaded', ensureFontAwesome);
+
+    // Cache original fetch and XHR at top level
+    const originalFetch = window.fetch;
+    const originalXHR = window.XMLHttpRequest;
+
     function isPlayerPageActive() {
         const href = (window.location.href || '').toLowerCase();
         return href.includes('player') ||
+            href.includes('watch') ||
             href.includes('live') ||
+            href.includes('study') ||
             href.includes('videoid=') ||
+            href.includes('childid=') ||
             href.includes('vurl=') ||
             href.includes('lectureid=') ||
-            (document.querySelector('video, #video-wrapper, .video-js') !== null);
+            (document.querySelector('video, #video-wrapper, .video-js, .player video, #custom-player-hub, article') !== null);
     }
 
     try {
@@ -109,10 +259,459 @@
         }
     } catch (e) { }
 
-    /* 1. AUTH GATEWAY PASS-THROUGH */
-    const originalFetch = window.fetch;
+    /* 1. UNIVERSAL DATA STORE & NETWORK INTERCEPTOR (STUDY PANDA & STUDYPARCHAM) */
+    const capturedData = {
+        batchSubjects: {},     // batchId -> [{ id, name, subject }]
+        subjectTopics: {},     // subjectId -> [{ id, _id, name, count, totalVideos, notesCount, tagType }]
+        topicLectures: {},     // topicId -> [{ id, schId, title, duration, url, pdfUrl, date, index, type }]
+        lectureDetails: {},    // childId/schId -> { title, duration, videoUrl, attachments, slides }
+        headers: {},           // captured request headers (authorization, client-id, randomid, etc.)
+        apiBases: new Set(['https://api.penpencil.co', window.location.origin])
+    };
+
+    // Helper: title case & slug cleaners
+    function formatSlugToTitle(slug) {
+        if (!slug) return '';
+        let s = String(slug).replace(/-[0-9a-f]{5,}$/i, '').replace(/-\d+$/, '');
+        s = s.replace(/[-_]+/g, ' ').trim();
+        if (!s) return '';
+        return s.split(' ').map(w => {
+            if (['by', 'of', 'in', 'and', 'the', 'a', 'an', 'to', 'for', 'at', 'on'].includes(w.toLowerCase())) return w.toLowerCase();
+            return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        }).join(' ');
+    }
+
+    function isGenericBrandName(name) {
+        if (!name) return true;
+        const clean = String(name).trim().toLowerCase();
+        return clean === 'study panda' || clean === 'studyparcham' || clean === 'study pand' || clean === 'studypanda' || clean === 'player' || clean === 'watch';
+    }
+
+    function getNodeText(el) {
+        if (!el) return '';
+        return (el.textContent || el.innerText || '').trim();
+    }
+
+    // React Fiber traversal helper to extract in-memory component props
+    function scanReactFiberTree() {
+        try {
+            const nodes = [
+                document.querySelector('.player'),
+                document.querySelector('#video-wrapper'),
+                document.querySelector('video'),
+                document.querySelector('#__next'),
+                document.body
+            ].filter(Boolean);
+
+            const visited = new Set();
+            let currentLectureTitle = null;
+            let foundLectures = null;
+            let foundSubjects = null;
+            let foundTopics = null;
+            let foundAttachments = null;
+
+            function walk(fiber, depth = 0) {
+                if (!fiber || depth > 35 || visited.has(fiber)) return;
+                visited.add(fiber);
+
+                const props = fiber.memoizedProps;
+                const state = fiber.memoizedState;
+
+                [props, state].forEach(obj => {
+                    if (!obj || typeof obj !== 'object') return;
+                    for (const key of Object.keys(obj)) {
+                        const val = obj[key];
+                        if (Array.isArray(val) && val.length > 0) {
+                            const first = val[0];
+                            if (first && typeof first === 'object') {
+                                if ((first.topic || first.name || first.videoDetails || first.Type === 'penpencilvdo' || first.ChildId) && !foundLectures) {
+                                    if (first.duration || first.videoUrl || first.videoDetails || first.topic || first.url) {
+                                        foundLectures = val;
+                                    }
+                                }
+                                if ((first.subject || first.teacherIds) && !foundSubjects) {
+                                    foundSubjects = val;
+                                }
+                                if ((first.totalVideos !== undefined || first.tagType) && !foundTopics) {
+                                    foundTopics = val;
+                                }
+                                if ((first.attachmentIds || first.fileUrl) && !foundAttachments) {
+                                    foundAttachments = val;
+                                }
+                            }
+                        } else if (typeof val === 'string' && val.length > 3 && val.length < 120) {
+                            if (['lectureTitle', 'currentTitle', 'topicName', 'videoTitle', 'title'].includes(key) && !isGenericBrandName(val)) {
+                                if (!currentLectureTitle) currentLectureTitle = val;
+                            }
+                        }
+                    }
+                });
+
+                if (fiber.child) walk(fiber.child, depth + 1);
+                if (fiber.sibling) walk(fiber.sibling, depth + 1);
+            }
+
+            for (const node of nodes) {
+                const fiberKey = Object.keys(node).find(k => k.startsWith('__reactFiber') || k.startsWith('__reactInternalInstance'));
+                if (fiberKey && node[fiberKey]) {
+                    walk(node[fiberKey], 0);
+                    if (currentLectureTitle || foundLectures) break;
+                }
+            }
+
+            return { currentLectureTitle, foundLectures, foundSubjects, foundTopics, foundAttachments };
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function resolveLectureTitle(fallback = '') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const titleParam = urlParams.get('title');
+        if (titleParam && !isGenericBrandName(titleParam)) return titleParam.trim();
+
+        const fiber = scanReactFiberTree();
+        if (fiber?.currentLectureTitle && !isGenericBrandName(fiber.currentLectureTitle)) {
+            return fiber.currentLectureTitle.trim();
+        }
+
+        const domSels = [
+            '.player-header .text-lg',
+            '.player-header h1',
+            '.player-header h2',
+            '.player-header span',
+            '[class*="lecture-title"]',
+            '[class*="video-title"]',
+            'h1', 'h2', 'h3'
+        ];
+        for (const sel of domSels) {
+            const el = document.querySelector(sel);
+            if (el) {
+                const t = getNodeText(el);
+                if (t && !isGenericBrandName(t) && t.length > 2 && t.length < 150) return t;
+            }
+        }
+
+        const topicId = urlParams.get('topicId') || urlParams.get('tagId');
+        if (topicId) {
+            const t = formatSlugToTitle(topicId);
+            if (t) return t;
+        }
+
+        const subjId = urlParams.get('SubjectId') || urlParams.get('subjectId');
+        if (subjId) {
+            const s = formatSlugToTitle(subjId);
+            if (s) return s;
+        }
+
+        const docTitle = (document.title || '').replace(/ - (StudyParcham|Study Panda)/gi, '').trim();
+        if (docTitle && !isGenericBrandName(docTitle)) return docTitle;
+
+        return fallback || 'Lecture';
+    }
+
+    // Ingest data into captured store
+    function ingestNetworkData(url, data) {
+        if (!data || typeof data !== 'object') return;
+        try {
+            const raw = data.data || data;
+            const items = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw?.contents) ? raw.contents : null));
+            if (items && items.length > 0) {
+                const first = items[0];
+                if (first && (first.topic || first.name || first.videoDetails || first.attachmentIds || first.ChildId)) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const topicId = urlParams.get('topicId') || urlParams.get('tagId') || first.tagId || 'default';
+                    capturedData.topicLectures[topicId] = items;
+                    try { localStorage.setItem('lq_topic_' + topicId, JSON.stringify(items)); } catch (e) { }
+                }
+                if (first && (first.subject || first.teacherIds)) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const batchId = urlParams.get('batchId') || 'default';
+                    capturedData.batchSubjects[batchId] = items;
+                }
+                if (first && first.totalVideos !== undefined) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const subjId = urlParams.get('SubjectId') || urlParams.get('subjectId') || 'default';
+                    capturedData.subjectTopics[subjId] = items;
+                }
+            }
+
+            if (raw?.subjects && Array.isArray(raw.subjects)) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const batchId = urlParams.get('batchId') || raw._id || 'default';
+                capturedData.batchSubjects[batchId] = raw.subjects;
+                try { localStorage.setItem('lq_batch_subs_' + batchId, JSON.stringify(raw.subjects)); } catch (e) { }
+            }
+
+            if (raw && (raw.videoDetails || raw.attachmentIds || raw.homeworkIds || raw.topic)) {
+                const childId = raw._id || raw.ChildId || raw.schId;
+                if (childId) {
+                    capturedData.lectureDetails[childId] = raw;
+                }
+            }
+        } catch (e) { }
+    }
+
+    // Background HTML scraper for same-origin batch pages (Study Panda Next.js)
+    async function fetchBatchPageData(batchId) {
+        if (!batchId) return null;
+        if (capturedData.batchSubjects[batchId]?.length > 0 && Object.keys(capturedData.subjectTopics).length > 0) {
+            return { subjects: capturedData.batchSubjects[batchId], topics: capturedData.subjectTopics };
+        }
+        try {
+            const cachedSubs = localStorage.getItem('lq_batch_subs_' + batchId);
+            if (cachedSubs) {
+                const parsed = JSON.parse(cachedSubs);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    capturedData.batchSubjects[batchId] = parsed;
+                }
+            }
+
+            const res = await originalFetch(`/study/batches/${batchId}`, { credentials: 'same-origin' });
+            if (!res.ok) return null;
+            const html = await res.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            const headingEl = doc.querySelector('h3.text-2xl, h3, h2.text-2xl');
+            const subjectName = getNodeText(headingEl);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentSubjId = urlParams.get('SubjectId') || urlParams.get('subjectId') || 'subject-default';
+
+            if (subjectName) {
+                const subjects = [{ id: currentSubjId, _id: currentSubjId, name: subjectName, subject: subjectName }];
+                capturedData.batchSubjects[batchId] = subjects;
+                try { localStorage.setItem('lq_batch_subs_' + batchId, JSON.stringify(subjects)); } catch (e) { }
+            }
+
+            const articles = doc.querySelectorAll('article');
+            const topics = [];
+            articles.forEach(art => {
+                const titleEl = art.querySelector('h2');
+                if (!titleEl) return;
+                const name = getNodeText(titleEl);
+                const pEl = art.querySelector('p');
+                const pText = getNodeText(pEl);
+                const vMatch = pText.match(/(\d+)\s*Videos/i);
+                const nMatch = pText.match(/(\d+)\s*Notes/i);
+                const totalVideos = vMatch ? parseInt(vMatch[1], 10) : 0;
+                const notesCount = nMatch ? parseInt(nMatch[1], 10) : 0;
+
+                const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                topics.push({
+                    _id: slug,
+                    id: slug,
+                    name: name,
+                    totalVideos: totalVideos,
+                    count: totalVideos,
+                    notesCount: notesCount,
+                    tagType: notesCount > 0 && totalVideos === 0 ? 'STUDY_MATERIAL' : 'UNITS'
+                });
+            });
+
+            if (topics.length > 0) {
+                capturedData.subjectTopics[currentSubjId] = topics;
+                try { localStorage.setItem('lq_topics_' + currentSubjId, JSON.stringify(topics)); } catch (e) { }
+            }
+
+            return { subjects: capturedData.batchSubjects[batchId], topics };
+        } catch (e) {
+            console.warn('[LiquidPlayer] Batch page fetch error:', e);
+            return null;
+        }
+    }
+
+    // Deep content parser for Study Panda topic page (HTML / DOM)
+    function extractContentsFromDoc(doc, batchId, subjectId, topicId) {
+        if (!doc) return null;
+        const videos = [];
+        const notes = [];
+        const dppPdfs = [];
+        const dppVideos = [];
+
+        function parseArticle(art, defaultType = 'LECTURE') {
+            const titleEl = art.querySelector('p.line-clamp-2, p, h2, h3, h4');
+            const imgEl = art.querySelector('img');
+            const rawTitle = getNodeText(titleEl) || (imgEl ? imgEl.getAttribute('alt') : '') || 'Lecture';
+            const title = rawTitle.replace(/\s+/g, ' ').trim();
+
+            let duration = '';
+            const timeEl = art.querySelector('time');
+            const dateStr = getNodeText(timeEl);
+
+            const text = art ? (art.textContent || art.innerText || '') : '';
+            const durMatch = text.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+            if (durMatch) duration = durMatch[1];
+
+            let id = '';
+            let url = '';
+            const link = art.querySelector('a') || (art.tagName === 'A' ? art : null);
+            if (link && link.href) {
+                url = link.href;
+                const uMatch = link.href.match(/[?&]ChildId=([^&]+)/i) || link.href.match(/\/([a-f0-9]{24})/i);
+                if (uMatch) id = uMatch[1];
+            }
+
+            if (!id && art) {
+                try {
+                    const propKey = Object.keys(art).find(k => k.startsWith('__reactProps'));
+                    if (propKey && art[propKey]) {
+                        const p = art[propKey];
+                        const obj = p.children?.props || p.lecture || p.item || p.data || p;
+                        if (obj) {
+                            id = obj._id || obj.id || obj.ChildId || obj.schId;
+                            if (obj.videoDetails?.videoUrl) url = obj.videoDetails.videoUrl;
+                        }
+                    }
+                } catch (e) { }
+            }
+
+            if (!id) {
+                id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            }
+
+            return {
+                id: id,
+                _id: id,
+                schId: id,
+                type: defaultType,
+                title: title,
+                topic: title,
+                name: title,
+                duration: duration || (defaultType === 'LECTURE' ? '1h' : (defaultType === 'NOTES' || defaultType === 'DPP_PDF' ? 'PDF' : '30m')),
+                videoDetails: { duration: duration || '1h', videoUrl: url },
+                url: url,
+                pdfUrl: (url && url.toLowerCase().includes('.pdf')) ? url : '',
+                date: dateStr ? new Date(dateStr).getTime() : Date.now(),
+                thumbnail: imgEl?.src || '',
+                nativeArticle: art
+            };
+        }
+
+        // 1. Lectures Tab
+        const videoPanel = doc.querySelector('[id*="content-videos"], [id*="content-lectures"], [role="tabpanel"][data-state="active"]');
+        let videoArticles = videoPanel ? Array.from(videoPanel.querySelectorAll('article')) : [];
+        if (videoArticles.length === 0) {
+            videoArticles = Array.from(doc.querySelectorAll('article'));
+        }
+
+        videoArticles.forEach((art) => {
+            const item = parseArticle(art, 'LECTURE');
+            videos.push(item);
+        });
+
+        // Sort videos: if numbered (e.g. "Laws of Motion 02", "Laws of Motion 21"), sort ascending
+        if (videos.length > 0) {
+            const hasNumbers = videos.some(v => v.title.match(/(?:lecture|lec|part)?\s*0*(\d+)/i));
+            if (hasNumbers) {
+                videos.sort((a, b) => {
+                    const ma = a.title.match(/(?:lecture|lec|part)?\s*0*(\d+)/i);
+                    const mb = b.title.match(/(?:lecture|lec|part)?\s*0*(\d+)/i);
+                    const na = ma ? parseInt(ma[1], 10) : 0;
+                    const nb = mb ? parseInt(mb[1], 10) : 0;
+                    if (na !== nb) return na - nb;
+                    return a.date - b.date;
+                });
+            } else {
+                videos.sort((a, b) => a.date - b.date);
+            }
+            videos.forEach((v, i) => { v.index = i + 1; });
+        }
+
+        // 2. Notes Tab
+        const notesPanel = doc.querySelector('[id*="content-notes"], [id*="content-Notes"]');
+        if (notesPanel) {
+            notesPanel.querySelectorAll('article, .border.rounded-md, a[href*=".pdf"]').forEach((art, idx) => {
+                const item = parseArticle(art, 'NOTES');
+                item.index = idx + 1;
+                notes.push(item);
+            });
+        }
+
+        // 3. DPP Notes Tab
+        const dppNotesPanel = doc.querySelector('[id*="content-DppNotes"], [id*="content-dppnotes"]');
+        if (dppNotesPanel) {
+            dppNotesPanel.querySelectorAll('article, .border.rounded-md, a[href*=".pdf"]').forEach((art, idx) => {
+                const item = parseArticle(art, 'DPP_PDF');
+                item.index = idx + 1;
+                dppPdfs.push(item);
+            });
+        }
+
+        // 4. DPP Videos Tab
+        const dppVideosPanel = doc.querySelector('[id*="content-DppVideos"], [id*="content-dppvideos"]');
+        if (dppVideosPanel) {
+            dppVideosPanel.querySelectorAll('article').forEach((art, idx) => {
+                const item = parseArticle(art, 'DPP_VIDEOS');
+                item.index = idx + 1;
+                dppVideos.push(item);
+            });
+        }
+
+        return { videos, notes, dppPdfs, dppVideos };
+    }
+
+    async function fetchTopicPageData(batchId, subjectId, topicId) {
+        // 1. First, check if current document already has articles (e.g. study page or embedded)
+        const docArticles = document.querySelectorAll('article');
+        if (docArticles.length > 0) {
+            const parsedFromDoc = extractContentsFromDoc(document, batchId, subjectId, topicId);
+            if (parsedFromDoc && parsedFromDoc.videos.length > 0) {
+                return parsedFromDoc;
+            }
+        }
+
+        if (!batchId) return null;
+
+        // 2. Fetch topic page from server
+        const urlsToTry = [];
+        if (batchId && subjectId && topicId) {
+            urlsToTry.push(`/study/batches/${batchId}?SubjectId=${subjectId}&topicId=${topicId}`);
+            urlsToTry.push(`/study/batches/${batchId}/${subjectId}/${topicId}`);
+        }
+        if (batchId && topicId) {
+            urlsToTry.push(`/study/batches/${batchId}?topicId=${topicId}`);
+            urlsToTry.push(`/study/batches/${batchId}/${topicId}`);
+        }
+        if (batchId) {
+            urlsToTry.push(`/study/batches/${batchId}`);
+        }
+
+        for (const u of urlsToTry) {
+            try {
+                const res = await originalFetch(u, { credentials: 'same-origin' });
+                if (res.ok) {
+                    const html = await res.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const parsed = extractContentsFromDoc(doc, batchId, subjectId, topicId);
+                    if (parsed && parsed.videos.length > 0) {
+                        return parsed;
+                    }
+                }
+            } catch (e) { }
+        }
+        return null;
+    }
+
+    // Intercept fetch
     window.fetch = async function (resource, init) {
         const url = typeof resource === 'string' ? resource : resource?.url || '';
+
+        try {
+            const h = init?.headers;
+            if (h) {
+                if (typeof h.forEach === 'function') {
+                    h.forEach((v, k) => { capturedData.headers[k.toLowerCase()] = v; });
+                } else if (typeof h === 'object') {
+                    for (const k of Object.keys(h)) {
+                        capturedData.headers[k.toLowerCase()] = h[k];
+                    }
+                }
+            }
+        } catch (e) { }
+
         if (url.includes('/api/auth')) {
             try {
                 const body = init?.body ? JSON.parse(init.body) : {};
@@ -123,8 +722,173 @@
                 }
             } catch (e) { }
         }
-        return originalFetch.apply(this, arguments);
+
+        const resp = await originalFetch.apply(this, arguments);
+
+        try {
+            const clone = resp.clone();
+            clone.json().then(data => ingestNetworkData(url, data)).catch(() => { });
+        } catch (e) { }
+
+        return resp;
     };
+
+    // Intercept XMLHttpRequest
+    function CustomXHR() {
+        const xhr = new originalXHR();
+        const origOpen = xhr.open;
+        const origSetRequestHeader = xhr.setRequestHeader;
+        let requestUrl = '';
+
+        xhr.open = function (method, url) {
+            requestUrl = url || '';
+            return origOpen.apply(this, arguments);
+        };
+
+        xhr.setRequestHeader = function (header, value) {
+            if (header) capturedData.headers[header.toLowerCase()] = value;
+            return origSetRequestHeader.apply(this, arguments);
+        };
+
+        xhr.addEventListener('load', function () {
+            try {
+                if (xhr.responseType === '' || xhr.responseType === 'text') {
+                    const text = xhr.responseText;
+                    if (text && (text.startsWith('{') || text.startsWith('['))) {
+                        const data = JSON.parse(text);
+                        ingestNetworkData(requestUrl, data);
+                    }
+                }
+            } catch (e) { }
+        });
+
+        return xhr;
+    }
+    CustomXHR.prototype = originalXHR.prototype;
+    window.XMLHttpRequest = CustomXHR;
+
+    // Universal ParchamCore Polyfill
+    if (typeof window.ParchamCore !== 'function') {
+        window.ParchamCore = async function (action, params = {}) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const batchId = params.batchId || urlParams.get('batchId') || '';
+            const subjectId = params.subjectId || urlParams.get('SubjectId') || urlParams.get('subjectId') || '';
+            const topicId = params.tagId || params.topicId || urlParams.get('topicId') || urlParams.get('tagId') || '';
+
+            switch (action) {
+                case 'pw_btch_dtl': {
+                    if (capturedData.batchSubjects[batchId]?.length > 0) {
+                        return { data: { subjects: capturedData.batchSubjects[batchId] } };
+                    }
+                    const scraped = await fetchBatchPageData(batchId);
+                    if (scraped?.subjects?.length > 0) {
+                        return { data: { subjects: scraped.subjects } };
+                    }
+                    if (subjectId) {
+                        const subName = formatSlugToTitle(subjectId);
+                        const fallbackSubjects = [{ id: subjectId, _id: subjectId, name: subName, subject: subName }];
+                        return { data: { subjects: fallbackSubjects } };
+                    }
+                    return { data: { subjects: [] } };
+                }
+
+                case 'pw_sub_topics': {
+                    if (capturedData.subjectTopics[subjectId]?.length > 0) {
+                        return { data: { data: capturedData.subjectTopics[subjectId] } };
+                    }
+                    const scraped = await fetchBatchPageData(batchId);
+                    if (scraped?.topics?.length > 0) {
+                        return { data: { data: scraped.topics } };
+                    }
+                    if (topicId) {
+                        const tName = formatSlugToTitle(topicId);
+                        return { data: { data: [{ _id: topicId, id: topicId, name: tName, totalVideos: 1 }] } };
+                    }
+                    return { data: { data: [] } };
+                }
+
+                case 'pw_v2_list':
+                case 'pw_sch_cntnt': {
+                    const effectiveTag = params.tagId || topicId;
+                    if (capturedData.topicLectures[effectiveTag]?.length > 0) {
+                        return { data: { data: capturedData.topicLectures[effectiveTag] } };
+                    }
+                    const cachedTopic = localStorage.getItem('lq_topic_' + effectiveTag);
+                    if (cachedTopic) {
+                        try {
+                            const parsed = JSON.parse(cachedTopic);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                capturedData.topicLectures[effectiveTag] = parsed;
+                                return { data: { data: parsed } };
+                            }
+                        } catch (e) { }
+                    }
+
+                    // Scrape from Study Panda HTML or current document
+                    const scrapedData = await fetchTopicPageData(batchId, subjectId, effectiveTag);
+                    const contentType = params.contentType || '';
+                    if (scrapedData) {
+                        let targetList = scrapedData.videos;
+                        if (['notes', 'NOTES'].includes(contentType)) targetList = scrapedData.notes;
+                        else if (['DppNotes', 'DPP_PDF'].includes(contentType)) targetList = scrapedData.dppPdfs;
+                        else if (['DppVideos', 'DPP_VIDEOS'].includes(contentType)) targetList = scrapedData.dppVideos;
+
+                        if (targetList && targetList.length > 0) {
+                            if (!contentType || contentType === 'videos' || contentType === 'LECTURE') {
+                                capturedData.topicLectures[effectiveTag] = scrapedData.videos;
+                            }
+                            return { data: { data: targetList } };
+                        } else if (['notes', 'NOTES', 'DppNotes', 'DPP_PDF', 'DppVideos', 'DPP_VIDEOS'].includes(contentType)) {
+                            return { data: { data: [] } };
+                        }
+                    }
+
+                    // For non-video categories (notes, DPPs), return empty array instead of single lecture fallback
+                    if (['notes', 'NOTES', 'DppNotes', 'DPP_PDF', 'DppVideos', 'DPP_VIDEOS'].includes(contentType)) {
+                        return { data: { data: [] } };
+                    }
+
+                    // Check React Fiber
+                    const fiber = scanReactFiberTree();
+                    if (fiber.foundLectures && fiber.foundLectures.length > 0) {
+                        capturedData.topicLectures[effectiveTag] = fiber.foundLectures;
+                        return { data: { data: fiber.foundLectures } };
+                    }
+
+                    // Single current lecture fallback
+                    const curChildId = urlParams.get('ChildId') || urlParams.get('childId') || urlParams.get('videoId') || urlParams.get('schId') || 'cur';
+                    const curTitle = resolveLectureTitle('Current Lecture');
+                    const singleLec = [{
+                        _id: curChildId,
+                        id: curChildId,
+                        schId: curChildId,
+                        topic: curTitle,
+                        name: curTitle,
+                        duration: 'Lecture',
+                        videoDetails: { duration: 'Lecture', videoUrl: '' },
+                        attachmentIds: [],
+                        date: Date.now()
+                    }];
+                    return { data: { data: singleLec } };
+                }
+
+                case 'pw_sch_dtl': {
+                    const schId = params.scheduleId || urlParams.get('ChildId') || urlParams.get('childId') || urlParams.get('videoId') || '';
+                    if (capturedData.lectureDetails[schId]) {
+                        return { data: capturedData.lectureDetails[schId] };
+                    }
+                    const fiber = scanReactFiberTree();
+                    if (fiber.foundAttachments && fiber.foundAttachments.length > 0) {
+                        return { data: { attachmentIds: fiber.foundAttachments } };
+                    }
+                    return { data: null };
+                }
+
+                default:
+                    return { data: null };
+            }
+        };
+    }
 
     /* 2. REFINED LIQUID GLASS CSS SUITE */
     const style = document.createElement('style');
@@ -747,8 +1511,17 @@
                 });
             }
             if (attachments.length > 0) {
-                window.open(attachments[0], '_blank');
-                showGlassToast("Lecture notes PDF opened in new tab", "success", "fas fa-file-pdf");
+                const targetUrl = attachments[0];
+                let noteName = (curTitle || 'Lecture_Notes').replace(/[/\\?%*:|"<>]/g, '_');
+                if (!noteName.toLowerCase().endsWith('.pdf')) noteName += '.pdf';
+
+                if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) {
+                    window.AndroidPlayerBridge.downloadFile(targetUrl, noteName);
+                    showGlassToast("Downloading lecture notes to phone...", "success", "fas fa-file-pdf");
+                } else {
+                    window.open(targetUrl, '_blank');
+                    showGlassToast("Lecture notes PDF opened", "success", "fas fa-file-pdf");
+                }
             } else {
                 showGlassToast("No notes or attachments found for this lecture.", "info", "fas fa-file-alt");
             }
@@ -761,8 +1534,8 @@
     }
 
     /* 6. MOUNT LIQUID PLAYER ENGINE */
-    function mountLiquidPlayer() {
-        const video = document.getElementById('video') || document.querySelector('#video-wrapper video, .video-js video, video');
+    function mountLiquidPlayer(targetVideo) {
+        const video = targetVideo || _liquidCurrentVideo || document.getElementById('video') || document.querySelector('#video-wrapper video, .player video, .video-js video, #lq-headless-video, video');
         if (!video || document.getElementById('custom-player-hub')) return;
 
         ensureSvgFilter();
@@ -805,6 +1578,7 @@
         // Top Lecture HUD
         const topHud = document.createElement('div');
         topHud.id = 'lq-top-lecture-hud';
+        topHud.dataset.liquidMounted = 'true';
         const initialParams = new URLSearchParams(window.location.search);
         function getCleanLectureTitle() {
             const domTitle = document.getElementById('video-title')?.innerText?.trim();
@@ -930,12 +1704,14 @@
         // Center Buffering Indicator
         const bufferingEl = document.createElement('div');
         bufferingEl.id = 'lq-buffering';
+        bufferingEl.dataset.liquidMounted = 'true';
         bufferingEl.innerHTML = `${GLASS_HTML}<div class="lq-buffering-ring"></div><span>Buffering...</span>`;
         (document.body || document.documentElement).appendChild(bufferingEl);
 
         // Next Lecture Prompt
         const nextPrompt = document.createElement('div');
         nextPrompt.id = 'lq-next-lecture-prompt';
+        nextPrompt.dataset.liquidMounted = 'true';
         nextPrompt.innerHTML = `
             ${GLASS_HTML}
             <div class="next-prompt-content">
@@ -955,6 +1731,7 @@
         // Bottom Liquid Glass Dock Hub
         const hub = document.createElement('div');
         hub.id = 'custom-player-hub';
+        hub.dataset.liquidMounted = 'true';
         hub.innerHTML = `
             ${GLASS_HTML}
             <button class="hub-btn" id="c-play"><i class="fas fa-play"></i></button>
@@ -1121,6 +1898,7 @@
         // Slide Tray
         const tray = document.createElement('div');
         tray.id = 'custom-timeline-tray';
+        tray.dataset.liquidMounted = 'true';
         tray.innerHTML = `
             ${GLASS_HTML}
             <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.95rem; color:#fff;">
@@ -1142,6 +1920,7 @@
         ];
         const shortcutsModal = document.createElement('div');
         shortcutsModal.id = 'custom-shortcuts-modal';
+        shortcutsModal.dataset.liquidMounted = 'true';
         shortcutsModal.innerHTML = `
             ${GLASS_HTML}
             <div style="display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:0.95rem; color:#fff;">
@@ -1726,6 +2505,9 @@
         async function loadBatchSubjects() {
             const urlParams = new URLSearchParams(window.location.search);
             const batchId = urlParams.get('batchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId') || (JSON.parse(localStorage.getItem('pw_enrolled_batches') || '[]')[0]);
+            const currentSubjParam = urlParams.get('subjectId') || urlParams.get('SubjectId');
+            if (currentSubjParam && !selectedSubjectId) selectedSubjectId = currentSubjParam;
+
             if (!batchId) {
                 if (subjectSelector) subjectSelector.innerHTML = '<option value="">No Batch ID found</option>';
                 return;
@@ -1749,6 +2531,31 @@
                 }
             }
 
+            if (availableSubjects.length === 0 && currentSubjParam) {
+                availableSubjects = [{ id: currentSubjParam, name: formatSlugToTitle(currentSubjParam) }];
+            }
+
+            if (currentSubjParam) {
+                const direct = availableSubjects.find(s => s.id === currentSubjParam);
+                if (direct) {
+                    selectedSubjectId = direct.id;
+                } else {
+                    const cleanParam = currentSubjParam.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+                    const matched = availableSubjects.find(s => {
+                        const sName = s.name.toLowerCase();
+                        const sSlug = s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        return sName.includes(cleanParam) || cleanParam.includes(sName) ||
+                               sSlug.includes(currentSubjParam.toLowerCase()) ||
+                               currentSubjParam.toLowerCase().includes(sSlug);
+                    });
+                    if (matched) selectedSubjectId = matched.id;
+                }
+            }
+
+            if (!selectedSubjectId && availableSubjects.length > 0) {
+                selectedSubjectId = availableSubjects[0].id;
+            }
+
             if (subjectSelector) {
                 if (availableSubjects.length === 0) {
                     subjectSelector.innerHTML = '<option value="">No subjects found</option>';
@@ -1757,9 +2564,6 @@
                 subjectSelector.innerHTML = availableSubjects.map(s => `
                     <option value="${s.id}" ${s.id === selectedSubjectId ? 'selected' : ''}>${s.name}</option>
                 `).join('');
-                if (!selectedSubjectId && availableSubjects.length > 0) {
-                    selectedSubjectId = availableSubjects[0].id;
-                }
                 loadSubjectChapters(selectedSubjectId);
             }
         }
@@ -1768,6 +2572,8 @@
             if (!chaptersContainer) return;
             const urlParams = new URLSearchParams(window.location.search);
             const batchId = urlParams.get('batchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId') || (JSON.parse(localStorage.getItem('pw_enrolled_batches') || '[]')[0]);
+            const currentTopicParam = urlParams.get('tagId') || urlParams.get('topicId');
+            if (currentTopicParam && !selectedTopicId) selectedTopicId = currentTopicParam;
 
             const typeLabel = (activeTopicType === 'STUDY_MATERIAL') ? 'study material' : 'chapters';
             chaptersContainer.innerHTML = `<div style="color:#94a3b8; font-size:0.8rem; padding:12px; text-align:center;"><i class="fas fa-spinner fa-spin me-2" style="color:var(--lq-accent, #38bdf8)"></i> Loading ${typeLabel}...</div>`;
@@ -1782,11 +2588,25 @@
                     count: t.totalVideos || t.count || 0
                 })).filter(c => c.id);
 
+                if (availableChapters.length === 0 && currentTopicParam) {
+                    availableChapters = [{
+                        id: currentTopicParam,
+                        name: formatSlugToTitle(currentTopicParam),
+                        count: 1
+                    }];
+                }
+
                 if (chapterCountEl) chapterCountEl.innerText = availableChapters.length;
                 renderChaptersList(chapterSearch?.value || '');
             } catch (err) {
                 console.warn('[LiquidPlayer] Topics load error:', err);
-                chaptersContainer.innerHTML = `<div style="color:#ef4444; font-size:0.8rem; padding:12px; text-align:center;">Failed to load ${typeLabel}</div>`;
+                if (currentTopicParam) {
+                    availableChapters = [{ id: currentTopicParam, name: formatSlugToTitle(currentTopicParam), count: 1 }];
+                    if (chapterCountEl) chapterCountEl.innerText = '1';
+                    renderChaptersList('');
+                } else {
+                    chaptersContainer.innerHTML = `<div style="color:#ef4444; font-size:0.8rem; padding:12px; text-align:center;">Failed to load ${typeLabel}</div>`;
+                }
             }
         }
 
@@ -1866,93 +2686,156 @@
         }
 
         async function selectChapterAndLoadLectures(subjId, topicId, chapterName) {
-            selectedSubjectId = subjId;
-            selectedTopicId = topicId;
-            if (topPlaylistHeading) topPlaylistHeading.innerText = chapterName || 'Chapter Content';
-            showGlassToast(`Loading "${chapterName}"...`, 'info', 'fas fa-spinner fa-spin');
-
             const urlParams = new URLSearchParams(window.location.search);
-            const batchId = urlParams.get('batchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId') || (JSON.parse(localStorage.getItem('pw_enrolled_batches') || '[]')[0]);
+            const batchId = urlParams.get('batchId') || urlParams.get('BatchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId') || (JSON.parse(localStorage.getItem('pw_enrolled_batches') || '[]')[0]);
+            subjId = subjId || urlParams.get('SubjectId') || urlParams.get('subjectId') || selectedSubjectId;
+            topicId = topicId || urlParams.get('topicId') || urlParams.get('tagId') || selectedTopicId;
+            if (subjId) selectedSubjectId = subjId;
+            if (topicId) selectedTopicId = topicId;
+
+            if (topPlaylistHeading) topPlaylistHeading.innerText = chapterName || formatSlugToTitle(topicId) || 'Chapter Content';
+            showGlassToast(`Loading "${chapterName || formatSlugToTitle(topicId)}"...`, 'info', 'fas fa-spinner fa-spin');
 
             // Keep URL in sync so bookmarks or refreshes stay on selected chapter
             try {
-                urlParams.set('subjectId', subjId);
-                urlParams.set('tagId', topicId);
-                urlParams.set('topicId', topicId);
+                if (subjId) { urlParams.set('subjectId', subjId); urlParams.set('SubjectId', subjId); }
+                if (topicId) { urlParams.set('tagId', topicId); urlParams.set('topicId', topicId); }
                 window.history.replaceState({}, '', `${window.location.pathname}?${urlParams.toString()}`);
             } catch (e) { }
 
             try {
-                // Fetch Videos, Notes, DPP PDFs, and DPP Videos simultaneously!
-                const [videosRes, notesRes, dppPdfsRes, dppVideosRes] = await Promise.allSettled([
-                    fetchTopicCategoryItems(batchId, subjId, topicId, 'videos', 'LECTURE'),
-                    fetchTopicCategoryItems(batchId, subjId, topicId, 'notes', 'NOTES'),
-                    fetchTopicCategoryItems(batchId, subjId, topicId, 'DppNotes', 'DPP_PDF'),
-                    fetchTopicCategoryItems(batchId, subjId, topicId, 'DppVideos', 'DPP_VIDEOS')
-                ]);
+                // 1. First check if scraped from Study Panda HTML or current document
+                let parsedLectures = [];
+                let parsedNotes = [];
+                let parsedDppPdfs = [];
+                let parsedDppVideos = [];
 
-                const rawVideos = videosRes.status === 'fulfilled' ? videosRes.value : [];
-                const rawNotes = notesRes.status === 'fulfilled' ? notesRes.value : [];
-                const rawDppPdfs = dppPdfsRes.status === 'fulfilled' ? dppPdfsRes.value : [];
-                const rawDppVideos = dppVideosRes.status === 'fulfilled' ? dppVideosRes.value : [];
+                const scraped = await fetchTopicPageData(batchId, subjId, topicId);
+                if (scraped && scraped.videos && scraped.videos.length > 0) {
+                    parsedLectures = scraped.videos;
+                    parsedNotes = scraped.notes || [];
+                    parsedDppPdfs = scraped.dppPdfs || [];
+                    parsedDppVideos = scraped.dppVideos || [];
+                } else {
+                    // 2. Check Universal Data Store and React Fiber before API calls
+                    const effectiveTag = topicId || selectedTopicId;
+                    if (capturedData.topicLectures[effectiveTag]?.length > 0) {
+                        parsedLectures = capturedData.topicLectures[effectiveTag];
+                    } else {
+                        const fiber = scanReactFiberTree();
+                        if (fiber.foundLectures && fiber.foundLectures.length > 0) {
+                            parsedLectures = fiber.foundLectures.map((item, idx) => {
+                                const d = item?.data || item || {};
+                                return {
+                                    id: d._id || d.ChildId || d.id || String(Math.random()),
+                                    schId: d._id || d.ChildId || d.schId || '',
+                                    type: 'LECTURE',
+                                    title: d.topic || d.name || `Lecture ${idx + 1}`,
+                                    duration: d.duration || d.videoDetails?.duration || '1h',
+                                    url: d.videoUrl || d.videoDetails?.videoUrl || d.url || '',
+                                    pdfUrl: extractPdfUrl(d),
+                                    date: new Date(d.date || d.startTime || 0).getTime()
+                                };
+                            });
+                        }
+                    }
 
-                const parsedLectures = rawVideos.map((item) => {
-                    let d = item?.data || item || {};
-                    return {
-                        id: d._id || d.videoDetails?._id || item?._id || String(Math.random()),
-                        schId: item?._id || d._id || '',
-                        type: 'LECTURE',
-                        title: d.topic || d.name || 'Lecture',
-                        duration: d.videoDetails?.duration || d.duration || '1h',
-                        url: d.videoDetails?.videoUrl || d.url || '',
-                        pdfUrl: extractPdfUrl(d),
-                        date: new Date(d.date || d.startTime || 0).getTime()
-                    };
-                });
-                parsedLectures.sort((a, b) => a.date - b.date);
-                parsedLectures.forEach((lec, idx) => lec.index = idx + 1);
+                    // 3. If still empty, query ParchamCore API
+                    if (parsedLectures.length === 0) {
+                        const [videosRes, notesRes, dppPdfsRes, dppVideosRes] = await Promise.allSettled([
+                            fetchTopicCategoryItems(batchId, subjId, topicId, 'videos', 'LECTURE'),
+                            fetchTopicCategoryItems(batchId, subjId, topicId, 'notes', 'NOTES'),
+                            fetchTopicCategoryItems(batchId, subjId, topicId, 'DppNotes', 'DPP_PDF'),
+                            fetchTopicCategoryItems(batchId, subjId, topicId, 'DppVideos', 'DPP_VIDEOS')
+                        ]);
 
-                const parsedNotes = rawNotes.map((item) => {
-                    let d = item?.data || item || {};
-                    return {
-                        id: d._id || item?._id || String(Math.random()),
-                        schId: item?._id || d._id || '',
-                        type: 'NOTES',
-                        title: d.topic || d.name || 'Lecture Notes',
-                        duration: 'PDF',
-                        url: '',
-                        pdfUrl: extractPdfUrl(d),
-                        date: new Date(d.date || d.startTime || 0).getTime()
-                    };
-                });
+                        const rawVideos = videosRes.status === 'fulfilled' ? videosRes.value : [];
+                        const rawNotes = notesRes.status === 'fulfilled' ? notesRes.value : [];
+                        const rawDppPdfs = dppPdfsRes.status === 'fulfilled' ? dppPdfsRes.value : [];
+                        const rawDppVideos = dppVideosRes.status === 'fulfilled' ? dppVideosRes.value : [];
 
-                const parsedDppPdfs = rawDppPdfs.map((item) => {
-                    let d = item?.data || item || {};
-                    return {
-                        id: d._id || item?._id || String(Math.random()),
-                        schId: item?._id || d._id || '',
-                        type: 'DPP_PDF',
-                        title: d.topic || d.name || 'DPP Problem Sheet',
-                        duration: 'PDF',
-                        url: '',
-                        pdfUrl: extractPdfUrl(d),
-                        date: new Date(d.date || d.startTime || 0).getTime()
-                    };
-                });
+                        parsedLectures = rawVideos.map((item) => {
+                            let d = item?.data || item || {};
+                            return {
+                                id: d._id || d.videoDetails?._id || item?._id || String(Math.random()),
+                                schId: item?._id || d._id || '',
+                                type: 'LECTURE',
+                                title: (!isGenericBrandName(d.topic || d.name)) ? (d.topic || d.name) : resolveLectureTitle('Lecture'),
+                                duration: d.videoDetails?.duration || d.duration || '1h',
+                                url: d.videoDetails?.videoUrl || d.url || '',
+                                pdfUrl: extractPdfUrl(d),
+                                date: new Date(d.date || d.startTime || 0).getTime()
+                            };
+                        });
 
-                const parsedDppVideos = rawDppVideos.map((item) => {
-                    let d = item?.data || item || {};
-                    return {
-                        id: d._id || d.videoDetails?._id || item?._id || String(Math.random()),
-                        schId: item?._id || d._id || '',
-                        type: 'DPP_VIDEOS',
-                        title: d.topic || d.name || 'DPP Video Solution',
-                        duration: d.videoDetails?.duration || d.duration || '30m',
-                        url: d.videoDetails?.videoUrl || d.url || '',
-                        pdfUrl: extractPdfUrl(d),
-                        date: new Date(d.date || d.startTime || 0).getTime()
-                    };
-                });
+                        // Only include notes if they have real PDF URLs or are distinct items
+                        if (rawNotes.length > 0) {
+                            parsedNotes = rawNotes.map((item) => {
+                                let d = item?.data || item || {};
+                                return {
+                                    id: d._id || item?._id || String(Math.random()),
+                                    schId: item?._id || d._id || '',
+                                    type: 'NOTES',
+                                    title: d.topic || d.name || 'Lecture Notes',
+                                    duration: 'PDF',
+                                    url: '',
+                                    pdfUrl: extractPdfUrl(d),
+                                    date: new Date(d.date || d.startTime || 0).getTime()
+                                };
+                            }).filter(n => n.pdfUrl || n.title !== parsedLectures[0]?.title);
+                        }
+
+                        if (rawDppPdfs.length > 0) {
+                            parsedDppPdfs = rawDppPdfs.map((item) => {
+                                let d = item?.data || item || {};
+                                return {
+                                    id: d._id || item?._id || String(Math.random()),
+                                    schId: item?._id || d._id || '',
+                                    type: 'DPP_PDF',
+                                    title: d.topic || d.name || 'DPP Problem Sheet',
+                                    duration: 'PDF',
+                                    url: '',
+                                    pdfUrl: extractPdfUrl(d),
+                                    date: new Date(d.date || d.startTime || 0).getTime()
+                                };
+                            }).filter(n => n.pdfUrl || n.title !== parsedLectures[0]?.title);
+                        }
+
+                        if (rawDppVideos.length > 0) {
+                            parsedDppVideos = rawDppVideos.map((item) => {
+                                let d = item?.data || item || {};
+                                return {
+                                    id: d._id || d.videoDetails?._id || item?._id || String(Math.random()),
+                                    schId: item?._id || d._id || '',
+                                    type: 'DPP_VIDEOS',
+                                    title: d.topic || d.name || 'DPP Video Solution',
+                                    duration: d.videoDetails?.duration || d.duration || '30m',
+                                    url: d.videoDetails?.videoUrl || d.url || '',
+                                    pdfUrl: extractPdfUrl(d),
+                                    date: new Date(d.date || d.startTime || 0).getTime()
+                                };
+                            }).filter(v => v.title !== parsedLectures[0]?.title || v.id !== parsedLectures[0]?.id);
+                        }
+                    }
+                }
+
+                // If lectures are numbered, sort ascending numerically (e.g. 01, 02, ... 21)
+                if (parsedLectures.length > 0) {
+                    const hasNumbers = parsedLectures.some(v => v.title.match(/(?:lecture|lec|part)?\s*0*(\d+)/i));
+                    if (hasNumbers) {
+                        parsedLectures.sort((a, b) => {
+                            const ma = a.title.match(/(?:lecture|lec|part)?\s*0*(\d+)/i);
+                            const mb = b.title.match(/(?:lecture|lec|part)?\s*0*(\d+)/i);
+                            const na = ma ? parseInt(ma[1], 10) : 0;
+                            const nb = mb ? parseInt(mb[1], 10) : 0;
+                            if (na !== nb) return na - nb;
+                            return a.date - b.date;
+                        });
+                    } else {
+                        parsedLectures.sort((a, b) => a.date - b.date);
+                    }
+                    parsedLectures.forEach((lec, idx) => lec.index = idx + 1);
+                }
 
                 chapterLectures = parsedLectures;
                 allChapterContents = [...parsedLectures, ...parsedNotes, ...parsedDppPdfs, ...parsedDppVideos];
@@ -1970,12 +2853,20 @@
                 if (countDppPdf) countDppPdf.innerText = parsedDppPdfs.length;
                 if (countDppVid) countDppVid.innerText = parsedDppVideos.length;
 
-                const currentVideoId = urlParams.get('videoId') || urlParams.get('schId') || urlParams.get('lectureId');
+                const currentVideoId = urlParams.get('videoId') || urlParams.get('schId') || urlParams.get('lectureId') || urlParams.get('ChildId') || urlParams.get('childId');
+                const urlTitle = resolveLectureTitle('');
                 currentLectureIndex = chapterLectures.findIndex(l =>
                     l.id === currentVideoId ||
                     l.schId === currentVideoId ||
                     (currentVideoId && (String(l.id).includes(currentVideoId) || String(l.schId).includes(currentVideoId)))
                 );
+                if (currentLectureIndex === -1 && urlTitle) {
+                    const numMatch = urlTitle.match(/(\d+)/);
+                    if (numMatch) {
+                        const targetNum = numMatch[1];
+                        currentLectureIndex = chapterLectures.findIndex(l => l.title.includes(targetNum));
+                    }
+                }
                 if (currentLectureIndex === -1 && chapterLectures.length > 0) currentLectureIndex = 0;
 
                 updateQueueBadge();
@@ -2337,6 +3228,7 @@
                     }
                     if (shouldTrigger) triggerNextLecturePrompt();
                 }
+            }
         });
 
         video.addEventListener('pause', () => {
@@ -2900,98 +3792,97 @@
         }
 
         /* 10. CHAPTER PLAYLIST ENGINE */
+        let _articleWatcherInterval = null;
+        function startArticleWatcher() {
+            if (_articleWatcherInterval) return;
+            let attempts = 0;
+            _articleWatcherInterval = setInterval(() => {
+                attempts++;
+                const count = document.querySelectorAll('article').length;
+                if (count > 1) {
+                    clearInterval(_articleWatcherInterval);
+                    _articleWatcherInterval = null;
+                    initChapterPlaylist(true);
+                } else if (attempts >= 40) {
+                    clearInterval(_articleWatcherInterval);
+                    _articleWatcherInterval = null;
+                }
+            }, 500);
+        }
+
         async function initChapterPlaylist(force) {
             const urlParams = new URLSearchParams(window.location.search);
-            const batchId = urlParams.get('batchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId');
-            const subjectId = urlParams.get('subjectId') || localStorage.getItem('subjectId') || sessionStorage.getItem('subjectId');
-            const currentVideoId = urlParams.get('videoId') || urlParams.get('schId') || urlParams.get('lectureId');
-            const urlTitle = urlParams.get('title') || document.title || '';
+            let batchId = urlParams.get('batchId') || urlParams.get('BatchId') || localStorage.getItem('batchId') || sessionStorage.getItem('batchId');
+            let subjectId = urlParams.get('SubjectId') || urlParams.get('subjectId') || localStorage.getItem('subjectId') || sessionStorage.getItem('subjectId');
+            let topicId = urlParams.get('topicId') || urlParams.get('tagId') || localStorage.getItem('topicId') || sessionStorage.getItem('topicId') || '';
+            const currentVideoId = urlParams.get('ChildId') || urlParams.get('childId') || urlParams.get('videoId') || urlParams.get('schId') || urlParams.get('lectureId');
+            const urlTitle = resolveLectureTitle('');
+
+            // Fallback: extract batchId, subjectId, topicId from pathname if missing (e.g. /study/batches/:batchId/:subjectId/:topicId)
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const bIdx = pathParts.indexOf('batches');
+            if (bIdx !== -1) {
+                if (!batchId && pathParts[bIdx + 1]) batchId = pathParts[bIdx + 1];
+                if (!subjectId && pathParts[bIdx + 2]) subjectId = pathParts[bIdx + 2];
+                if (!topicId && pathParts[bIdx + 3]) topicId = pathParts[bIdx + 3];
+            }
+
+            // Fallback: check DOM elements for topic/subject info
+            if (!topicId) {
+                const topicEl = document.querySelector('[data-topic-id]');
+                if (topicEl && topicEl.dataset.topicId) topicId = topicEl.dataset.topicId;
+                else {
+                    const headingEl = document.querySelector('.divshadow h3, h3.text-2xl, h3');
+                    const hText = getNodeText(headingEl);
+                    if (hText && !isGenericBrandName(hText)) {
+                        topicId = hText.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                    }
+                }
+            }
+
+            if (!subjectId && subjectSelector && subjectSelector.value) {
+                subjectId = subjectSelector.value;
+            }
 
             if (subjectId) selectedSubjectId = subjectId;
+            if (topicId) selectedTopicId = topicId;
 
-            if (!batchId || !subjectId) {
+            try {
+                // If articles exist in DOM or batchId/subjectId/topicId are known, load full chapter content
+                const hasArticlesInDOM = document.querySelectorAll('article').length > 0;
+                if (hasArticlesInDOM || (batchId && (subjectId || topicId)) || topicId) {
+                    const topicName = formatSlugToTitle(topicId) || resolveLectureTitle('Chapter Content');
+                    await selectChapterAndLoadLectures(subjectId || selectedSubjectId, topicId || selectedTopicId, topicName);
+                    if (chapterLectures.length > 1 && _articleWatcherInterval) {
+                        clearInterval(_articleWatcherInterval);
+                        _articleWatcherInterval = null;
+                    } else if (chapterLectures.length <= 1) {
+                        startArticleWatcher();
+                    }
+                    return;
+                }
+
                 if (urlTitle || currentVideoId) {
                     chapterLectures = [{
                         id: currentVideoId || 'cur',
                         schId: currentVideoId || 'cur',
-                        title: urlTitle.replace(/ - StudyParcham/gi, '').trim() || 'Current Lecture',
+                        title: resolveLectureTitle('Current Lecture'),
                         duration: formatTime(video.duration) || 'Lecture',
                         url: '',
                         date: Date.now(),
                         index: 1
                     }];
+                    allChapterContents = [...chapterLectures];
                     currentLectureIndex = 0;
+                    const countAll = topHud.querySelector('#count-all');
+                    const countLec = topHud.querySelector('#count-lec');
+                    if (countAll) countAll.innerText = '1';
+                    if (countLec) countLec.innerText = '1';
                     updateQueueBadge();
                     updatePrevNextButtons();
                     renderTopPlaylist(topPlaylistSearch?.value || '');
+                    startArticleWatcher();
                 }
-                return;
-            }
-
-            try {
-                let topicId = urlParams.get('tagId') || urlParams.get('topicId') || '';
-                if (!topicId) {
-                    const topicSlug = urlParams.get('topicSlug');
-                    const topicsRes = await window.ParchamCore('pw_sub_topics', { batchId, subjectId, page: 1, tagType: 'UNITS', limit: 50 });
-                    const topics = (topicsRes?.data?.data) || (topicsRes?.data) || [];
-                    if (topicSlug && topics.length > 0) {
-                        const matchedTopic = topics.find(t => t.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === topicSlug);
-                        if (matchedTopic) topicId = matchedTopic._id;
-                    }
-                }
-                if (topicId) selectedTopicId = topicId;
-
-                let res = await window.ParchamCore('pw_v2_list', { batchId, subjectId, tagId: topicId, contentType: 'videos', page: 1 });
-                let rawList = res?.data?.data || res?.data || [];
-
-                if (!rawList || rawList.length === 0) {
-                    let resV3 = await window.ParchamCore('pw_sch_cntnt', { batchId, subjectId, contentType: 'LECTURE', tagId: topicId, skip: 0, limit: 50 });
-                    rawList = (resV3?.data || []).map(w => w.data || w);
-                }
-
-                chapterLectures = rawList.map((item) => {
-                    let d = item?.data || item || {};
-                    return {
-                        id: d._id || d.videoDetails?._id || item?._id || String(Math.random()),
-                        schId: item?._id || d._id || '',
-                        title: d.topic || d.name || 'Lecture',
-                        duration: d.videoDetails?.duration || d.duration || '1h',
-                        url: d.videoDetails?.videoUrl || d.url || '',
-                        date: new Date(d.date || d.startTime || 0).getTime()
-                    };
-                });
-
-                chapterLectures.sort((a, b) => a.date - b.date);
-                chapterLectures.forEach((lec, idx) => lec.index = idx + 1);
-
-                currentLectureIndex = chapterLectures.findIndex(l =>
-                    l.id === currentVideoId ||
-                    l.schId === currentVideoId ||
-                    (currentVideoId && (String(l.id).includes(currentVideoId) || String(l.schId).includes(currentVideoId)))
-                );
-
-                if (currentLectureIndex === -1 && (urlTitle || initialTitle)) {
-                    const searchTitle = (urlTitle || initialTitle).toLowerCase();
-                    currentLectureIndex = chapterLectures.findIndex(l =>
-                        l.title && (searchTitle.includes(l.title.toLowerCase()) || l.title.toLowerCase().includes(searchTitle))
-                    );
-                    if (currentLectureIndex === -1) {
-                        const numMatch = searchTitle.match(/(?:lecture|lec|ep|episode|class)?\s*(\d+)/i);
-                        if (numMatch && numMatch[1]) {
-                            const targetNum = parseInt(numMatch[1], 10);
-                            currentLectureIndex = chapterLectures.findIndex(l => {
-                                const lMatch = l.title?.match(/(?:lecture|lec|ep|episode|class)?\s*(\d+)/i);
-                                return lMatch && parseInt(lMatch[1], 10) === targetNum;
-                            });
-                        }
-                    }
-                }
-
-                if (currentLectureIndex === -1 && chapterLectures.length > 0) currentLectureIndex = 0;
-
-                updateQueueBadge();
-                updatePrevNextButtons();
-                renderTopPlaylist(topPlaylistSearch?.value || '');
             } catch (e) {
                 console.warn("Playlist warning:", e);
                 if (queueBadge) queueBadge.innerHTML = '<i class="fas fa-list-ul"></i>';
@@ -2999,16 +3890,22 @@
                     chapterLectures = [{
                         id: currentVideoId || 'cur',
                         schId: currentVideoId || 'cur',
-                        title: urlTitle.replace(/ - StudyParcham/gi, '').trim() || 'Current Lecture',
+                        title: resolveLectureTitle('Current Lecture'),
                         duration: formatTime(video.duration) || 'Lecture',
                         url: '',
                         date: Date.now(),
                         index: 1
                     }];
+                    allChapterContents = [...chapterLectures];
                     currentLectureIndex = 0;
+                    const countAll = topHud.querySelector('#count-all');
+                    const countLec = topHud.querySelector('#count-lec');
+                    if (countAll) countAll.innerText = '1';
+                    if (countLec) countLec.innerText = '1';
                     updateQueueBadge();
                     updatePrevNextButtons();
                     renderTopPlaylist(topPlaylistSearch?.value || '');
+                    startArticleWatcher();
                 }
             }
         }
@@ -3112,19 +4009,20 @@
             const currentNum = validIdx ? (currentLectureIndex + 1) : initialLecNum;
             const total = chapterLectures.length;
             const currentLec = validIdx ? chapterLectures[currentLectureIndex] : null;
-            const titleDisplay = currentLec ? currentLec.title : (initialTitle || `Lecture ${currentNum}`);
+            let titleDisplay = currentLec ? currentLec.title : (initialTitle || `Lecture ${currentNum}`);
+            if (isGenericBrandName(titleDisplay)) titleDisplay = resolveLectureTitle(`Lecture ${currentNum}`);
 
             const queueChipEl = topHud.querySelector('#c-queue-chip');
             const lectureTitleEl = topHud.querySelector('#c-lecture-title');
 
-            if (queueChipEl) queueChipEl.innerText = `Lec ${currentNum}/${total}`;
+            if (queueChipEl) queueChipEl.innerText = total > 1 ? `Lec ${currentNum}/${total}` : `Lec ${currentNum}`;
             if (lectureTitleEl) {
                 lectureTitleEl.innerText = titleDisplay;
                 lectureTitleEl.title = titleDisplay;
             }
 
             const left = Math.max(0, total - currentNum);
-            if (topPlaylistCount) topPlaylistCount.innerText = `${left} Left`;
+            if (topPlaylistCount) topPlaylistCount.innerText = total > 1 ? `${left} Left` : '';
             updateChapterStatsHub();
         }
 
@@ -3138,12 +4036,25 @@
         function navigateToLecture(index) {
             const target = chapterLectures[index];
             if (!target) return;
+            if (target.nativeArticle && document.body.contains(target.nativeArticle)) {
+                const playBtn = target.nativeArticle.querySelector('[aria-label*="Play"], button, svg') || target.nativeArticle;
+                playBtn.click();
+                currentLectureIndex = index;
+                updateQueueBadge();
+                updatePrevNextButtons();
+                renderTopPlaylist(topPlaylistSearch?.value || '');
+                return;
+            }
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('videoId', target.id);
             urlParams.set('schId', target.schId);
             urlParams.set('lectureId', target.id);
+            urlParams.set('ChildId', target.schId || target.id);
             urlParams.set('title', target.title);
-            if (selectedSubjectId) urlParams.set('subjectId', selectedSubjectId);
+            if (selectedSubjectId) {
+                urlParams.set('subjectId', selectedSubjectId);
+                urlParams.set('SubjectId', selectedSubjectId);
+            }
             if (selectedTopicId) {
                 urlParams.set('tagId', selectedTopicId);
                 urlParams.set('topicId', selectedTopicId);
@@ -3207,20 +4118,24 @@
 
                 let actionsHtml = '';
                 if (isPdf && item.pdfUrl) {
+                    let noteName = (item.title || 'Notes').replace(/[/\\?%*:|"<>]/g, '_');
+                    if (!noteName.toLowerCase().endsWith('.pdf')) noteName += '.pdf';
                     actionsHtml = `
                         <div class="lq-item-actions">
-                            <a href="${item.pdfUrl}" target="_blank" download class="lq-item-action-btn" title="Download PDF" onclick="event.stopPropagation();">
+                            <a href="${item.pdfUrl}" class="lq-item-action-btn" title="Download PDF to phone" onclick="event.stopPropagation(); event.preventDefault(); if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) { window.AndroidPlayerBridge.downloadFile('${item.pdfUrl}', '${noteName.replace(/'/g, "\\'")}'); } else { window.open('${item.pdfUrl}', '_blank'); }">
                                 <i class="fas fa-download"></i>
                             </a>
-                            <a href="${item.pdfUrl}" target="_blank" class="lq-item-action-btn" title="Open PDF in new tab" onclick="event.stopPropagation();">
+                            <a href="${item.pdfUrl}" class="lq-item-action-btn" title="Open PDF" onclick="event.stopPropagation(); event.preventDefault(); if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) { window.AndroidPlayerBridge.downloadFile('${item.pdfUrl}', '${noteName.replace(/'/g, "\\'")}'); } else { window.open('${item.pdfUrl}', '_blank'); }">
                                 <i class="fas fa-external-link-alt"></i>
                             </a>
                         </div>
                     `;
                 } else if (isVideo && item.pdfUrl) {
+                    let noteName = (item.title || 'Lecture_Notes').replace(/[/\\?%*:|"<>]/g, '_');
+                    if (!noteName.toLowerCase().endsWith('.pdf')) noteName += '.pdf';
                     actionsHtml = `
                         <div class="lq-item-actions">
-                            <a href="${item.pdfUrl}" target="_blank" download class="lq-item-action-btn" title="Download Lecture Notes PDF" onclick="event.stopPropagation();">
+                            <a href="${item.pdfUrl}" class="lq-item-action-btn" title="Download Lecture Notes PDF" onclick="event.stopPropagation(); event.preventDefault(); if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) { window.AndroidPlayerBridge.downloadFile('${item.pdfUrl}', '${noteName.replace(/'/g, "\\'")}'); } else { window.open('${item.pdfUrl}', '_blank'); }">
                                 <i class="fas fa-file-pdf" style="color:#f87171;"></i>
                             </a>
                         </div>
@@ -3243,15 +4158,27 @@
                 row.onclick = (e) => {
                     e.stopPropagation();
                     if (isPdf && item.pdfUrl) {
-                        window.open(item.pdfUrl, '_blank');
+                        let noteName = (item.title || 'Notes').replace(/[/\\?%*:|"<>]/g, '_');
+                        if (!noteName.toLowerCase().endsWith('.pdf')) noteName += '.pdf';
+                        if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.downloadFile) {
+                            window.AndroidPlayerBridge.downloadFile(item.pdfUrl, noteName);
+                            showGlassToast("Downloading notes to phone...", "success", "fas fa-file-pdf");
+                        } else {
+                            window.open(item.pdfUrl, '_blank');
+                        }
                     } else if (isVideo) {
-                        const targetLecIdx = chapterLectures.findIndex(l => l.id === item.id);
+                        const targetLecIdx = chapterLectures.findIndex(l => l.id === item.id || (item.schId && l.schId === item.schId));
                         if (targetLecIdx !== -1) navigateToLecture(targetLecIdx);
-                        else if (item.url) {
+                        else if (item.nativeArticle && document.body.contains(item.nativeArticle)) {
+                            const playBtn = item.nativeArticle.querySelector('[aria-label*="Play"], button, svg') || item.nativeArticle;
+                            playBtn.click();
+                        } else {
                             const urlParams = new URLSearchParams(window.location.search);
                             urlParams.set('videoId', item.id);
+                            urlParams.set('schId', item.schId || item.id);
+                            urlParams.set('ChildId', item.schId || item.id);
                             urlParams.set('title', item.title);
-                            urlParams.set('vUrl', item.url);
+                            if (item.url) urlParams.set('vUrl', item.url);
                             window.location.search = urlParams.toString();
                         }
                     }
@@ -3366,6 +4293,7 @@
         setTimeout(loadAndRenderSlides, 2000);
         setTimeout(initChapterPlaylist, 1000);
         setTimeout(initChapterPlaylist, 2500);
+        setTimeout(loadBatchSubjects, 1200);
         setTimeout(attemptResumePlayback, 500);
         setTimeout(attemptResumePlayback, 1200);
         setTimeout(attemptResumePlayback, 2500);
@@ -3373,17 +4301,50 @@
 
     let _liquidCurrentVideo = null;
     function tryMountLiquidPlayer() {
-        const existingHub = document.getElementById('custom-player-hub');
-        const video = document.getElementById('video') || document.querySelector('#video-wrapper video, .video-js video, video');
-        if (!video) return;
+        let video = document.getElementById('video') || document.querySelector('#video-wrapper video, .player video, .video-js video, video');
+        if (!video) {
+            const isPlayerOrStudy = isPlayerPageActive() || document.querySelectorAll('article').length > 0;
+            if (isPlayerOrStudy) {
+                let fallback = document.getElementById('lq-headless-video');
+                if (!fallback) {
+                    fallback = document.createElement('video');
+                    fallback.id = 'lq-headless-video';
+                    fallback.style.display = 'none';
+                    fallback.preload = 'metadata';
+                    (document.body || document.documentElement).appendChild(fallback);
+                }
+                video = fallback;
+            } else {
+                return;
+            }
+        }
 
+        ensureFontAwesome();
+
+        try {
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
+                window.AndroidPlayerBridge.onLecturePlayerDetected(true);
+            }
+        } catch (e) { }
+
+        const existingHub = document.getElementById('custom-player-hub');
         if (existingHub) {
-            // In Single Page Apps, clicking another video lecture replaces the <video> element.
-            // If the video element changed or old hub is orphaned, clean up and re-mount!
-            if (_liquidCurrentVideo && _liquidCurrentVideo !== video) {
+            const isRealVideoUpgrade = (_liquidCurrentVideo && _liquidCurrentVideo.id === 'lq-headless-video' && video.id !== 'lq-headless-video');
+            const isVideoChanged = (_liquidCurrentVideo && _liquidCurrentVideo !== video);
+            const isUnmountedStatic = !existingHub.dataset.liquidMounted;
+
+            if (isRealVideoUpgrade || isVideoChanged || isUnmountedStatic) {
                 try { existingHub.remove(); } catch (e) { }
                 const oldTop = document.getElementById('lq-top-lecture-hud');
                 if (oldTop) try { oldTop.remove(); } catch (e) { }
+                const oldTray = document.getElementById('custom-timeline-tray');
+                if (oldTray) try { oldTray.remove(); } catch (e) { }
+                const oldModal = document.getElementById('custom-shortcuts-modal');
+                if (oldModal) try { oldModal.remove(); } catch (e) { }
+                const oldPrompt = document.getElementById('lq-next-lecture-prompt');
+                if (oldPrompt) try { oldPrompt.remove(); } catch (e) { }
+                const oldBuffer = document.getElementById('lq-buffering');
+                if (oldBuffer) try { oldBuffer.remove(); } catch (e) { }
             } else {
                 return;
             }
@@ -3391,20 +4352,9 @@
 
         try {
             _liquidCurrentVideo = video;
-            mountLiquidPlayer();
+            mountLiquidPlayer(video);
         } catch (err) {
             console.error("[LiquidPlayer] Mount error:", err);
-        }
-    }
-
-    function checkAndMountPlayer() {
-        if (isPlayerPageActive()) {
-            try {
-                if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
-                    window.AndroidPlayerBridge.onLecturePlayerDetected(true);
-                }
-            } catch (e) { }
-            tryMountLiquidPlayer();
         }
     }
 
@@ -3413,27 +4363,26 @@
         const _origPush = history.pushState;
         history.pushState = function () {
             _origPush.apply(this, arguments);
-            setTimeout(checkAndMountPlayer, 150);
-            setTimeout(checkAndMountPlayer, 600);
+            setTimeout(tryMountLiquidPlayer, 150);
+            setTimeout(tryMountLiquidPlayer, 600);
         };
         const _origReplace = history.replaceState;
         history.replaceState = function () {
             _origReplace.apply(this, arguments);
-            setTimeout(checkAndMountPlayer, 150);
-            setTimeout(checkAndMountPlayer, 600);
+            setTimeout(tryMountLiquidPlayer, 150);
+            setTimeout(tryMountLiquidPlayer, 600);
         };
-        window.addEventListener('popstate', checkAndMountPlayer);
-        window.addEventListener('hashchange', checkAndMountPlayer);
+        window.addEventListener('popstate', tryMountLiquidPlayer);
+        window.addEventListener('hashchange', tryMountLiquidPlayer);
     } catch (e) { }
 
-    // Continuous lightweight watcher for DOM/route changes
-    setInterval(checkAndMountPlayer, 800);
+    setInterval(tryMountLiquidPlayer, 800);
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        checkAndMountPlayer();
+        tryMountLiquidPlayer();
     } else {
-        document.addEventListener('DOMContentLoaded', checkAndMountPlayer);
-        window.addEventListener('load', checkAndMountPlayer);
-        setTimeout(checkAndMountPlayer, 350);
+        document.addEventListener('DOMContentLoaded', tryMountLiquidPlayer);
+        window.addEventListener('load', tryMountLiquidPlayer);
+        setTimeout(tryMountLiquidPlayer, 350);
     }
 })();

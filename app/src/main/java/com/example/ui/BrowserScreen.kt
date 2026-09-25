@@ -13,6 +13,7 @@ import android.net.Uri
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.Message
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -53,6 +54,8 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Home
@@ -121,7 +124,10 @@ private fun isPlayerUrl(url: String?): Boolean {
     val lower = url.lowercase()
     return lower.contains("/player") ||
             lower.contains("player?") ||
+            lower.contains("/watch") ||
+            lower.contains("watch?") ||
             lower.contains("videoid=") ||
+            lower.contains("childid=") ||
             lower.contains("vurl=") ||
             lower.contains("lectureid=")
 }
@@ -136,8 +142,9 @@ fun BrowserScreen(
 ) {
     val context = LocalContext.current
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
-    var currentUrl by remember { mutableStateOf(SecurityManager.HOME_URL) }
-    var pageTitle by remember { mutableStateOf("StudyParcham") }
+    var currentPortal by remember { mutableStateOf(securityManager.getSelectedPortal()) }
+    var currentUrl by remember { mutableStateOf(securityManager.getCurrentPortalUrl()) }
+    var pageTitle by remember { mutableStateOf(currentPortal.displayName) }
     var loadingProgress by remember { mutableFloatStateOf(0f) }
     var isLoading by remember { mutableStateOf(true) }
     var blockedUrlNotice by remember { mutableStateOf<String?>(null) }
@@ -147,11 +154,64 @@ fun BrowserScreen(
     var swipeRefreshInstance by remember { mutableStateOf<SwipeRefreshLayout?>(null) }
     var showAdminDialog by remember { mutableStateOf(false) }
     var showAdminAuthDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showDownloadsDialog by remember { mutableStateOf(false) }
     var isSettingsPillVisible by remember { mutableStateOf(true) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
     var maintenanceInfo by remember { mutableStateOf(AppMaintenanceInfo()) }
+
+    // Direct download helper saving files to user mobile's Downloads folder
+    fun downloadFileToDownloads(url: String, suggestedName: String? = null) {
+        try {
+            var cleanFileName = suggestedName?.trim()
+            if (cleanFileName.isNullOrBlank()) {
+                cleanFileName = URLUtil.guessFileName(url, null, "application/pdf")
+            }
+            cleanFileName = cleanFileName.replace("[\\\\/:*?\"<>|]".toRegex(), "_")
+            if (!cleanFileName.contains(".")) {
+                cleanFileName += ".pdf"
+            }
+
+            val request = DownloadManager.Request(Uri.parse(url)).apply {
+                val mimeType = if (cleanFileName.endsWith(".pdf", ignoreCase = true)) {
+                    "application/pdf"
+                } else {
+                    URLUtil.guessFileName(url, null, null).let { fn ->
+                        android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(
+                            android.webkit.MimeTypeMap.getFileExtensionFromUrl(fn)
+                        ) ?: "*/*"
+                    }
+                }
+                setMimeType(mimeType)
+                val cookies = android.webkit.CookieManager.getInstance().getCookie(url)
+                if (cookies != null) {
+                    addRequestHeader("Cookie", cookies)
+                }
+                webViewInstance?.settings?.userAgentString?.let {
+                    addRequestHeader("User-Agent", it)
+                }
+                setTitle(cleanFileName)
+                setDescription("Downloading to mobile Downloads folder...")
+                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, cleanFileName)
+                setAllowedOverMetered(true)
+                setAllowedOverRoaming(true)
+            }
+            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+            dm?.enqueue(request)
+            toastMessage = "Downloading: $cleanFileName\nSaving to Downloads folder"
+        } catch (e: Exception) {
+            android.util.Log.e("BrowserScreen", "Failed to enqueue download", e)
+            try {
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                context.startActivity(intent)
+            } catch (_: Exception) {
+                toastMessage = "Download failed: ${e.localizedMessage}"
+            }
+        }
+    }
 
     // Auto-dismiss notices after 4 seconds
     fun showToast(msg: String) {
@@ -217,10 +277,11 @@ fun BrowserScreen(
             customVideoView = null
         } else {
             val curUrl = webViewInstance?.url ?: ""
+            val homeUrl = securityManager.getCurrentPortalUrl()
             if (webViewInstance?.canGoBack() == true) {
                 webViewInstance?.goBack()
-            } else if (!curUrl.contains("#home-view") && curUrl != SecurityManager.HOME_URL && curUrl.isNotEmpty()) {
-                webViewInstance?.loadUrl(SecurityManager.HOME_URL)
+            } else if (!curUrl.contains("#home-view") && !curUrl.contains("/study") && curUrl != homeUrl && curUrl.isNotEmpty()) {
+                webViewInstance?.loadUrl(homeUrl)
             } else {
                 (context as? android.app.Activity)?.moveTaskToBack(true)
             }
@@ -305,6 +366,30 @@ fun BrowserScreen(
                         displayZoomControls = false
                         cacheMode = WebSettings.LOAD_DEFAULT
                         userAgentString = "$userAgentString StudyBrowser/1.0"
+                        setSupportMultipleWindows(true)
+                        javaScriptCanOpenWindowsAutomatically = true
+                    }
+
+                    fun handlePopupNavigationOrDownload(url: String) {
+                        val lower = url.lowercase()
+                        if (lower.endsWith(".pdf") ||
+                            lower.contains(".pdf?") ||
+                            lower.contains("/pdf/") ||
+                            lower.contains("static.pw.live") ||
+                            lower.contains("attachment") ||
+                            lower.contains("download") ||
+                            lower.endsWith(".zip") ||
+                            lower.endsWith(".docx")
+                        ) {
+                            downloadFileToDownloads(url)
+                        } else if (securityManager.isUrlAllowed(url)) {
+                            loadUrl(url)
+                        } else {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                                context.startActivity(intent)
+                            } catch (_: Exception) {}
+                        }
                     }
 
                     webViewClient = object : WebViewClient() {
@@ -321,39 +406,19 @@ fun BrowserScreen(
                                 lowerUrl.contains("/pdf/") ||
                                 lowerUrl.endsWith(".zip") ||
                                 lowerUrl.endsWith(".docx") ||
+                                lowerUrl.endsWith(".doc") ||
+                                lowerUrl.endsWith(".xlsx") ||
+                                lowerUrl.endsWith(".pptx") ||
+                                (lowerUrl.contains("static.pw.live") && (lowerUrl.contains("attachment") || lowerUrl.contains(".pdf") || lowerUrl.contains("/notes"))) ||
                                 lowerUrl.contains("content-disposition=attachment")
                             ) {
-                                try {
-                                    val fileName = URLUtil.guessFileName(url, null, "application/pdf")
-                                    val req = DownloadManager.Request(Uri.parse(url)).apply {
-                                        setMimeType("application/pdf")
-                                        val cookies = android.webkit.CookieManager.getInstance().getCookie(url)
-                                        if (cookies != null) {
-                                            addRequestHeader("Cookie", cookies)
-                                        }
-                                        addRequestHeader("User-Agent", settings.userAgentString)
-                                        setTitle(fileName)
-                                        setDescription("Downloading PW Notes / DPP...")
-                                        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                                        setAllowedOverMetered(true)
-                                        setAllowedOverRoaming(true)
-                                    }
-                                    (context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager)?.enqueue(req)
-                                    toastMessage = "Downloading PDF in background: $fileName"
-                                    return true // Screen never blocks!
-                                } catch (e: Exception) {
-                                    try {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
-                                        context.startActivity(intent)
-                                        return true
-                                    } catch (_: Exception) {}
-                                }
+                                downloadFileToDownloads(url)
+                                return true // Screen never blocks!
                             }
 
                             if (securityManager.isUrlAllowed(url)) {
                                 handlePlayerOrientation(isPlayerUrl(url))
-                                return false // Allow navigation within pw.studyparcham.in
+                                return false // Allow navigation within allowed portals
                             } else {
                                 // Block external domain navigation!
                                 showBlockedNotice(url)
@@ -364,16 +429,16 @@ fun BrowserScreen(
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
                             isLoading = true
-                            currentUrl = url ?: SecurityManager.HOME_URL
+                            currentUrl = url ?: securityManager.getCurrentPortalUrl()
                             handlePlayerOrientation(isPlayerUrl(currentUrl))
-                            // Inject early masterkey security pass-through
-                            view?.let { scriptManager.injectPreloadSecurity(it) }
+                            // Inject early security pass-through (strictly isolated per portal)
+                            view?.let { scriptManager.injectPreloadSecurity(it, currentUrl) }
                         }
 
                         override fun onPageCommitVisible(view: WebView?, url: String?) {
                             super.onPageCommitVisible(view, url)
                             view?.let { wv ->
-                                scriptManager.injectAll(wv)
+                                scriptManager.injectForUrl(wv, wv.url ?: currentUrl)
                             }
                         }
 
@@ -381,8 +446,8 @@ fun BrowserScreen(
                             super.onPageFinished(view, url)
                             isLoading = false
                             swipeRefreshInstance?.isRefreshing = false
-                            currentUrl = url ?: SecurityManager.HOME_URL
-                            pageTitle = view?.title ?: "StudyParcham"
+                            currentUrl = url ?: securityManager.getCurrentPortalUrl()
+                            pageTitle = view?.title ?: currentPortal.displayName
                             securityManager.sendHeartbeat(
                                 currentUrl = currentUrl,
                                 currentPageTitle = pageTitle
@@ -392,9 +457,9 @@ fun BrowserScreen(
                                 android.webkit.CookieManager.getInstance().flush()
                             } catch (_: Exception) {}
 
-                            // Inject both scripts automatically on load/reload
+                            // Inject scripts automatically on load/reload (strictly isolated per portal)
                             view?.let { wv ->
-                                scriptManager.injectAll(wv) { success ->
+                                scriptManager.injectForUrl(wv, wv.url ?: currentUrl) { success ->
                                     if (success) {
                                         scriptInjectionCount = scriptManager.injectionCount
                                     }
@@ -412,11 +477,37 @@ fun BrowserScreen(
                             }
                             if (newProgress >= 50 && scriptInjectionCount == 0) {
                                 view?.let { wv ->
-                                    scriptManager.injectAll(wv) {
+                                    scriptManager.injectForUrl(wv, wv.url ?: currentUrl) {
                                         scriptInjectionCount = scriptManager.injectionCount
                                     }
                                 }
                             }
+                        }
+
+                        override fun onCreateWindow(
+                            view: WebView?,
+                            isDialog: Boolean,
+                            isUserGesture: Boolean,
+                            resultMsg: Message?
+                        ): Boolean {
+                            val tempWebView = WebView(view!!.context)
+                            tempWebView.webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                    val popupUrl = request?.url?.toString() ?: return false
+                                    handlePopupNavigationOrDownload(popupUrl)
+                                    return true
+                                }
+                                @Deprecated("Deprecated in Java")
+                                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                                    val popupUrl = url ?: return false
+                                    handlePopupNavigationOrDownload(popupUrl)
+                                    return true
+                                }
+                            }
+                            val transport = resultMsg?.obj as? WebView.WebViewTransport
+                            transport?.webView = tempWebView
+                            resultMsg?.sendToTarget()
+                            return true
                         }
 
                         override fun onReceivedTitle(view: WebView?, title: String?) {
@@ -454,39 +545,23 @@ fun BrowserScreen(
                         }
                     }
 
-                    // Set DownloadListener for PDFs, notes, assignments
-                    setDownloadListener { downloadUrl, userAgent, contentDisposition, mimetype, _ ->
-                        try {
-                            val fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimetype)
-                            val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
-                                setMimeType(mimetype)
-                                addRequestHeader("User-Agent", userAgent)
-                                val cookies = android.webkit.CookieManager.getInstance().getCookie(downloadUrl)
-                                if (cookies != null) {
-                                    addRequestHeader("Cookie", cookies)
-                                }
-                                setTitle(fileName)
-                                setDescription("Downloading study notes / PDF...")
-                                setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                                setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                                setAllowedOverMetered(true)
-                                setAllowedOverRoaming(true)
-                            }
-                            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
-                            dm?.enqueue(request)
-                            toastMessage = "Downloading: $fileName • Check notifications"
-                        } catch (e: Exception) {
-                            try {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                toastMessage = "Download failed: ${e.localizedMessage}"
-                            }
-                        }
+                    // Set DownloadListener for PDFs, notes, assignments directly to phone Downloads folder
+                    setDownloadListener { downloadUrl, _, contentDisposition, mimetype, _ ->
+                        val fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimetype)
+                        downloadFileToDownloads(downloadUrl, fileName)
                     }
 
-                    // Bridge to detect SPA player route changes and manual rotation
+                    // Bridge to detect SPA player route changes, manual rotation and direct file downloads
                     addJavascriptInterface(object {
+                        @JavascriptInterface
+                        fun downloadFile(url: String?, fileName: String?) {
+                            (context as? Activity)?.runOnUiThread {
+                                if (!url.isNullOrBlank()) {
+                                    downloadFileToDownloads(url, fileName)
+                                }
+                            }
+                        }
+
                         @JavascriptInterface
                         fun onLecturePlayerDetected(isPlayer: Boolean) {
                             (context as? Activity)?.runOnUiThread {
@@ -535,7 +610,7 @@ fun BrowserScreen(
                     }, "AndroidPlayerBridge")
 
                     // Initial Load
-                    loadUrl(SecurityManager.HOME_URL)
+                    loadUrl(securityManager.getCurrentPortalUrl())
                     webViewInstance = this
                 }
 
@@ -796,7 +871,7 @@ fun BrowserScreen(
                                 )
                             }
 
-                            // Settings & Admin Management Button
+                            // Settings & Portal/Storage Configuration Button
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = GoldenAccent.copy(alpha = 0.18f),
@@ -804,7 +879,7 @@ fun BrowserScreen(
                                 modifier = Modifier
                                     .clickable {
                                         revealSettingsPill()
-                                        showAdminAuthDialog = true
+                                        showSettingsDialog = true
                                     }
                                     .testTag("browser_settings_btn")
                             ) {
@@ -827,6 +902,22 @@ fun BrowserScreen(
                                         )
                                     )
                                 }
+                            }
+
+                            // Quick Downloads Folder Button
+                            IconButton(
+                                onClick = {
+                                    revealSettingsPill()
+                                    showDownloadsDialog = true
+                                },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Folder,
+                                    contentDescription = "My Downloads",
+                                    tint = EmeraldSuccess,
+                                    modifier = Modifier.size(15.dp)
+                                )
                             }
 
                             // Direct APK Download / Share button
@@ -960,7 +1051,7 @@ fun BrowserScreen(
 
                         IconButton(
                             onClick = {
-                                webViewInstance?.loadUrl(SecurityManager.HOME_URL)
+                                webViewInstance?.loadUrl(securityManager.getCurrentPortalUrl())
                             },
                             modifier = Modifier.size(32.dp)
                         ) {
@@ -1061,6 +1152,38 @@ fun BrowserScreen(
                     }
                 }
             }
+        }
+
+        // App Settings Dialog (Portal Server Switcher, Downloads, Share, Admin)
+        if (showSettingsDialog) {
+            AppSettingsDialog(
+                securityManager = securityManager,
+                currentPortal = currentPortal,
+                onPortalSelected = { selected ->
+                    securityManager.setSelectedPortal(selected)
+                    currentPortal = selected
+                    webViewInstance?.loadUrl(selected.url)
+                    currentUrl = selected.url
+                    toastMessage = "Switched to ${selected.displayName}"
+                    showSettingsDialog = false
+                },
+                onOpenDownloads = {
+                    showSettingsDialog = false
+                    showDownloadsDialog = true
+                },
+                onOpenAdmin = {
+                    showSettingsDialog = false
+                    showAdminAuthDialog = true
+                },
+                onDismiss = { showSettingsDialog = false }
+            )
+        }
+
+        // Downloaded Files Dialog (Access stored PDFs, notes, and study files)
+        if (showDownloadsDialog) {
+            DownloadedFilesDialog(
+                onDismiss = { showDownloadsDialog = false }
+            )
         }
 
         // Admin Verification Dialog (Requires 240411)
