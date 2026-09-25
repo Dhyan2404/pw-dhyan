@@ -418,8 +418,8 @@ data class PortalMaintenanceInfo(
  */
 data class PortalConfig(
     val defaultPortalId: String = "studyparcham",
-    val studyparchamMaintenance: PortalMaintenanceInfo = PortalMaintenanceInfo(message = "StudyParcham is undergoing maintenance. Please switch to PWThor Live!"),
-    val pwthorMaintenance: PortalMaintenanceInfo = PortalMaintenanceInfo(message = "PWThor Live is undergoing maintenance. Please switch to StudyParcham!"),
+    val studyparchamMaintenance: PortalMaintenanceInfo = PortalMaintenanceInfo(message = "Server Sun ☀️ is undergoing maintenance. Please switch to Server Moon 🌙!"),
+    val pwthorMaintenance: PortalMaintenanceInfo = PortalMaintenanceInfo(message = "Server Moon 🌙 is undergoing maintenance. Please switch to Server Sun ☀️!"),
     val blockedPortals: List<String> = emptyList()
 ) {
     val defaultPortal: SecurityManager.Portal get() = SecurityManager.Portal.values().find { it.id == defaultPortalId } ?: SecurityManager.Portal.STUDYPARCHAM
@@ -464,9 +464,6 @@ class SecurityManager(private val context: Context) {
     private val portalChangeListeners = mutableListOf<(portal: Portal, reason: String) -> Unit>()
 
     companion object {
-        typealias PortalConfig = com.example.security.PortalConfig
-        typealias PortalMaintenanceInfo = com.example.security.PortalMaintenanceInfo
-
         const val MASTER_PERMANENT_CODE = "240411"
         private const val KEY_PERMANENT_UNLOCKED = "is_permanent_unlocked"
         private const val KEY_REVOKED_DEVICES = "revoked_devices_set"
@@ -493,8 +490,8 @@ class SecurityManager(private val context: Context) {
     }
 
     enum class Portal(val id: String, val displayName: String, val url: String, val domain: String) {
-        STUDYPARCHAM("studyparcham", "StudyParcham", "https://pw.studyparcham.in/#home-view", "pw.studyparcham.in"),
-        PWTHOR("pwthor", "PWThor Live", "https://pwthor.live/study", "pwthor.live")
+        STUDYPARCHAM("studyparcham", "Server Sun ☀️", "https://pw.studyparcham.in/#home-view", "pw.studyparcham.in"),
+        PWTHOR("pwthor", "Server Moon 🌙", "https://pwthor.live/study", "pwthor.live")
     }
 
     fun addPortalChangeListener(listener: (portal: Portal, reason: String) -> Unit) {

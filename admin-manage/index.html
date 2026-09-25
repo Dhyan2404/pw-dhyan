@@ -1116,50 +1116,50 @@ service cloud.firestore {
               <div style="display:flex; gap:14px; margin-bottom:16px;">
                 <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
                   <input type="radio" name="defaultPortalRadio" value="studyparcham" id="radio-def-sp" checked />
-                  <span style="font-weight:600; color:var(--cyan);"><i class="fas fa-server"></i> StudyParcham (1)</span>
+                  <span style="font-weight:600; color:var(--amber);"><i class="fas fa-sun"></i> Server Sun ☀️ (Node 1)</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
                   <input type="radio" name="defaultPortalRadio" value="pwthor" id="radio-def-pw" />
-                  <span style="font-weight:600; color:var(--emerald);"><i class="fas fa-bolt"></i> PWThor Live (2)</span>
+                  <span style="font-weight:600; color:var(--purple);"><i class="fas fa-moon"></i> Server Moon 🌙 (Node 2)</span>
                 </label>
               </div>
 
               <button class="btn btn-primary btn-sm" onclick="saveDefaultPortalFromWeb()"><i class="fas fa-save"></i> Save Default Portal</button>
             </div>
 
-            <!-- Portal 1 (StudyParcham) Maintenance & Blocking -->
+            <!-- Server Sun Maintenance & Blocking -->
             <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
-              <div style="font-size:13px; font-weight:700; color:var(--cyan); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
-                <span><i class="fas fa-server"></i> Portal 1: StudyParcham</span>
+              <div style="font-size:13px; font-weight:700; color:var(--amber); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                <span><i class="fas fa-sun"></i> Server Sun ☀️</span>
                 <span id="badge-sp-status" class="status-badge" style="font-size:10px; padding:2px 8px;">Active</span>
               </div>
               
               <div style="margin-bottom:10px;">
                 <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE MESSAGE</label>
-                <input type="text" id="sp-maint-msg" class="form-control" value="StudyParcham is undergoing maintenance. Please switch to PWThor Live!" style="font-size:12px;" />
+                <input type="text" id="sp-maint-msg" class="form-control" value="Server Sun ☀️ is undergoing maintenance. Please switch to Server Moon 🌙!" style="font-size:12px;" />
               </div>
 
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button id="btn-toggle-sp-maint" class="btn btn-secondary btn-sm" onclick="togglePortalMaintenanceFromWeb('studyparcham')"><i class="fas fa-wrench"></i> Toggle Maintenance</button>
-                <button id="btn-toggle-sp-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('studyparcham')"><i class="fas fa-ban"></i> Block Portal 1</button>
+                <button id="btn-toggle-sp-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('studyparcham')"><i class="fas fa-ban"></i> Block Server Sun</button>
               </div>
             </div>
 
-            <!-- Portal 2 (PWThor Live) Maintenance & Blocking -->
+            <!-- Server Moon Maintenance & Blocking -->
             <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
-              <div style="font-size:13px; font-weight:700; color:var(--emerald); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
-                <span><i class="fas fa-bolt"></i> Portal 2: PWThor Live</span>
+              <div style="font-size:13px; font-weight:700; color:var(--purple); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                <span><i class="fas fa-moon"></i> Server Moon 🌙</span>
                 <span id="badge-pw-status" class="status-badge" style="font-size:10px; padding:2px 8px;">Active</span>
               </div>
               
               <div style="margin-bottom:10px;">
                 <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE MESSAGE</label>
-                <input type="text" id="pw-maint-msg" class="form-control" value="PWThor Live is undergoing maintenance. Please switch to StudyParcham!" style="font-size:12px;" />
+                <input type="text" id="pw-maint-msg" class="form-control" value="Server Moon 🌙 is undergoing maintenance. Please switch to Server Sun ☀️!" style="font-size:12px;" />
               </div>
 
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button id="btn-toggle-pw-maint" class="btn btn-secondary btn-sm" onclick="togglePortalMaintenanceFromWeb('pwthor')"><i class="fas fa-wrench"></i> Toggle Maintenance</button>
-                <button id="btn-toggle-pw-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('pwthor')"><i class="fas fa-ban"></i> Block Portal 2</button>
+                <button id="btn-toggle-pw-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('pwthor')"><i class="fas fa-ban"></i> Block Server Moon</button>
               </div>
             </div>
 
@@ -1673,26 +1673,26 @@ service cloud.firestore {
             </td>
             <td>
               <div>
-                <span class="status-badge" style="${isP2 ? 'background:rgba(217,70,239,0.15); border-color:rgba(217,70,239,0.4); color:var(--purple);' : 'background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.4); color:var(--blue);'}">
-                  <i class="${isP2 ? 'fas fa-bolt' : 'fas fa-graduation-cap'}" style="margin-right:4px;"></i>
-                  ${isP2 ? 'Portal 2 (PWThor)' : 'Portal 1 (StudyParcham)'}
+                <span class="status-badge" style="${isP2 ? 'background:rgba(217,70,239,0.15); border-color:rgba(217,70,239,0.4); color:var(--purple);' : 'background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:var(--amber);'}">
+                  <i class="${isP2 ? 'fas fa-moon' : 'fas fa-sun'}" style="margin-right:4px;"></i>
+                  ${isP2 ? 'Server Moon 🌙' : 'Server Sun ☀️'}
                 </span>
               </div>
               ${s.assignedPortal ? `
                 <div style="font-size:10px; color:var(--amber); font-weight:600; margin-top:3px;">
-                  <i class="fas fa-exchange-alt"></i> Assigned: ${s.assignedPortal === 'pwthor' ? 'Portal 2' : 'Portal 1'}
+                  <i class="fas fa-exchange-alt"></i> Assigned: ${s.assignedPortal === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️'}
                 </div>
               ` : ''}
               ${s.blockedPortal ? `
                 <div style="font-size:10px; color:var(--crimson); font-weight:700; margin-top:2px;">
-                  <i class="fas fa-ban"></i> Blocked: ${s.blockedPortal === 'pwthor' ? 'Portal 2' : 'Portal 1'}
+                  <i class="fas fa-ban"></i> Blocked: ${s.blockedPortal === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️'}
                 </div>
               ` : ''}
               <div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">
-                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:2px 6px;" onclick="switchUserPortal('${s.deviceId}', '${isP2 ? 'studyparcham' : 'pwthor'}')" title="Force switch to ${isP2 ? 'StudyParcham' : 'PWThor Live'}">
-                  <i class="fas fa-random"></i> ${isP2 ? 'Switch P1' : 'Switch P2'}
+                <button class="btn btn-secondary btn-sm" style="font-size:10px; padding:2px 6px;" onclick="switchUserPortal('${s.deviceId}', '${isP2 ? 'studyparcham' : 'pwthor'}')" title="Force switch to ${isP2 ? 'Server Sun' : 'Server Moon'}">
+                  <i class="fas fa-random"></i> ${isP2 ? 'Switch Sun' : 'Switch Moon'}
                 </button>
-                <button class="btn ${s.blockedPortal ? 'btn-emerald' : 'btn-danger'} btn-sm" style="font-size:10px; padding:2px 6px;" onclick="promptBlockUserPortal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${s.blockedPortal || ''}')" title="${s.blockedPortal ? 'Remove portal block' : 'Block a portal for this user'}">
+                <button class="btn ${s.blockedPortal ? 'btn-emerald' : 'btn-danger'} btn-sm" style="font-size:10px; padding:2px 6px;" onclick="promptBlockUserPortal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${s.blockedPortal || ''}')" title="${s.blockedPortal ? 'Remove server block' : 'Block a server for this user'}">
                   <i class="fas ${s.blockedPortal ? 'fa-unlock' : 'fa-ban'}"></i> ${s.blockedPortal ? 'Unblock' : 'Block...'}
                 </button>
               </div>
@@ -2377,14 +2377,14 @@ service cloud.firestore {
         btnSpMaint.className = isSpMaint ? 'btn btn-emerald btn-sm' : 'btn btn-secondary btn-sm';
       }
       if (btnSpBlock) {
-        btnSpBlock.innerHTML = `<i class="fas fa-ban"></i> ${isSpBlocked ? 'Unblock Portal 1' : 'Block Portal 1'}`;
+        btnSpBlock.innerHTML = `<i class="fas fa-ban"></i> ${isSpBlocked ? 'Unblock Server Sun' : 'Block Server Sun'}`;
         btnSpBlock.className = isSpBlocked ? 'btn btn-emerald btn-sm' : 'btn btn-danger btn-sm';
       }
       if (inputSpMsg && portalConfig.studyparchamMaintenance && portalConfig.studyparchamMaintenance.message) {
         inputSpMsg.value = portalConfig.studyparchamMaintenance.message;
       }
 
-      // PWThor status & buttons
+      // Server Moon status & buttons
       const pwBadge = document.getElementById('badge-pw-status');
       const btnPwMaint = document.getElementById('btn-toggle-pw-maint');
       const btnPwBlock = document.getElementById('btn-toggle-pw-block');
@@ -2413,7 +2413,7 @@ service cloud.firestore {
         btnPwMaint.className = isPwMaint ? 'btn btn-emerald btn-sm' : 'btn btn-secondary btn-sm';
       }
       if (btnPwBlock) {
-        btnPwBlock.innerHTML = `<i class="fas fa-ban"></i> ${isPwBlocked ? 'Unblock Portal 2' : 'Block Portal 2'}`;
+        btnPwBlock.innerHTML = `<i class="fas fa-ban"></i> ${isPwBlocked ? 'Unblock Server Moon' : 'Block Server Moon'}`;
         btnPwBlock.className = isPwBlocked ? 'btn btn-emerald btn-sm' : 'btn btn-danger btn-sm';
       }
       if (inputPwMsg && portalConfig.pwthorMaintenance && portalConfig.pwthorMaintenance.message) {
@@ -2429,7 +2429,7 @@ service cloud.firestore {
         defaultPortal: defVal,
         updatedAt: Date.now()
       }, { merge: true }).then(() => {
-        showToast(`Default portal updated to: ${defVal === 'pwthor' ? 'Portal 2 (PWThor)' : 'Portal 1 (StudyParcham)'}`);
+        showToast(`Default portal updated to: ${defVal === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️'}`);
       }).catch(err => handleFirestoreError("Save Default Portal", err));
     }
     window.saveDefaultPortalFromWeb = saveDefaultPortalFromWeb;
@@ -2440,7 +2440,7 @@ service cloud.firestore {
       const current = portalConfig[key] || { isActive: false, message: '' };
       const nextActive = !current.isActive;
       const msgInputId = isSp ? 'sp-maint-msg' : 'pw-maint-msg';
-      const msg = document.getElementById(msgInputId)?.value?.trim() || `${isSp ? 'StudyParcham' : 'PWThor Live'} is undergoing scheduled maintenance.`;
+      const msg = document.getElementById(msgInputId)?.value?.trim() || `${isSp ? 'Server Sun ☀️' : 'Server Moon 🌙'} is undergoing scheduled maintenance.`;
 
       const updateData = {};
       updateData[key] = {
@@ -2450,7 +2450,7 @@ service cloud.firestore {
       updateData.updatedAt = Date.now();
 
       setDoc(doc(db, 'system_config', 'portal_config'), updateData, { merge: true }).then(() => {
-        showToast(`${isSp ? 'Portal 1' : 'Portal 2'} Maintenance ${nextActive ? 'ACTIVATED' : 'DEACTIVATED'}`);
+        showToast(`${isSp ? 'Server Sun' : 'Server Moon'} Maintenance ${nextActive ? 'ACTIVATED' : 'DEACTIVATED'}`);
       }).catch(err => handleFirestoreError("Portal Maintenance", err));
     }
     window.togglePortalMaintenanceFromWeb = togglePortalMaintenanceFromWeb;
@@ -2469,14 +2469,14 @@ service cloud.firestore {
         blockedPortals: nextBlocked,
         updatedAt: Date.now()
       }, { merge: true }).then(() => {
-        showToast(`${portalId === 'pwthor' ? 'Portal 2' : 'Portal 1'} ${isCurrentlyBlocked ? 'UNBLOCKED' : 'BLOCKED globally'}`);
+        showToast(`${portalId === 'pwthor' ? 'Server Moon' : 'Server Sun'} ${isCurrentlyBlocked ? 'UNBLOCKED' : 'BLOCKED globally'}`);
       }).catch(err => handleFirestoreError("Portal Global Block", err));
     }
     window.toggleGlobalPortalBlockFromWeb = toggleGlobalPortalBlockFromWeb;
 
     function switchUserPortal(deviceId, targetPortal) {
       if (!deviceId) return;
-      const portalName = targetPortal === 'pwthor' ? 'Portal 2 (PWThor Live)' : 'Portal 1 (StudyParcham)';
+      const portalName = targetPortal === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️';
       if (!confirm(`Switch device "${deviceId}" to ${portalName}? This will instantly re-route the student's active portal.`)) return;
 
       setDoc(doc(db, 'user_sessions', deviceId), {
@@ -2491,16 +2491,16 @@ service cloud.firestore {
     function promptBlockUserPortal(deviceId, model, currentBlocked) {
       if (!deviceId) return;
       if (currentBlocked) {
-        if (confirm(`Unblock ${currentBlocked === 'pwthor' ? 'Portal 2 (PWThor)' : 'Portal 1 (StudyParcham)'} for ${model || deviceId}?`)) {
+        if (confirm(`Unblock ${currentBlocked === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️'} for ${model || deviceId}?`)) {
           setDoc(doc(db, 'user_sessions', deviceId), {
             blockedPortal: null,
             updatedAt: Date.now()
           }, { merge: true }).then(() => {
-            showToast(`Portal unblocked for device ${deviceId}.`);
+            showToast(`Server unblocked for device ${deviceId}.`);
           }).catch(err => handleFirestoreError("Unblock User Portal", err));
         }
       } else {
-        const choice = prompt(`Block portal for ${model || deviceId}:\n1 = Block StudyParcham (Portal 1)\n2 = Block PWThor Live (Portal 2)\nEnter 1 or 2:`);
+        const choice = prompt(`Block server for ${model || deviceId}:\n1 = Block Server Sun ☀️\n2 = Block Server Moon 🌙\nEnter 1 or 2:`);
         if (!choice) return;
         let blockTarget = null;
         if (choice.trim() === '1') blockTarget = 'studyparcham';
@@ -2514,7 +2514,7 @@ service cloud.firestore {
           blockedPortal: blockTarget,
           updatedAt: Date.now()
         }, { merge: true }).then(() => {
-          showToast(`Blocked ${blockTarget === 'pwthor' ? 'Portal 2' : 'Portal 1'} for device ${deviceId}.`);
+          showToast(`Blocked ${blockTarget === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️'} for device ${deviceId}.`);
         }).catch(err => handleFirestoreError("Block User Portal", err));
       }
     }

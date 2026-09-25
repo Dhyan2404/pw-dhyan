@@ -166,40 +166,40 @@ fun AppSettingsDialog(
                         )
                     )
 
-                    // Server 1: StudyParcham
+                    // Server 1: Server Sun ☀️
                     val spMaint = portalConfig.isMaintenance(SecurityManager.Portal.STUDYPARCHAM)
                     val spBlocked = portalConfig.isBlocked(SecurityManager.Portal.STUDYPARCHAM)
                     PortalServerCard(
-                        title = "StudyParcham",
-                        subtitle = if (spMaint) portalConfig.getMaintenanceMessage(SecurityManager.Portal.STUDYPARCHAM) else "Current Study Portal",
-                        url = SecurityManager.Portal.STUDYPARCHAM.url,
+                        title = "Server Sun ☀️",
+                        subtitle = if (spMaint) portalConfig.getMaintenanceMessage(SecurityManager.Portal.STUDYPARCHAM) else "Primary High-Speed Cloud Node",
+                        url = "Encrypted Cloud Core (Node 1)",
                         isSelected = currentPortal == SecurityManager.Portal.STUDYPARCHAM,
                         accentColor = CyberCyan,
                         isMaintenance = spMaint,
                         isBlocked = spBlocked,
                         onClick = {
                             if (spBlocked) {
-                                Toast.makeText(context, "StudyParcham is currently disabled by Admin.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Server Sun is currently disabled by Admin.", Toast.LENGTH_SHORT).show()
                             } else {
                                 onPortalSelected(SecurityManager.Portal.STUDYPARCHAM)
                             }
                         }
                     )
 
-                    // Server 2: PWThor Live
+                    // Server 2: Server Moon 🌙
                     val pwMaint = portalConfig.isMaintenance(SecurityManager.Portal.PWTHOR)
                     val pwBlocked = portalConfig.isBlocked(SecurityManager.Portal.PWTHOR)
                     PortalServerCard(
-                        title = "PWThor Live",
-                        subtitle = if (pwMaint) portalConfig.getMaintenanceMessage(SecurityManager.Portal.PWTHOR) else "Fast Stream & Study Server",
-                        url = SecurityManager.Portal.PWTHOR.url,
+                        title = "Server Moon 🌙",
+                        subtitle = if (pwMaint) portalConfig.getMaintenanceMessage(SecurityManager.Portal.PWTHOR) else "Ultra-Stream Mirror Node",
+                        url = "Encrypted Cloud Mirror (Node 2)",
                         isSelected = currentPortal == SecurityManager.Portal.PWTHOR,
                         accentColor = GoldenAccent,
                         isMaintenance = pwMaint,
                         isBlocked = pwBlocked,
                         onClick = {
                             if (pwBlocked) {
-                                Toast.makeText(context, "PWThor Live is currently disabled by Admin.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Server Moon is currently disabled by Admin.", Toast.LENGTH_SHORT).show()
                             } else {
                                 onPortalSelected(SecurityManager.Portal.PWTHOR)
                             }

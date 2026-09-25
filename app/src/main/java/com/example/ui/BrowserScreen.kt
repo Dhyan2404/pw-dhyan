@@ -504,7 +504,7 @@ fun BrowserScreen(
                                 val reqUrl = request.url?.toString() ?: ""
                                 if (currentPortal == SecurityManager.Portal.STUDYPARCHAM || reqUrl.contains("studyparcham")) {
                                     portalFailureOffer = true
-                                    portalFailureMsg = "Portal 1 (StudyParcham) is not responding or unreachable."
+                                    portalFailureMsg = "Server Sun ☀️ is not responding or unreachable."
                                 }
                             }
                         }
@@ -515,7 +515,7 @@ fun BrowserScreen(
                                 val code = errorResponse?.statusCode ?: 200
                                 if (code >= 500 && currentPortal == SecurityManager.Portal.STUDYPARCHAM) {
                                     portalFailureOffer = true
-                                    portalFailureMsg = "Portal 1 (StudyParcham) returned server error $code."
+                                    portalFailureMsg = "Server Sun ☀️ returned server error $code."
                                 }
                             }
                         }
@@ -1080,7 +1080,7 @@ fun BrowserScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Portal 1 (StudyParcham) is not responding",
+                            text = "Server Sun ☀️ is not responding",
                             style = MaterialTheme.typography.titleSmall.copy(
                                 color = TextPrimary,
                                 fontWeight = FontWeight.Bold
@@ -1101,7 +1101,7 @@ fun BrowserScreen(
                     }
 
                     Text(
-                        text = if (portalFailureMsg.isNotBlank()) portalFailureMsg else "Portal 1 is currently unreachable. You can switch to PWThor Live (Portal 2) from settings or tap below to continue your studies without interruption.",
+                        text = if (portalFailureMsg.isNotBlank()) portalFailureMsg else "Server Sun ☀️ is currently unreachable. You can switch to Server Moon 🌙 from settings or tap below to continue your studies without interruption.",
                         style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
                     )
 
@@ -1116,7 +1116,7 @@ fun BrowserScreen(
                                 currentUrl = SecurityManager.Portal.PWTHOR.url
                                 portalFailureOffer = false
                                 webViewInstance?.loadUrl(SecurityManager.Portal.PWTHOR.url)
-                                showToast("Switched to PWThor Live (Portal 2)")
+                                showToast("Switched to Server Moon 🌙")
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = GoldenAccent),
                             shape = RoundedCornerShape(10.dp),
@@ -1124,7 +1124,7 @@ fun BrowserScreen(
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = null, tint = DarkBackground, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Switch to Portal 2", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("Switch to Server Moon 🌙", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                         }
 
                         OutlinedButton(
