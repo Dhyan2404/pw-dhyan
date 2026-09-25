@@ -17,51 +17,6 @@
     'use strict';
 
     /* ==========================================================================
-       0. GLOBAL FETCH & XHR NETWORK INTERCEPTOR (Prevents "Failed to fetch")
-       ========================================================================== */
-    const originalFetch = window.fetch;
-    if (typeof originalFetch === 'function') {
-        window.fetch = async function (resource, config) {
-            let urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
-
-            // Route streamvideo / penpencil API requests through local proxy on localhost
-            if (urlStr.includes('proxy.streamvideo.co.in') || urlStr.includes('api.penpencil.co')) {
-                try {
-                    const u = new URL(urlStr, window.location.origin);
-                    const sub = u.pathname + u.search + u.hash;
-                    const newUrl = '/streamvideo-proxy' + (sub.startsWith('/') ? sub : '/' + sub);
-                    if (typeof resource === 'string') {
-                        resource = newUrl;
-                    } else if (resource && resource.url) {
-                        resource = new Request(newUrl, resource);
-                    }
-                } catch (_) {}
-            } else if (urlStr.startsWith('https://pwthor.live') || urlStr.startsWith('https://test.pwthor.live') || urlStr.startsWith('https://pwthor.site')) {
-                try {
-                    const u = new URL(urlStr);
-                    const newUrl = u.pathname + u.search + u.hash;
-                    if (typeof resource === 'string') {
-                        resource = newUrl;
-                    } else if (resource && resource.url) {
-                        resource = new Request(newUrl, resource);
-                    }
-                } catch (_) {}
-            }
-
-            try {
-                return await originalFetch.call(this, resource, config);
-            } catch (err) {
-                if (typeof resource === 'string' && !resource.startsWith('/pwthor') && !resource.startsWith('http')) {
-                    try {
-                        return await originalFetch.call(this, '/pwthor' + (resource.startsWith('/') ? resource : '/' + resource), config);
-                    } catch (_) {}
-                }
-                throw err;
-            }
-        };
-    }
-
-    /* ==========================================================================
        1. ROUTE INTERCEPTOR & POPUP GUARD
        ========================================================================== */
     // If the user lands directly on or navigates to /contact, redirect to batches

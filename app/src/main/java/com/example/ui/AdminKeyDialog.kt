@@ -839,6 +839,11 @@ fun AdminKeyDialog(
                                 items(filteredUserSessions, key = { it.deviceId }) { session ->
                                     UserDeviceCard(
                                         session = session,
+                                        onGrantAccess = {
+                                            securityManager.grantDeviceAccess(session.deviceId, 6f, false, session.label) {
+                                                Toast.makeText(context, "Granted 6 hours to ${session.deviceModel}!", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
                                         onTakeBackAccess = {
                                             securityManager.revokeAccessNoBan(session.deviceId) {
                                                 Toast.makeText(context, "Access taken back from ${session.deviceModel} (No ban)!", Toast.LENGTH_SHORT).show()
@@ -1490,6 +1495,7 @@ private fun KeyCard(
 @Composable
 private fun UserDeviceCard(
     session: UserSession,
+    onGrantAccess: () -> Unit,
     onTakeBackAccess: () -> Unit,
     onRevoke: () -> Unit,
     onSuspend: () -> Unit,
@@ -1628,6 +1634,20 @@ private fun UserDeviceCard(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 0. Grant 6 Hours (Instantly unlocks student phone)
+                    Button(
+                        onClick = onGrantAccess,
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess.copy(alpha = 0.18f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldSuccess.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(28.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Text("Grant 6h", style = MaterialTheme.typography.labelSmall.copy(color = EmeraldSuccess, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     // 1. Take Back Access (No Ban - Locks student screen immediately)
                     Button(
                         onClick = onTakeBackAccess,

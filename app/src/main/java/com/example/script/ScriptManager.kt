@@ -174,7 +174,7 @@ class ScriptManager(private val context: Context) {
      */
     fun injectPreloadSecurity(webView: WebView, url: String? = null) {
         val currentUrl = (url ?: webView.url)?.lowercase() ?: ""
-        if (currentUrl.contains("pwthor.live")) {
+        if (currentUrl.contains("pwthor")) {
             // For PWThor: Do NOT inject StudyParcham masterkey! Inject PWThor portal script early
             val pwthorPortal = getPWThorPortalScript()
             if (pwthorPortal.isNotBlank()) {

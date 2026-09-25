@@ -394,13 +394,7 @@ fun BrowserScreen(
                         builtInZoomControls = true
                         displayZoomControls = false
                         cacheMode = WebSettings.LOAD_DEFAULT
-                        // Clean user-agent: match standard mobile Chrome to prevent Cloudflare bot blocking
-                        val cleanUa = userAgentString
-                            .replace("; wv", "")
-                            .replace(Regex("Version/\\d+\\.\\d+\\s*"), "")
-                            .replace("StudyBrowser/1.0", "")
-                            .trim()
-                        userAgentString = cleanUa
+                        userAgentString = "$userAgentString StudyBrowser/1.0"
                         setSupportMultipleWindows(true)
                         javaScriptCanOpenWindowsAutomatically = true
                     }

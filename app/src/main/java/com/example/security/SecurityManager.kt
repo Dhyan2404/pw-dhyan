@@ -116,7 +116,8 @@ data class UserSession(
     val currentPortal: String = "studyparcham",
     val assignedPortal: String? = null,
     val blockedPortal: String? = null,
-    val accessRevoked: Boolean = false
+    val accessRevoked: Boolean = false,
+    val sessionExpiry: Long = 0L
 ) {
     val isCurrentlyOnline: Boolean get() = isOnline && (System.currentTimeMillis() - maxOf(lastHeartbeat, lastActiveTime) < 35000L)
 
@@ -157,6 +158,7 @@ data class UserSession(
             "suspendedUntil" to suspendedUntil,
             "isRevoked" to isRevoked,
             "accessRevoked" to accessRevoked,
+            "sessionExpiry" to sessionExpiry,
             "currentProgressPercent" to currentProgressPercent,
             "totalWatchTimeSeconds" to totalWatchTimeSeconds,
             "isPermanentAdmin" to isPermanentAdmin,
@@ -188,6 +190,7 @@ data class UserSession(
                 suspendedUntil = (map["suspendedUntil"] as? Number)?.toLong() ?: 0L,
                 isRevoked = (map["isRevoked"] as? Boolean) ?: false,
                 accessRevoked = (map["accessRevoked"] as? Boolean) ?: false,
+                sessionExpiry = (map["sessionExpiry"] as? Number)?.toLong() ?: 0L,
                 currentLecture = map["currentLecture"] as? String,
                 currentSubject = map["currentSubject"] as? String,
                 currentChapter = map["currentChapter"] as? String,
@@ -753,24 +756,28 @@ class SecurityManager(private val context: Context) {
 
                     val isRevoked = data["isRevoked"] as? Boolean ?: false
                     val accessRevoked = data["accessRevoked"] as? Boolean ?: false
-                    if (isRevoked || accessRevoked) {
+                    val sessionExpiry = (data["sessionExpiry"] as? Number)?.toLong() ?: 0L
+                    val isInf = data["isPermanentAdmin"] as? Boolean ?: false
+                    val passkey = data["passkey"] as? String ?: "Admin Granted"
+                    val label = data["label"] as? String ?: "Student"
+                    val suspendedUntil = (data["suspendedUntil"] as? Number)?.toLong() ?: 0L
+
+                    // 1. Device is permanently banned
+                    if (isRevoked) {
                         clearSession()
                         notifySessionStateChanged(false)
                         return@addSnapshotListener
                     }
 
-                    val suspendedUntil = (data["suspendedUntil"] as? Number)?.toLong() ?: 0L
+                    // 2. Device placed on temporary cooldown
                     if (suspendedUntil > System.currentTimeMillis()) {
                         prefs.edit().putLong("suspended_until_$myDeviceId", suspendedUntil).apply()
+                        clearSession()
                         notifySessionStateChanged(false)
                         return@addSnapshotListener
                     }
 
-                    val sessionExpiry = (data["sessionExpiry"] as? Number)?.toLong() ?: 0L
-                    val isInf = data["isPermanentAdmin"] as? Boolean ?: false
-                    val passkey = data["passkey"] as? String ?: "Admin Granted"
-                    val label = data["label"] as? String ?: "Student"
-
+                    // 3. Active remote access grant or valid session (Overrides any old accessRevoked)
                     if (isInf || sessionExpiry > System.currentTimeMillis()) {
                         val currentExpiry = prefs.getLong(KEY_SESSION_EXPIRY, 0L)
                         if (!isSessionActive() || sessionExpiry > currentExpiry || isInf) {
@@ -779,6 +786,13 @@ class SecurityManager(private val context: Context) {
                             if (isInf) setPermanentUnlocked(true)
                             notifySessionStateChanged(true)
                         }
+                    } else if (accessRevoked || (sessionExpiry in 1..System.currentTimeMillis())) {
+                        // 4. Admin specifically took back access or session expired:
+                        if (isSessionActive()) {
+                            clearSession()
+                            notifySessionStateChanged(false)
+                        }
+                        return@addSnapshotListener
                     }
 
                     // Admin Remote Portal Assignment for this user
@@ -833,6 +847,7 @@ class SecurityManager(private val context: Context) {
             base["label"] = prefs.getString(KEY_SESSION_LABEL, if (isInf) "Administrator" else "Student") ?: "Student"
             base["sessionExpiry"] = prefs.getLong(KEY_SESSION_EXPIRY, now + 24 * 3600 * 1000L)
             base["isPermanentAdmin"] = isInf
+            base["accessRevoked"] = false
         } else {
             base["passkey"] = "🔒 Locked / Awaiting Access"
             base["label"] = "Student"
@@ -854,7 +869,9 @@ class SecurityManager(private val context: Context) {
     }
 
     private fun notifySessionStateChanged(isUnlocked: Boolean) {
-        sessionStateListeners.forEach { it.invoke(isUnlocked) }
+        Handler(Looper.getMainLooper()).post {
+            sessionStateListeners.forEach { it.invoke(isUnlocked) }
+        }
     }
 
     fun addKeysUpdateListener(listener: (List<AccessKey>) -> Unit) {
@@ -1351,6 +1368,63 @@ class SecurityManager(private val context: Context) {
     }
 
     /**
+     * Admin grants custom study hours or permanent access to a user/device remotely without login.
+     */
+    fun grantDeviceAccess(
+        deviceId: String,
+        hours: Float = 6f,
+        isInfinite: Boolean = false,
+        label: String = "Student",
+        onComplete: ((Boolean) -> Unit)? = null
+    ) {
+        val fs = firestore ?: run {
+            showToast("Firestore offline")
+            onComplete?.invoke(false)
+            return
+        }
+        val now = System.currentTimeMillis()
+        val durationMillis = (hours * 3600 * 1000L).toLong().coerceAtLeast(60000L)
+        val expiry = if (isInfinite) 9999999999999L else now + durationMillis
+
+        val update = mapOf(
+            "deviceId" to deviceId,
+            "sessionExpiry" to expiry,
+            "durationMillis" to durationMillis,
+            "isPermanentAdmin" to isInfinite,
+            "isRevoked" to false,
+            "accessRevoked" to false,
+            "suspendedUntil" to 0L,
+            "isOnline" to true,
+            "passkey" to (if (isInfinite) "Master Admin" else "Admin Granted (${hours}h)"),
+            "label" to label,
+            "lastGrantedAt" to now,
+            "loginTime" to now
+        )
+
+        if (deviceId == getDeviceId()) {
+            saveSession(
+                if (isInfinite) "Master Admin" else "Admin Granted (${hours}h)",
+                label,
+                if (isInfinite) Long.MAX_VALUE else durationMillis,
+                isInfinite
+            )
+            if (isInfinite) setPermanentUnlocked(true)
+            notifySessionStateChanged(true)
+        }
+
+        fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(deviceId)
+            .set(update, SetOptions.merge())
+            .addOnSuccessListener {
+                showToast("Granted ${if (isInfinite) "Permanent" else "${hours}h"} access!")
+                onComplete?.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                showToast("Failed to grant: ${e.message}")
+                onComplete?.invoke(false)
+            }
+    }
+
+    /**
      * Admin takes back granted access for a user/device WITHOUT banning them.
      * Resets their active session in Firestore so their phone immediately locks.
      * The student is NOT banned; they simply need a new passkey to unlock.
@@ -1367,6 +1441,10 @@ class SecurityManager(private val context: Context) {
             "isOnline" to false,
             "passkey" to "Revoked by Admin"
         )
+        if (deviceId == getDeviceId()) {
+            clearSession()
+            notifySessionStateChanged(false)
+        }
         fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(deviceId)
             .set(update, SetOptions.merge())
             .addOnSuccessListener {
