@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.download.DownloadedFilesManager
 import com.example.download.DownloadedItem
+import com.example.security.PortalConfig
+import com.example.security.PortalMaintenanceInfo
 import com.example.security.SecurityManager
 import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyberCyan

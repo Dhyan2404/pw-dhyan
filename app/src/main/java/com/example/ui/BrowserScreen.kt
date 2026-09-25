@@ -109,6 +109,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.script.ScriptManager
 import com.example.security.AppMaintenanceInfo
 import com.example.security.BroadcastAnnouncement
+import com.example.security.PortalConfig
+import com.example.security.PortalMaintenanceInfo
 import com.example.security.SecurityManager
 import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyberCyan
@@ -252,7 +254,7 @@ fun BrowserScreen(
         }
         securityManager.addPortalChangeListener(portalListener)
 
-        val cfgListener: (SecurityManager.PortalConfig) -> Unit = { cfg ->
+        val cfgListener: (PortalConfig) -> Unit = { cfg ->
             portalConfig = cfg
         }
         securityManager.addPortalConfigListener(cfgListener)

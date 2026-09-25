@@ -464,6 +464,9 @@ class SecurityManager(private val context: Context) {
     private val portalChangeListeners = mutableListOf<(portal: Portal, reason: String) -> Unit>()
 
     companion object {
+        typealias PortalConfig = com.example.security.PortalConfig
+        typealias PortalMaintenanceInfo = com.example.security.PortalMaintenanceInfo
+
         const val MASTER_PERMANENT_CODE = "240411"
         private const val KEY_PERMANENT_UNLOCKED = "is_permanent_unlocked"
         private const val KEY_REVOKED_DEVICES = "revoked_devices_set"
