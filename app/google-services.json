@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "53335492024",
-    "project_id": "dhyan11-acc24",
-    "storage_bucket": "dhyan11-acc24.firebasestorage.app"
+    "project_number": "133624864848",
+    "project_id": "pw-dhyan",
+    "storage_bucket": "pw-dhyan.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:53335492024:android:f356aa9c969ef0baa7fb4d",
+        "mobilesdk_app_id": "1:133624864848:android:cbc2e22da531ee7a5b7155",
         "android_client_info": {
           "package_name": "com.dhyan.pwmod"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCH6XPiiyEvDYxJdRBEu6kcMoS7ridDh5c"
+          "current_key": "AIzaSyCUq7tBBkLbZpSn7FWE-2A8XIn9U1kCxuI"
         }
       ],
       "services": {

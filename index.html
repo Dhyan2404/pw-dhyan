@@ -781,8 +781,8 @@
         <i class="fas fa-exclamation-triangle" style="color:var(--crimson); font-size:18px;"></i> Firebase Firestore Permission Denied!
       </div>
       <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
-        Your writes to Cloud Firestore on project <b>dhyan11-acc24</b> are blocked by Firestore Security Rules.<br>
-        To fix this instantly: Open your <a href="https://console.firebase.google.com/project/dhyan11-acc24/firestore/rules" target="_blank" style="color:var(--cyan); text-decoration:underline; font-weight:600;">Firebase Console &gt; Firestore Database &gt; Rules tab</a>, replace the rules with the code below, and click <b>Publish</b>:
+        Your writes to Cloud Firestore on project <b>pw-dhyan</b> are blocked by Firestore Security Rules.<br>
+        To fix this instantly: Open your <a href="https://console.firebase.google.com/project/pw-dhyan/firestore/rules" target="_blank" style="color:var(--cyan); text-decoration:underline; font-weight:600;">Firebase Console &gt; Firestore Database &gt; Rules tab</a>, replace the rules with the code below, and click <b>Publish</b>:
       </div>
       <pre style="background: rgba(0,0,0,0.6); padding: 12px; border-radius: 8px; font-size: 12px; color: #4ade80; overflow-x: auto; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">rules_version = '2';
 service cloud.firestore {
@@ -1454,13 +1454,13 @@ service cloud.firestore {
 
     // Your web app's Firebase configuration
     const firebaseConfig = {
-      apiKey: "AIzaSyCenufaqeXZj9LeLhc_Kv5_artxWI-Kb2E",
-      authDomain: "dhyan11-acc24.firebaseapp.com",
-      projectId: "dhyan11-acc24",
-      storageBucket: "dhyan11-acc24.firebasestorage.app",
-      messagingSenderId: "53335492024",
-      appId: "1:53335492024:web:4fa34425bda1e70aa7fb4d",
-      measurementId: "G-QBF0PEEZTH"
+      apiKey: "AIzaSyA8iX72amArcyc1pH6nBziDhxZHxMnsC4k",
+      authDomain: "pw-dhyan.firebaseapp.com",
+      projectId: "pw-dhyan",
+      storageBucket: "pw-dhyan.firebasestorage.app",
+      messagingSenderId: "133624864848",
+      appId: "1:133624864848:web:e74104d318a776895b7155",
+      measurementId: "G-YXZLHPMSBL"
     };
 
     // Initialize Firebase v12
@@ -1644,7 +1644,7 @@ service cloud.firestore {
       const isPerm = err.code === 'permission-denied' || (err.message && (err.message.includes('permission') || err.message.includes('insufficient')));
       if (isPerm) {
         showPermissionErrorBanner();
-        alert(`Firestore Permission Error during ${actionName}!\n\nYour Firebase security rules on 'dhyan11-acc24' are blocking this write.\nPlease open Firebase Console -> Firestore Database -> Rules tab, and set:\nallow read, write: if true;\n\nCheck the diagnostic banner shown on the page.`);
+        alert(`Firestore Permission Error during ${actionName}!\n\nYour Firebase security rules on 'pw-dhyan' are blocking this write.\nPlease open Firebase Console -> Firestore Database -> Rules tab, and set:\nallow read, write: if true;\n\nCheck the diagnostic banner shown on the page.`);
       } else {
         alert(`${actionName} error: ${err.message}`);
       }

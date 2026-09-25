@@ -4,8 +4,8 @@
  */
 const https = require('https');
 
-const apiKey = "AIzaSyCenufaqeXZj9LeLhc_Kv5_artxWI-Kb2E";
-const projectId = "dhyan11-acc24";
+const apiKey = "AIzaSyA8iX72amArcyc1pH6nBziDhxZHxMnsC4k";
+const projectId = "pw-dhyan";
 
 function httpRequest(options, postData) {
   return new Promise((resolve, reject) => {
