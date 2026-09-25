@@ -1284,17 +1284,79 @@ service cloud.firestore {
 
         <!-- APP UPDATE & MANDATORY FORCE UPDATE CONTROL -->
         <div class="glass-panel" style="padding:24px; grid-column: 1 / -1;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-cloud-arrow-down" style="color:var(--cyan); margin-right:8px;"></i> In-App Auto-Update & Force Update Control</h3>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Manage latest APK release, toggle mandatory updates across student devices, and specify minimum supported version</p>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+            <div>
+              <h3 style="font-size:18px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-cloud-arrow-down" style="color:var(--cyan);"></i> In-App Auto-Update & GitHub Release Engine
+              </h3>
+              <p style="font-size:12px; color:var(--text-muted);">
+                Automatically check GitHub for new APK releases, sync to Firestore, and push instant auto-update prompts to student phones.
+              </p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-check-github" onclick="checkGitHubReleasesNow(false)">
+                <i class="fas fa-sync-alt" id="icon-gh-sync"></i> Check GitHub Now
+              </button>
+              <button type="button" class="btn btn-emerald btn-sm" id="btn-deploy-release" onclick="deployLatestGitHubReleaseNow()">
+                <i class="fas fa-rocket"></i> Deploy Latest APK & Push Update
+              </button>
+            </div>
+          </div>
 
+          <!-- LIVE GITHUB RELEASE STATUS CARD -->
+          <div id="github-release-card" style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--glass-border-strong); border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="status-dot" id="gh-status-dot" style="background:var(--cyan); box-shadow:0 0 8px var(--cyan);"></span>
+                <span style="font-size:13px; font-weight:700; color:#fff;" id="gh-status-title">GitHub Release Watcher</span>
+                <span class="status-badge" id="gh-release-tag-badge" style="font-size:11px; padding:2px 10px; background:rgba(56,189,248,0.15); color:var(--cyan); border-color:var(--cyan);">Checking...</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted);" id="gh-release-time">Checking GitHub API...</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:12px; font-size:12px; margin-bottom:14px;">
+              <div style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">ACTIVE CLOUD APK</div>
+                <div style="font-weight:700; color:var(--cyan); font-size:14px; margin-top:3px;" id="disp-active-cloud-version">Checking...</div>
+              </div>
+              <div style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">LATEST GITHUB RELEASE</div>
+                <div style="font-weight:700; color:var(--emerald); font-size:14px; margin-top:3px;" id="disp-latest-gh-version">Checking...</div>
+              </div>
+              <div style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">RELEASE ASSET</div>
+                <div style="font-weight:600; color:#fff; font-size:12px; margin-top:3px; display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="disp-gh-asset">
+                  <i class="fab fa-android text-emerald"></i> PW-DHYAN.apk
+                </div>
+              </div>
+            </div>
+
+            <div id="gh-notes-preview" style="font-size:11.5px; color:#cbd5e1; line-height:1.55; background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-bottom:14px; max-height:80px; overflow-y:auto; display:none;">
+            </div>
+
+            <!-- AUTO DEPLOY TOGGLE -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="update-auto-deploy-toggle" style="width:17px; height:17px; accent-color:var(--emerald);" checked />
+                <span style="font-size:12.5px; font-weight:600; color:#e2e8f0;">
+                  <i class="fas fa-bolt" style="color:var(--amber);"></i> Auto-Publish New APK Releases to Cloud (Zero-Click Updates)
+                </span>
+              </label>
+              <div style="font-size:11px; color:var(--text-muted);" id="gh-auto-check-status">
+                Auto-polls GitHub every 60s
+              </div>
+            </div>
+          </div>
+
+          <!-- FORM INPUTS -->
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:16px;">
             <div>
               <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST VERSION CODE</label>
-              <input type="number" id="update-version-code" class="form-control" value="53" />
+              <input type="number" id="update-version-code" class="form-control" value="55" />
             </div>
             <div>
               <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST VERSION NAME</label>
-              <input type="text" id="update-version-name" class="form-control" value="1.0.53" />
+              <input type="text" id="update-version-name" class="form-control" value="1.0.55" />
             </div>
             <div>
               <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MINIMUM SUPPORTED VERSION CODE</label>
@@ -1309,16 +1371,25 @@ service cloud.firestore {
 
           <div style="margin-bottom:16px;">
             <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">RELEASE NOTES / WHAT'S NEW</label>
-            <textarea id="update-release-notes" class="form-control" rows="2" placeholder="e.g. Added real-time grant hours sync, instant maintenance mode, and immersive video playback."></textarea>
+            <textarea id="update-release-notes" class="form-control" rows="2" placeholder="e.g. Eradicate StudyParcham auth lock screen, gatekeeper bypass, and sync liquid player."></textarea>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-              <input type="checkbox" id="update-force-toggle" style="width:18px; height:18px; accent-color:var(--crimson);" />
-              <span style="font-size:13px; font-weight:700; color:var(--crimson);"><i class="fas fa-triangle-exclamation"></i> Mandatory / Force Update (Blocks app until updated)</span>
-            </label>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:20px;">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="update-force-toggle" style="width:18px; height:18px; accent-color:var(--crimson);" />
+                <span style="font-size:13px; font-weight:700; color:var(--crimson);"><i class="fas fa-triangle-exclamation"></i> Mandatory / Force Update (Blocks app until updated)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="update-send-push-toggle" style="width:17px; height:17px; accent-color:var(--cyan);" checked />
+                <span style="font-size:12.5px; font-weight:600; color:#e2e8f0;"><i class="fas fa-paper-plane" style="color:var(--cyan);"></i> Broadcast Push Notification to All Connected Phones</span>
+              </label>
+            </div>
 
-            <button class="btn btn-primary" onclick="saveAppUpdateConfigFromWeb()"><i class="fas fa-save"></i> Save Update Settings</button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="sendUpdatePushNotificationOnly()"><i class="fas fa-bell"></i> Send Update Alert Only</button>
+              <button type="button" class="btn btn-primary" onclick="saveAppUpdateConfigFromWeb()"><i class="fas fa-save"></i> Save & Broadcast Update</button>
+            </div>
           </div>
         </div>
 
@@ -1381,6 +1452,9 @@ service cloud.firestore {
       pwthorMaintenance: { isActive: false, message: '' },
       blockedPortals: []
     };
+    let activeCloudUpdateConfig = null;
+    let latestGitHubRelease = null;
+    let isCheckingGitHub = false;
 
     // Fetch cloud admin PIN from Firestore system_config/admin_auth
     try {
@@ -1672,6 +1746,14 @@ service cloud.firestore {
         }
         updatePortalConfigUI();
       }, err => console.error("Portal config sync error", err));
+
+      // 7. Auto-poller for GitHub APK Releases & Auto-Update Engine
+      checkGitHubReleasesNow(true);
+      if (!window.__ghReleasePollerInterval) {
+        window.__ghReleasePollerInterval = setInterval(() => {
+          checkGitHubReleasesNow(true);
+        }, 60000);
+      }
     }
 
     // Formatting Helpers
@@ -1811,6 +1893,23 @@ service cloud.firestore {
         const curPortal = s.currentPortal || 'studyparcham';
         const isP2 = curPortal === 'pwthor';
 
+        const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 0;
+        const cloudName = activeCloudUpdateConfig?.latestVersionName || '';
+        let isDeviceOutdated = false;
+        let deviceVersionText = s.appVersion ? (s.appVersion.startsWith('v') ? s.appVersion : `v${s.appVersion}`) : '';
+        if (s.appVersionCode && cloudCode > 0) {
+          isDeviceOutdated = s.appVersionCode < cloudCode;
+        } else if (s.appVersion && cloudName) {
+          const cleanDev = s.appVersion.replace(/^v/i, '').trim();
+          const cleanCloud = cloudName.replace(/^v/i, '').trim();
+          isDeviceOutdated = cleanDev !== cleanCloud;
+        }
+        const versionBadgeHtml = s.appVersion ? `
+          <div style="margin-top:4px; display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px; ${isDeviceOutdated ? 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);' : 'background:rgba(16,185,129,0.15); color:var(--emerald); border:1px solid rgba(16,185,129,0.3);'}">
+            <i class="fas ${isDeviceOutdated ? 'fa-arrow-circle-up' : 'fa-check'}"></i> ${escapeHtml(deviceVersionText)} ${isDeviceOutdated ? '(Outdated)' : '(Latest)'}
+          </div>
+        ` : '';
+
         return `
           <tr>
             <td data-label="Status">
@@ -1822,6 +1921,7 @@ service cloud.firestore {
             <td data-label="Device">
               <div style="font-weight:700; color:#fff;">${escapeHtml(s.deviceModel || 'Android Device')}</div>
               <div style="font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${s.deviceId || ''}</div>
+              ${versionBadgeHtml}
             </td>
             <td data-label="Passkey">
               <span class="code-chip">${escapeHtml(s.passkey || 'Admin')}</span>
@@ -1865,6 +1965,7 @@ service cloud.firestore {
                 <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${escapeHtml(s.label || 'Student')}')" title="Grant or Extend Custom Access Hours (No login needed)"><i class="fas fa-hourglass-half"></i> Grant Hours</button>
                 ${!s.isRevoked ? `<button class="btn btn-warning btn-sm" onclick="takeBackAccess('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Take Back Access (Instantly locks phone screen without banning)"><i class="fas fa-undo-alt"></i> Take Back Key</button>` : ''}
                 <button class="btn btn-primary btn-sm" onclick="promptDirectAlert('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Send direct notification"><i class="fas fa-bell"></i></button>
+                <button class="btn btn-secondary btn-sm" onclick="sendTargetedDeviceUpdate('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${escapeHtml(s.appVersion || '')}')" title="Send Targeted In-App Update Alert to this device" style="color:var(--cyan); border-color:rgba(56,189,248,0.4);"><i class="fas fa-cloud-arrow-down"></i></button>
                 ${(isSuspended || s.isRevoked) 
                   ? `<button class="btn btn-emerald btn-sm" onclick="unsuspendDevice('${s.deviceId}')" title="Unban / Reactivate Device"><i class="fas fa-check-circle"></i> Unban</button>`
                   : `<button class="btn btn-secondary btn-sm" onclick="suspendDevice('${s.deviceId}', 5)" title="5-Min Cooldown"><i class="fas fa-clock"></i></button>`
@@ -2674,38 +2775,349 @@ service cloud.firestore {
     }
     window.toggleGlobalPortalBlockFromWeb = toggleGlobalPortalBlockFromWeb;
 
-    function saveAppUpdateConfigFromWeb() {
-      const versionCode = parseInt(document.getElementById('update-version-code')?.value) || 53;
+    function parseReleaseVersion(tag) {
+      if (!tag) return { code: 0, name: '1.0.0' };
+      const cleanTag = tag.trim().replace(/^v/i, '');
+      const semver = cleanTag.match(/(\d+)\.(\d+)\.(\d+)/);
+      if (semver) {
+        const code = parseInt(semver[3], 10);
+        return { code: isNaN(code) ? 0 : code, name: cleanTag };
+      }
+      const numMatch = cleanTag.match(/(\d+)/);
+      if (numMatch) {
+        const code = parseInt(numMatch[1], 10);
+        return { code: isNaN(code) ? 0 : code, name: `1.0.${code}` };
+      }
+      return { code: 0, name: cleanTag };
+    }
+
+    function updateReleaseCompareStatus() {
+      const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 0;
+      const cloudName = activeCloudUpdateConfig?.latestVersionName || '';
+      const dispCloud = document.getElementById('disp-active-cloud-version');
+      if (dispCloud && cloudName) {
+        dispCloud.innerText = `v${cloudName} (Code ${cloudCode})`;
+      }
+
+      if (!latestGitHubRelease) return;
+      const ghVer = parseReleaseVersion(latestGitHubRelease.tag_name);
+      const isNewer = ghVer.code > cloudCode;
+      
+      const badge = document.getElementById('gh-release-tag-badge');
+      const dot = document.getElementById('gh-status-dot');
+      const statusTitle = document.getElementById('gh-status-title');
+
+      if (isNewer) {
+        if (badge) {
+          badge.innerText = `⚡ New Release: ${latestGitHubRelease.tag_name}`;
+          badge.style.background = 'rgba(245,158,11,0.2)';
+          badge.style.color = 'var(--amber)';
+          badge.style.borderColor = 'var(--amber)';
+        }
+        if (dot) {
+          dot.style.background = 'var(--amber)';
+          dot.style.boxShadow = '0 0 10px var(--amber)';
+        }
+        if (statusTitle) statusTitle.innerText = `New APK Available (${latestGitHubRelease.tag_name})`;
+      } else {
+        if (badge) {
+          badge.innerText = `Cloud Up to Date (${latestGitHubRelease.tag_name})`;
+          badge.style.background = 'rgba(16,185,129,0.15)';
+          badge.style.color = 'var(--emerald)';
+          badge.style.borderColor = 'var(--emerald)';
+        }
+        if (dot) {
+          dot.style.background = 'var(--emerald)';
+          dot.style.boxShadow = '0 0 10px var(--emerald)';
+        }
+        if (statusTitle) statusTitle.innerText = 'GitHub Release Watcher (Synced)';
+      }
+    }
+
+    async function checkGitHubReleasesNow(isBackground = false) {
+      if (isCheckingGitHub) return;
+      isCheckingGitHub = true;
+      const syncIcon = document.getElementById('icon-gh-sync');
+      if (syncIcon) syncIcon.classList.add('fa-spin');
+      const badge = document.getElementById('gh-release-tag-badge');
+      if (badge && !isBackground) badge.innerText = 'Checking GitHub...';
+
+      try {
+        const resp = await fetch('https://api.github.com/repos/Dhyan2404/pw-dhyan/releases/latest', {
+          headers: { 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!resp.ok) {
+          throw new Error(`GitHub API returned status ${resp.status}`);
+        }
+        const rel = await resp.json();
+        latestGitHubRelease = rel;
+
+        const ghVer = parseReleaseVersion(rel.tag_name);
+        const apkAsset = (rel.assets || []).find(a => (a.name || '').toLowerCase().endsWith('.apk')) || null;
+        const apkUrl = apkAsset ? apkAsset.browser_download_url : `https://github.com/Dhyan2404/pw-dhyan/releases/download/${rel.tag_name}/PW-DHYAN.apk`;
+        const apkSizeMb = apkAsset ? (apkAsset.size / (1024 * 1024)).toFixed(1) : null;
+
+        const dispGh = document.getElementById('disp-latest-gh-version');
+        if (dispGh) dispGh.innerText = `${rel.tag_name} (Code ${ghVer.code})`;
+
+        const dispAsset = document.getElementById('disp-gh-asset');
+        if (dispAsset) {
+          dispAsset.innerHTML = `<i class="fab fa-android text-emerald"></i> ${escapeHtml(apkAsset ? apkAsset.name : 'PW-DHYAN.apk')} ${apkSizeMb ? `(${apkSizeMb} MB)` : ''}`;
+        }
+
+        const dispTime = document.getElementById('gh-release-time');
+        if (dispTime && rel.published_at) {
+          const d = new Date(rel.published_at);
+          dispTime.innerText = `Published ${d.toLocaleDateString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}`;
+        }
+
+        const notesBox = document.getElementById('gh-notes-preview');
+        if (notesBox) {
+          if (rel.body && rel.body.trim()) {
+            notesBox.style.display = 'block';
+            notesBox.innerText = `Release Notes: ${rel.body.trim()}`;
+          } else {
+            notesBox.style.display = 'none';
+          }
+        }
+
+        const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 0;
+        const isNewReleaseAvailable = ghVer.code > cloudCode;
+
+        updateReleaseCompareStatus();
+
+        const autoDeployChecked = document.getElementById('update-auto-deploy-toggle')?.checked ?? true;
+
+        if (isNewReleaseAvailable) {
+          // Fill inputs with newer version details
+          if (document.getElementById('update-version-code')) document.getElementById('update-version-code').value = ghVer.code;
+          if (document.getElementById('update-version-name')) document.getElementById('update-version-name').value = ghVer.name;
+          if (document.getElementById('update-download-url')) document.getElementById('update-download-url').value = apkUrl;
+          if (document.getElementById('update-release-notes') && rel.body) document.getElementById('update-release-notes').value = rel.body.trim();
+
+          if (autoDeployChecked) {
+            // Auto deploy zero-click update!
+            await deployLatestGitHubReleaseNow(true);
+          } else {
+            if (!isBackground) {
+              showToast(`New release ${rel.tag_name} detected! Ready to deploy.`);
+            }
+          }
+        } else {
+          if (!isBackground) {
+            showToast(`Cloud is up to date with latest GitHub release (${rel.tag_name}).`);
+          }
+        }
+      } catch (err) {
+        console.warn("GitHub Release check warning:", err);
+        const badge = document.getElementById('gh-release-tag-badge');
+        if (badge) {
+          badge.innerText = 'Rate-limited / Offline';
+          badge.style.color = 'var(--text-muted)';
+        }
+        if (!isBackground) showToast(`GitHub check notice: ${err.message}`);
+      } finally {
+        isCheckingGitHub = false;
+        if (syncIcon) syncIcon.classList.remove('fa-spin');
+      }
+    }
+    window.checkGitHubReleasesNow = checkGitHubReleasesNow;
+
+    async function deployLatestGitHubReleaseNow(isAuto = false) {
+      if (!latestGitHubRelease) {
+        await checkGitHubReleasesNow(false);
+        if (!latestGitHubRelease) {
+          alert("Could not load release data from GitHub.");
+          return;
+        }
+      }
+
+      const rel = latestGitHubRelease;
+      const ghVer = parseReleaseVersion(rel.tag_name);
+      const apkAsset = (rel.assets || []).find(a => (a.name || '').toLowerCase().endsWith('.apk')) || null;
+      const apkUrl = apkAsset ? apkAsset.browser_download_url : `https://github.com/Dhyan2404/pw-dhyan/releases/download/${rel.tag_name}/PW-DHYAN.apk`;
+      const notes = (rel.body || '').trim() || `Official update ${rel.tag_name} released.`;
+
+      if (document.getElementById('update-version-code')) document.getElementById('update-version-code').value = ghVer.code;
+      if (document.getElementById('update-version-name')) document.getElementById('update-version-name').value = ghVer.name;
+      if (document.getElementById('update-download-url')) document.getElementById('update-download-url').value = apkUrl;
+      if (document.getElementById('update-release-notes')) document.getElementById('update-release-notes').value = notes;
+
+      const shouldPush = document.getElementById('update-send-push-toggle')?.checked ?? true;
+      await saveAppUpdateConfigFromWeb(shouldPush, isAuto);
+    }
+    window.deployLatestGitHubReleaseNow = deployLatestGitHubReleaseNow;
+
+    async function broadcastAppUpdatePush(versionName, versionCode, releaseNotes, isForce) {
+      const now = Date.now();
+      const title = isForce ? `🚨 MANDATORY UPDATE: PW DHYAN v${versionName}` : `🚀 New Update Available: PW DHYAN v${versionName}`;
+      const message = releaseNotes ? releaseNotes : `Version ${versionName} is now ready! Tap to update and get the latest fixes.`;
+
+      // 1. Dispatch push notification to collection
+      const notifRef = doc(collection(db, 'push_notifications'));
+      await setDoc(notifRef, {
+        id: notifRef.id,
+        title: title,
+        message: message,
+        targetType: 'ALL',
+        targetValue: 'ALL',
+        type: 'APP_UPDATE',
+        versionCode: versionCode,
+        versionName: versionName,
+        timestamp: now,
+        isActive: true,
+        isBurst: true,
+        burstCount: isForce ? 3 : 2,
+        author: 'Auto-Release Engine'
+      });
+
+      // 2. Also set pendingAlert across all active user sessions for instant wake
+      const activeSessions = (userSessions || []).filter(s => s.deviceId);
+      const chunks = [];
+      for (let i = 0; i < activeSessions.length; i += 400) {
+        chunks.push(activeSessions.slice(i, i + 400));
+      }
+      for (const chunk of chunks) {
+        const batch = writeBatch(db);
+        chunk.forEach(s => {
+          batch.set(doc(db, 'user_sessions', s.deviceId), {
+            pendingAlert: {
+              id: `update_${versionCode}_${now}`,
+              title: title,
+              message: message,
+              type: 'APP_UPDATE',
+              versionCode: versionCode,
+              isBurst: true,
+              burstCount: isForce ? 3 : 2,
+              timestamp: now
+            }
+          }, { merge: true });
+        });
+        await batch.commit();
+      }
+    }
+    window.broadcastAppUpdatePush = broadcastAppUpdatePush;
+
+    async function saveAppUpdateConfigFromWeb(forceBroadcast = false, isAuto = false) {
+      const versionCode = parseInt(document.getElementById('update-version-code')?.value) || 55;
       const versionName = document.getElementById('update-version-name')?.value?.trim() || `1.0.${versionCode}`;
       const minVersion = parseInt(document.getElementById('update-min-version')?.value) || 50;
-      const downloadUrl = document.getElementById('update-download-url')?.value?.trim() || 'https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk';
+      const downloadUrl = document.getElementById('update-download-url')?.value?.trim() || `https://github.com/Dhyan2404/pw-dhyan/releases/download/v${versionName}/PW-DHYAN.apk`;
+      const releaseNotes = document.getElementById('update-release-notes')?.value?.trim() || '';
+      const isForceUpdate = document.getElementById('update-force-toggle')?.checked || false;
+      const shouldPush = forceBroadcast || (document.getElementById('update-send-push-toggle')?.checked ?? true);
+
+      try {
+        await setDoc(doc(db, 'system_config', 'app_update'), {
+          latestVersionCode: versionCode,
+          latestVersionName: versionName,
+          minSupportedVersionCode: minVersion,
+          downloadUrl: downloadUrl,
+          releaseNotes: releaseNotes,
+          isForceUpdate: isForceUpdate,
+          updatedAt: Date.now(),
+          autoDeployed: !!isAuto
+        }, { merge: true });
+
+        if (shouldPush) {
+          await broadcastAppUpdatePush(versionName, versionCode, releaseNotes, isForceUpdate);
+        }
+
+        showToast(isAuto ? `⚡ Auto-Deployed APK v${versionName} & broadcasted update to all devices!` : `App update v${versionName} published & broadcasted!`);
+        updateReleaseCompareStatus();
+      } catch (err) {
+        handleFirestoreError("Save Update Config", err);
+      }
+    }
+    window.saveAppUpdateConfigFromWeb = saveAppUpdateConfigFromWeb;
+
+    async function sendUpdatePushNotificationOnly() {
+      const versionName = document.getElementById('update-version-name')?.value?.trim() || '1.0.55';
+      const versionCode = parseInt(document.getElementById('update-version-code')?.value) || 55;
       const releaseNotes = document.getElementById('update-release-notes')?.value?.trim() || '';
       const isForceUpdate = document.getElementById('update-force-toggle')?.checked || false;
 
-      setDoc(doc(db, 'system_config', 'app_update'), {
-        latestVersionCode: versionCode,
-        latestVersionName: versionName,
-        minSupportedVersionCode: minVersion,
-        downloadUrl: downloadUrl,
-        releaseNotes: releaseNotes,
-        isForceUpdate: isForceUpdate,
-        updatedAt: Date.now()
-      }, { merge: true }).then(() => {
-        showToast('App update configuration published to cloud!');
-      }).catch(err => handleFirestoreError("Save Update Config", err));
+      if (!confirm(`Broadcast update notification for v${versionName} to ALL connected devices now?`)) return;
+
+      try {
+        await broadcastAppUpdatePush(versionName, versionCode, releaseNotes, isForceUpdate);
+        showToast(`Update alert broadcasted to all connected devices!`);
+      } catch (err) {
+        handleFirestoreError("Broadcast Update Alert", err);
+      }
     }
-    window.saveAppUpdateConfigFromWeb = saveAppUpdateConfigFromWeb;
+    window.sendUpdatePushNotificationOnly = sendUpdatePushNotificationOnly;
+
+    async function sendTargetedDeviceUpdate(deviceId, model, curVer) {
+      if (!deviceId) return;
+      const targetName = model || deviceId;
+      const cloudName = activeCloudUpdateConfig?.latestVersionName || 'latest';
+      const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 55;
+      const notes = activeCloudUpdateConfig?.releaseNotes || 'New version is ready.';
+      const isForce = !!activeCloudUpdateConfig?.isForceUpdate;
+
+      if (!confirm(`Send instant in-app update notification to "${targetName}"?\nCurrent: ${curVer || 'unknown'} -> Target: v${cloudName}`)) return;
+
+      const now = Date.now();
+      const title = isForce ? `🚨 Mandatory Update Required (v${cloudName})` : `🚀 Update Available (v${cloudName})`;
+      const msg = `Please update your app to v${cloudName}. ${notes}`;
+
+      try {
+        const notifRef = doc(collection(db, 'push_notifications'));
+        await setDoc(notifRef, {
+          id: notifRef.id,
+          title: title,
+          message: msg,
+          targetType: 'DEVICE',
+          targetValue: deviceId,
+          type: 'APP_UPDATE',
+          versionCode: cloudCode,
+          versionName: cloudName,
+          timestamp: now,
+          isActive: true,
+          isBurst: true,
+          burstCount: isForce ? 3 : 2,
+          author: 'Admin'
+        });
+
+        await setDoc(doc(db, 'user_sessions', deviceId), {
+          pendingAlert: {
+            id: `target_upd_${cloudCode}_${now}`,
+            title: title,
+            message: msg,
+            type: 'APP_UPDATE',
+            versionCode: cloudCode,
+            isBurst: true,
+            burstCount: isForce ? 3 : 2,
+            timestamp: now
+          }
+        }, { merge: true });
+
+        showToast(`Targeted update alert pushed to ${targetName}!`);
+      } catch (err) {
+        handleFirestoreError("Targeted Device Update", err);
+      }
+    }
+    window.sendTargetedDeviceUpdate = sendTargetedDeviceUpdate;
 
     // Listen to in-app update config in real time
     onSnapshot(doc(db, 'system_config', 'app_update'), snapshot => {
       if (snapshot.exists()) {
         const d = snapshot.data();
+        activeCloudUpdateConfig = d;
         if (document.getElementById('update-version-code') && d.latestVersionCode) document.getElementById('update-version-code').value = d.latestVersionCode;
         if (document.getElementById('update-version-name') && d.latestVersionName) document.getElementById('update-version-name').value = d.latestVersionName;
         if (document.getElementById('update-min-version') && d.minSupportedVersionCode !== undefined) document.getElementById('update-min-version').value = d.minSupportedVersionCode;
         if (document.getElementById('update-download-url') && d.downloadUrl) document.getElementById('update-download-url').value = d.downloadUrl;
         if (document.getElementById('update-release-notes') && d.releaseNotes) document.getElementById('update-release-notes').value = d.releaseNotes;
         if (document.getElementById('update-force-toggle') && d.isForceUpdate !== undefined) document.getElementById('update-force-toggle').checked = !!d.isForceUpdate;
+        
+        const dispCloud = document.getElementById('disp-active-cloud-version');
+        if (dispCloud) {
+          dispCloud.innerText = `v${d.latestVersionName || '1.0.0'} (Code ${d.latestVersionCode || 0})`;
+        }
+        updateReleaseCompareStatus();
+        renderDevicesTable();
       }
     });
 
