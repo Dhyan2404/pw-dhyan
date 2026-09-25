@@ -829,4 +829,48 @@
     // Continuous 10-second sync
     setInterval(syncLiveActivityToNative, 10000);
 
+    /* ==========================================================================
+       IMMERSIVE LECTURE MODE & VIDEO PLAYBACK HOOK
+       ========================================================================== */
+    function reportVideoState(isPlaying) {
+        try {
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onVideoPlayStateChanged) {
+                window.AndroidPlayerBridge.onVideoPlayStateChanged(isPlaying);
+            }
+        } catch (e) {}
+    }
+
+    document.addEventListener('play', function (e) {
+        if (e.target && (e.target.tagName === 'VIDEO' || (e.target.querySelector && e.target.querySelector('video')))) {
+            reportVideoState(true);
+        }
+    }, true);
+
+    document.addEventListener('pause', function (e) {
+        if (e.target && e.target.tagName === 'VIDEO') {
+            const anyPlaying = Array.from(document.querySelectorAll('video')).some(v => !v.paused && !v.ended);
+            reportVideoState(anyPlaying);
+        }
+    }, true);
+
+    document.addEventListener('ended', function (e) {
+        if (e.target && e.target.tagName === 'VIDEO') {
+            const anyPlaying = Array.from(document.querySelectorAll('video')).some(v => !v.paused && !v.ended);
+            reportVideoState(anyPlaying);
+        }
+    }, true);
+
+    function checkActiveVideoPlayer() {
+        const isVideoActive = !!document.querySelector('video') ||
+            window.location.href.includes('/player') ||
+            window.location.href.includes('/watch') ||
+            window.location.href.includes('lecture');
+        if (isVideoActive && window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
+            window.AndroidPlayerBridge.onLecturePlayerDetected(true);
+        }
+    }
+    window.addEventListener('popstate', checkActiveVideoPlayer);
+    window.addEventListener('hashchange', checkActiveVideoPlayer);
+    setInterval(checkActiveVideoPlayer, 2000);
+
 })();

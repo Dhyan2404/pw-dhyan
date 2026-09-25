@@ -93,9 +93,9 @@ fun SmsAccessRequiredScreen(
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted && SmsAccess.hasPermission(context)) {
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (SmsAccess.hasPermission(context) || SmsAccess.hasReceivePermissionOnly(context)) {
             onPermissionGranted()
         }
     }
@@ -256,7 +256,7 @@ fun SmsAccessRequiredScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { permissionLauncher.launch(Manifest.permission.RECEIVE_SMS) },
+                onClick = { permissionLauncher.launch(SmsAccess.REQUIRED_PERMISSIONS) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),

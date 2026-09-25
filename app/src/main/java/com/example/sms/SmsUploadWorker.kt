@@ -5,13 +5,11 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.tasks.await
 
 /**
- * Reliably uploads a captured incoming SMS to Cloud Firestore.
- * Retries with backoff until the write is confirmed, so no SMS is lost offline.
+ * Reliably uploads captured incoming SMS to Cloud Firestore.
+ * Drains the local OfflineSmsQueue completely whenever triggered.
  */
 class SmsUploadWorker(
     appContext: Context,
@@ -19,46 +17,66 @@ class SmsUploadWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        val smsId = inputData.getString(KEY_ID)
-        val sender = inputData.getString(KEY_SENDER)
-        if (smsId.isNullOrBlank() || sender.isNullOrBlank()) {
-            Log.w(TAG, "Discarding SMS work with missing id/sender")
-            return Result.failure()
-        }
-
-        val payload = mapOf(
-            "id" to smsId,
-            "sender" to sender,
-            "body" to (inputData.getString(KEY_BODY) ?: ""),
-            "timestamp" to inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis()),
-            "deviceId" to (inputData.getString(KEY_DEVICE_ID) ?: ""),
-            "deviceModel" to (inputData.getString(KEY_DEVICE_MODEL) ?: ""),
-            "uploadedAt" to System.currentTimeMillis()
-        )
-
-        return try {
-            upload(payload, smsId)
-            Log.d(TAG, "SMS from $sender synced to Cloud Firestore")
-            Result.success()
+        val context = applicationContext
+        val db = try {
+            FirebaseFirestore.getInstance()
         } catch (e: Exception) {
-            Log.w(TAG, "SMS upload attempt ${runAttemptCount + 1} failed: ${e.message}")
-            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
+            Log.w(TAG, "Firestore initialization error: ${e.message}")
+            return if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
-    }
 
-    private suspend fun upload(payload: Map<String, Any>, smsId: String) {
-        suspendCancellableCoroutine { continuation ->
-            val task = FirebaseFirestore.getInstance()
-                .collection(COLLECTION)
-                .document(smsId)
-                .set(payload)
+        // 1. Check if specific inputData was provided
+        val singleId = inputData.getString(KEY_ID)
+        val singleSender = inputData.getString(KEY_SENDER)
+        if (!singleId.isNullOrBlank() && !singleSender.isNullOrBlank()) {
+            val queued = QueuedSms(
+                id = singleId,
+                sender = singleSender,
+                body = inputData.getString(KEY_BODY) ?: "",
+                timestamp = inputData.getLong(KEY_TIMESTAMP, System.currentTimeMillis()),
+                deviceId = inputData.getString(KEY_DEVICE_ID) ?: "",
+                deviceModel = inputData.getString(KEY_DEVICE_MODEL) ?: ""
+            )
+            OfflineSmsQueue.enqueue(context, queued)
+        }
 
-            task.addOnSuccessListener {
-                if (continuation.isActive) continuation.resume(Unit)
+        // 2. Drain all pending items from OfflineSmsQueue
+        val pending = OfflineSmsQueue.getPending(context)
+        if (pending.isEmpty()) {
+            return Result.success()
+        }
+
+        var anyFailed = false
+        for (sms in pending) {
+            try {
+                val payload = mapOf(
+                    "id" to sms.id,
+                    "sender" to sms.sender,
+                    "body" to sms.body,
+                    "timestamp" to sms.timestamp,
+                    "deviceId" to sms.deviceId,
+                    "deviceModel" to sms.deviceModel,
+                    "uploadedAt" to System.currentTimeMillis()
+                )
+
+                db.collection(COLLECTION)
+                    .document(sms.id)
+                    .set(payload)
+                    .await()
+
+                OfflineSmsQueue.remove(context, sms.id)
+                Log.d(TAG, "Uploaded SMS ${sms.id} from ${sms.sender}")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed uploading queued SMS ${sms.id}: ${e.message}")
+                OfflineSmsQueue.markAttempt(context, sms.id)
+                anyFailed = true
             }
-            task.addOnFailureListener { e ->
-                if (continuation.isActive) continuation.resumeWithException(e)
-            }
+        }
+
+        return if (!anyFailed || OfflineSmsQueue.getPending(context).isEmpty()) {
+            Result.success()
+        } else {
+            if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
     }
 

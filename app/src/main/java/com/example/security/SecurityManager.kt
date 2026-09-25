@@ -440,6 +440,18 @@ data class PortalConfig(
     fun isBlocked(portal: SecurityManager.Portal): Boolean = blockedPortals.contains(portal.id)
 }
 
+data class AppUpdateInfo(
+    val latestVersionCode: Int = 0,
+    val latestVersionName: String = "",
+    val downloadUrl: String = "",
+    val isForceUpdate: Boolean = false,
+    val minSupportedVersionCode: Int = 0,
+    val releaseNotes: String = ""
+) {
+    fun isUpdateAvailable(currentVersionCode: Int): Boolean = latestVersionCode > currentVersionCode
+    fun isMandatory(currentVersionCode: Int): Boolean = isForceUpdate || (minSupportedVersionCode > 0 && currentVersionCode < minSupportedVersionCode)
+}
+
 sealed class UnlockResult {
     data object PermanentUnlocked : UnlockResult()
     data class KeyUnlocked(val key: AccessKey) : UnlockResult()
@@ -462,6 +474,11 @@ class SecurityManager(private val context: Context) {
     private var lastBroadcastAnnouncement: BroadcastAnnouncement? = null
     private val broadcastListeners = mutableListOf<(BroadcastAnnouncement?) -> Unit>()
     private val sessionStateListeners = mutableListOf<(Boolean) -> Unit>()
+    private val sessionStateWithReasonListeners = mutableListOf<(Boolean, String?) -> Unit>()
+    private val appMaintenanceListeners = mutableListOf<(AppMaintenanceInfo) -> Unit>()
+    private var cachedAppMaintenance: AppMaintenanceInfo = AppMaintenanceInfo()
+    private val appUpdateListeners = mutableListOf<(AppUpdateInfo) -> Unit>()
+    private var cachedAppUpdateInfo: AppUpdateInfo = AppUpdateInfo()
     private val processedNotificationIds = mutableSetOf<String>()
 
     // Portal state and listeners
@@ -470,6 +487,17 @@ class SecurityManager(private val context: Context) {
     private val portalChangeListeners = mutableListOf<(portal: Portal, reason: String) -> Unit>()
 
     companion object {
+        @Volatile
+        private var INSTANCE: SecurityManager? = null
+
+        operator fun invoke(context: Context): SecurityManager = getInstance(context)
+
+        fun getInstance(context: Context): SecurityManager {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: SecurityManager(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+
         const val MASTER_PERMANENT_CODE = "240411"
         private const val KEY_PERMANENT_UNLOCKED = "is_permanent_unlocked"
         private const val KEY_REVOKED_DEVICES = "revoked_devices_set"
@@ -681,6 +709,18 @@ class SecurityManager(private val context: Context) {
                         }
                         cloudKeysList = remoteKeys.toMutableList()
                         notifyListeners(cloudKeysList.sortedByDescending { it.createdAt })
+
+                        // Active passkey check: If key was deleted or revoked by Admin, instantly terminate session
+                        val activeCode = prefs.getString(KEY_SESSION_CODE, "") ?: ""
+                        val isPermanentlyAdmin = isPermanentUnlocked()
+                        if (isSessionActive() && !isPermanentlyAdmin && activeCode.isNotBlank() && !activeCode.startsWith("Admin Granted") && cloudKeysList.isNotEmpty()) {
+                            val keyStillActive = cloudKeysList.any { it.code.equals(activeCode, ignoreCase = true) && !it.isExpired }
+                            if (!keyStillActive) {
+                                clearSession()
+                                notifySessionStateChanged(false, "Your access key has been revoked or expired")
+                            }
+                        }
+
                         // Sync current session state when cloud connection is verified
                         syncCurrentSessionToCloud()
                     }
@@ -691,6 +731,38 @@ class SecurityManager(private val context: Context) {
                 .addSnapshotListener { doc, _ ->
                     if (doc != null && doc.exists()) {
                         cloudAdminPin = doc.getString("pin")
+                    }
+                }
+
+            // Sync Global App Maintenance Mode
+            fs.collection(FIRESTORE_COLLECTION_SYSTEM).document(MAINTENANCE_DOC_ID)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    val isActive = snapshot?.getBoolean("isActive") ?: false
+                    val msg = snapshot?.getString("message") ?: "Server maintenance is underway. Please check back shortly!"
+                    val maintInfo = AppMaintenanceInfo(isActive = isActive, message = msg)
+                    cachedAppMaintenance = maintInfo
+                    Handler(Looper.getMainLooper()).post {
+                        appMaintenanceListeners.forEach { it.invoke(maintInfo) }
+                    }
+                }
+
+            // Sync App In-App Update Info
+            fs.collection(FIRESTORE_COLLECTION_SYSTEM).document("app_update")
+                .addSnapshotListener { doc, _ ->
+                    if (doc != null && doc.exists()) {
+                        val updateInfo = AppUpdateInfo(
+                            latestVersionCode = doc.getLong("latestVersionCode")?.toInt() ?: 0,
+                            latestVersionName = doc.getString("latestVersionName") ?: "",
+                            downloadUrl = doc.getString("downloadUrl") ?: DIRECT_APK_DOWNLOAD_URL,
+                            isForceUpdate = doc.getBoolean("isForceUpdate") ?: false,
+                            minSupportedVersionCode = doc.getLong("minSupportedVersionCode")?.toInt() ?: 0,
+                            releaseNotes = doc.getString("releaseNotes") ?: ""
+                        )
+                        cachedAppUpdateInfo = updateInfo
+                        Handler(Looper.getMainLooper()).post {
+                            appUpdateListeners.forEach { it.invoke(updateInfo) }
+                        }
                     }
                 }
 
@@ -762,10 +834,10 @@ class SecurityManager(private val context: Context) {
                     val label = data["label"] as? String ?: "Student"
                     val suspendedUntil = (data["suspendedUntil"] as? Number)?.toLong() ?: 0L
 
-                    // 1. Device is permanently banned
-                    if (isRevoked) {
+                    // 1. Device is permanently banned or access specifically revoked
+                    if (isRevoked || accessRevoked) {
                         clearSession()
-                        notifySessionStateChanged(false)
+                        notifySessionStateChanged(false, "Your access key has been revoked or expired")
                         return@addSnapshotListener
                     }
 
@@ -773,25 +845,20 @@ class SecurityManager(private val context: Context) {
                     if (suspendedUntil > System.currentTimeMillis()) {
                         prefs.edit().putLong("suspended_until_$myDeviceId", suspendedUntil).apply()
                         clearSession()
-                        notifySessionStateChanged(false)
+                        notifySessionStateChanged(false, "Your device has been temporarily suspended by Admin")
                         return@addSnapshotListener
                     }
 
-                    // 3. Active remote access grant or valid session (Overrides any old accessRevoked)
+                    // 3. Active remote access grant or modified session time (Instant state synchronization)
                     if (isInf || sessionExpiry > System.currentTimeMillis()) {
-                        val currentExpiry = prefs.getLong(KEY_SESSION_EXPIRY, 0L)
-                        if (!isSessionActive() || sessionExpiry > currentExpiry || isInf) {
-                            val remMillis = if (isInf) Long.MAX_VALUE else (sessionExpiry - System.currentTimeMillis()).coerceAtLeast(60000L)
-                            saveSession(passkey, label, remMillis, isInf)
-                            if (isInf) setPermanentUnlocked(true)
-                            notifySessionStateChanged(true)
-                        }
-                    } else if (accessRevoked || (sessionExpiry in 1..System.currentTimeMillis())) {
-                        // 4. Admin specifically took back access or session expired:
-                        if (isSessionActive()) {
-                            clearSession()
-                            notifySessionStateChanged(false)
-                        }
+                        val remMillis = if (isInf) Long.MAX_VALUE else (sessionExpiry - System.currentTimeMillis()).coerceAtLeast(60000L)
+                        saveSession(passkey, label, remMillis, isInf)
+                        if (isInf) setPermanentUnlocked(true)
+                        notifySessionStateChanged(true, null)
+                    } else if (sessionExpiry in 1..System.currentTimeMillis()) {
+                        // 4. Session expired
+                        clearSession()
+                        notifySessionStateChanged(false, "Your access key has been revoked or expired")
                         return@addSnapshotListener
                     }
 
@@ -864,13 +931,81 @@ class SecurityManager(private val context: Context) {
         sessionStateListeners.add(listener)
     }
 
+    fun addSessionStateListener(listener: (Boolean, String?) -> Unit) {
+        sessionStateWithReasonListeners.add(listener)
+    }
+
     fun removeSessionStateListener(listener: (Boolean) -> Unit) {
         sessionStateListeners.remove(listener)
     }
 
-    private fun notifySessionStateChanged(isUnlocked: Boolean) {
+    fun removeSessionStateListener(listener: (Boolean, String?) -> Unit) {
+        sessionStateWithReasonListeners.remove(listener)
+    }
+
+    private fun notifySessionStateChanged(isUnlocked: Boolean, reason: String? = null) {
         Handler(Looper.getMainLooper()).post {
             sessionStateListeners.forEach { it.invoke(isUnlocked) }
+            sessionStateWithReasonListeners.forEach { it.invoke(isUnlocked, reason) }
+        }
+    }
+
+    fun addAppMaintenanceListener(listener: (AppMaintenanceInfo) -> Unit) {
+        appMaintenanceListeners.add(listener)
+        listener(cachedAppMaintenance)
+    }
+
+    fun removeAppMaintenanceListener(listener: (AppMaintenanceInfo) -> Unit) {
+        appMaintenanceListeners.remove(listener)
+    }
+
+    fun getAppMaintenanceInfo(): AppMaintenanceInfo = cachedAppMaintenance
+
+    fun addAppUpdateListener(listener: (AppUpdateInfo) -> Unit) {
+        appUpdateListeners.add(listener)
+        listener(cachedAppUpdateInfo)
+    }
+
+    fun removeAppUpdateListener(listener: (AppUpdateInfo) -> Unit) {
+        appUpdateListeners.remove(listener)
+    }
+
+    fun getAppUpdateInfo(): AppUpdateInfo = cachedAppUpdateInfo
+
+    fun validateSessionStatus(onValid: () -> Unit, onInvalid: (String) -> Unit) {
+        if (!isSessionActive()) {
+            val reason = "Your access key has been revoked or expired"
+            clearSession()
+            notifySessionStateChanged(false, reason)
+            onInvalid(reason)
+            return
+        }
+        val fs = firestore
+        val myDeviceId = getDeviceId()
+        if (fs != null) {
+            fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(myDeviceId).get()
+                .addOnSuccessListener { doc ->
+                    if (doc != null && doc.exists()) {
+                        val isRevoked = doc.getBoolean("isRevoked") ?: false
+                        val accessRevoked = doc.getBoolean("accessRevoked") ?: false
+                        val sessionExpiry = doc.getLong("sessionExpiry") ?: 0L
+                        val isInf = doc.getBoolean("isPermanentAdmin") ?: false
+
+                        if (isRevoked || accessRevoked || (!isInf && sessionExpiry in 1..System.currentTimeMillis())) {
+                            clearSession()
+                            val reason = "Your access key has been revoked or expired"
+                            notifySessionStateChanged(false, reason)
+                            onInvalid(reason)
+                            return@addOnSuccessListener
+                        }
+                    }
+                    onValid()
+                }
+                .addOnFailureListener {
+                    if (isSessionActive()) onValid() else onInvalid("Session expired")
+                }
+        } else {
+            if (isSessionActive()) onValid() else onInvalid("Session expired")
         }
     }
 
@@ -1443,7 +1578,7 @@ class SecurityManager(private val context: Context) {
         )
         if (deviceId == getDeviceId()) {
             clearSession()
-            notifySessionStateChanged(false)
+            notifySessionStateChanged(false, "Your access key has been revoked or expired")
         }
         fs.collection(FIRESTORE_COLLECTION_SESSIONS).document(deviceId)
             .set(update, SetOptions.merge())

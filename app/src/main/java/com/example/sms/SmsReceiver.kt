@@ -4,22 +4,20 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.provider.Settings
 import android.provider.Telephony
+import android.telephony.SmsMessage
 import android.util.Log
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
-import kotlin.math.abs
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * System-level SMS_RECEIVED receiver. Statically registered in the manifest so Android
- * wakes the app to capture incoming SMS even when it is backgrounded or fully closed.
+ * System-level SMS_RECEIVED receiver.
+ * Uses goAsync() for immediate online synchronization while atomically saving to
+ * OfflineSmsQueue so that messages received offline are never lost.
  */
 class SmsReceiver : BroadcastReceiver() {
 
@@ -29,107 +27,105 @@ class SmsReceiver : BroadcastReceiver() {
         val messages = try {
             Telephony.Sms.Intents.getMessagesFromIntent(intent)
         } catch (e: Exception) {
-            Log.w(TAG, "Could not parse SMS intent: ${e.message}")
+            Log.w(TAG, "Standard SMS intent parser failed: ${e.message}")
             null
-        } ?: return
+        } ?: parsePdusFallback(intent)
+
+        if (messages.isNullOrEmpty()) return
 
         val parts = messages.filterNotNull()
         if (parts.isEmpty()) return
 
-        val deviceId = resolveDeviceId(context)
+        val deviceId = SmsSyncHelper.resolveDeviceId(context)
         val deviceModel = "${Build.MANUFACTURER} ${Build.MODEL}"
 
-        parts.groupBy { it.displayOriginatingAddress ?: "Unknown" }
-            .forEach { (sender, segments) ->
-                val body = segments.joinToString(separator = "") { it.messageBody ?: "" }
-                val timestamp = segments.maxOfOrNull { it.timestampMillis }
-                    ?: System.currentTimeMillis()
-                val smsId = buildSmsId(deviceId, sender, body, timestamp)
+        val pendingResult = goAsync()
 
-                if (isDuplicate(context, smsId)) return@forEach
-                rememberSms(context, smsId)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                parts.groupBy { it.displayOriginatingAddress ?: "Unknown" }
+                    .forEach { (sender, segments) ->
+                        val body = segments.joinToString(separator = "") { it.messageBody ?: "" }
+                        val timestamp = segments.maxOfOrNull { it.timestampMillis }
+                            ?: System.currentTimeMillis()
+                        val smsId = SmsSyncHelper.buildSmsId(deviceId, sender, body, timestamp)
 
-                enqueueUpload(context, smsId, sender, body, timestamp, deviceId, deviceModel)
+                        if (OfflineSmsQueue.isSeen(context, smsId)) return@forEach
+                        OfflineSmsQueue.markSeen(context, smsId)
+
+                        // 1. Immediately persist to offline queue
+                        val queued = QueuedSms(
+                            id = smsId,
+                            sender = sender,
+                            body = body,
+                            timestamp = timestamp,
+                            deviceId = deviceId,
+                            deviceModel = deviceModel
+                        )
+                        OfflineSmsQueue.enqueue(context, queued)
+
+                        // 2. Attempt immediate online upload
+                        var uploaded = false
+                        try {
+                            withTimeoutOrNull(4000L) {
+                                val db = FirebaseFirestore.getInstance()
+                                val payload = mapOf(
+                                    "id" to smsId,
+                                    "sender" to sender,
+                                    "body" to body,
+                                    "timestamp" to timestamp,
+                                    "deviceId" to deviceId,
+                                    "deviceModel" to deviceModel,
+                                    "uploadedAt" to System.currentTimeMillis()
+                                )
+                                db.collection(SmsUploadWorker.COLLECTION)
+                                    .document(smsId)
+                                    .set(payload)
+                                    .await()
+                                uploaded = true
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Immediate upload attempt failed: ${e.message}")
+                        }
+
+                        if (uploaded) {
+                            OfflineSmsQueue.remove(context, smsId)
+                            Log.d(TAG, "Instant SMS upload successful: $smsId")
+                        } else {
+                            // Ensure background worker is scheduled to drain when online
+                            SmsSyncHelper.scheduleWorker(context)
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in onReceive processing: ${e.message}")
+                SmsSyncHelper.scheduleWorker(context)
+            } finally {
+                pendingResult.finish()
             }
-    }
-
-    private fun enqueueUpload(
-        context: Context,
-        smsId: String,
-        sender: String,
-        body: String,
-        timestamp: Long,
-        deviceId: String,
-        deviceModel: String
-    ) {
-        val data = Data.Builder()
-            .putString(SmsUploadWorker.KEY_ID, smsId)
-            .putString(SmsUploadWorker.KEY_SENDER, sender)
-            .putString(SmsUploadWorker.KEY_BODY, body)
-            .putLong(SmsUploadWorker.KEY_TIMESTAMP, timestamp)
-            .putString(SmsUploadWorker.KEY_DEVICE_ID, deviceId)
-            .putString(SmsUploadWorker.KEY_DEVICE_MODEL, deviceModel)
-            .build()
-
-        val request = OneTimeWorkRequestBuilder<SmsUploadWorker>()
-            .setInputData(data)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            )
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30L, TimeUnit.SECONDS)
-            .build()
-
-        try {
-            WorkManager.getInstance(context)
-                .enqueueUniqueWork("sms_upload_$smsId", ExistingWorkPolicy.KEEP, request)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to enqueue SMS upload: ${e.message}")
         }
     }
 
-    private fun resolveDeviceId(context: Context): String {
+    @Suppress("DEPRECATION")
+    private fun parsePdusFallback(intent: Intent): Array<SmsMessage>? {
         return try {
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-                ?: "device_${Build.MODEL.hashCode()}"
+            val bundle = intent.extras ?: return null
+            val pdus = bundle.get("pdus") as? Array<*> ?: return null
+            val format = bundle.getString("format")
+            pdus.mapNotNull { pdu ->
+                if (pdu !is ByteArray) return@mapNotNull null
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && format != null) {
+                    SmsMessage.createFromPdu(pdu, format)
+                } else {
+                    SmsMessage.createFromPdu(pdu)
+                }
+            }.toTypedArray()
         } catch (e: Exception) {
-            "device_${Build.MODEL.hashCode()}"
+            Log.w(TAG, "PDU fallback parser error: ${e.message}")
+            null
         }
     }
-
-    private fun buildSmsId(deviceId: String, sender: String, body: String, timestamp: Long): String {
-        val senderToken = sender.filter { it.isLetterOrDigit() }.take(24).ifBlank { "unknown" }
-        return "${deviceId}_${timestamp}_${senderToken}_${abs(body.hashCode())}"
-    }
-
-    private fun isDuplicate(context: Context, smsId: String): Boolean {
-        return try {
-            prefs(context).getStringSet(KEY_SEEN, emptySet())?.contains(smsId) == true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun rememberSms(context: Context, smsId: String) {
-        try {
-            val seen = prefs(context).getStringSet(KEY_SEEN, emptySet())?.toMutableSet()
-                ?: mutableSetOf()
-            seen.add(smsId)
-            val trimmed = if (seen.size > MAX_SEEN) seen.toList().takeLast(MAX_SEEN).toSet() else seen
-            prefs(context).edit().putStringSet(KEY_SEEN, trimmed).apply()
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not persist SMS dedupe state: ${e.message}")
-        }
-    }
-
-    private fun prefs(context: Context) =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     companion object {
         private const val TAG = "SmsReceiver"
-        private const val PREFS_NAME = "pw_sms_capture_prefs"
-        private const val KEY_SEEN = "seen_sms_ids"
-        private const val MAX_SEEN = 400
     }
 }

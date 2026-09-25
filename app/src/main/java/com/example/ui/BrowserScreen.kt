@@ -171,6 +171,7 @@ fun BrowserScreen(
     var showDownloadsDialog by remember { mutableStateOf(false) }
     var areControlsVisible by remember { mutableStateOf(true) }
     var isSettingsPillVisible by remember { mutableStateOf(false) }
+    var isVideoPlaying by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var activeAnnouncement by remember { mutableStateOf<BroadcastAnnouncement?>(null) }
     var dismissedAnnouncementId by remember { mutableStateOf<String?>(null) }
@@ -293,20 +294,23 @@ fun BrowserScreen(
     }
 
     fun revealControls() {
-        areControlsVisible = true
-        lastInteractionTime = System.currentTimeMillis()
+        if (!isVideoPlaying) {
+            areControlsVisible = true
+            lastInteractionTime = System.currentTimeMillis()
+        }
     }
 
     fun revealSettingsPill() {
-        areControlsVisible = true
-        isSettingsPillVisible = true
-        lastInteractionTime = System.currentTimeMillis()
+        if (!isVideoPlaying) {
+            areControlsVisible = true
+            isSettingsPillVisible = true
+            lastInteractionTime = System.currentTimeMillis()
+        }
     }
 
     // Auto-hide floating navigation & settings after 3.5 seconds of inactivity
-    // User request: "it has time out of 4 sec if i dont click on screen for 3 sec it fades out and disables"
-    LaunchedEffect(lastInteractionTime, areControlsVisible) {
-        if (areControlsVisible) {
+    LaunchedEffect(lastInteractionTime, areControlsVisible, isVideoPlaying) {
+        if (areControlsVisible && !isVideoPlaying) {
             delay(3500)
             areControlsVisible = false
             isSettingsPillVisible = false
@@ -314,11 +318,25 @@ fun BrowserScreen(
     }
 
     // System Back Handler
-    // User request: "simple mobile back goes vid page to normal main page"
+    // Immersive Video Playback: stops the video, redirects to exact previous page, restores navigation UI
     BackHandler(enabled = true) {
-        if (customVideoView != null) {
-            // Exit fullscreen video
-            customVideoView = null
+        if (isVideoPlaying || customVideoView != null) {
+            // 1. Stop video in WebView immediately
+            webViewInstance?.evaluateJavascript(
+                "(function() { var vids = document.querySelectorAll('video'); vids.forEach(function(v) { try { v.pause(); v.currentTime = 0; } catch(e){} }); })();",
+                null
+            )
+            if (customVideoView != null) {
+                customVideoView = null
+            }
+            isVideoPlaying = false
+            areControlsVisible = true
+            // 2. Redirect to exact previous page
+            if (webViewInstance?.canGoBack() == true) {
+                webViewInstance?.goBack()
+            } else {
+                webViewInstance?.loadUrl(securityManager.getCurrentPortalUrl())
+            }
         } else {
             val curUrl = webViewInstance?.url ?: ""
             val homeUrl = securityManager.getCurrentPortalUrl()
@@ -614,12 +632,17 @@ fun BrowserScreen(
                             super.onShowCustomView(view, callback)
                             handlePlayerOrientation(true)
                             customVideoView = view
+                            isVideoPlaying = true
+                            areControlsVisible = false
+                            isSettingsPillVisible = false
                         }
 
                         override fun onHideCustomView() {
                             super.onHideCustomView()
                             handlePlayerOrientation(false)
                             customVideoView = null
+                            isVideoPlaying = false
+                            areControlsVisible = true
                         }
 
                         override fun onPermissionRequest(request: android.webkit.PermissionRequest?) {
@@ -656,8 +679,25 @@ fun BrowserScreen(
                         }
 
                         @JavascriptInterface
+                        fun onVideoPlayStateChanged(isPlaying: Boolean) {
+                            (context as? Activity)?.runOnUiThread {
+                                isVideoPlaying = isPlaying
+                                if (isPlaying) {
+                                    areControlsVisible = false
+                                    isSettingsPillVisible = false
+                                }
+                            }
+                        }
+
+                        @JavascriptInterface
                         fun onLecturePlayerDetected(isPlayer: Boolean) {
-                            // Orientation is strictly managed via fullscreen video or manual toggle
+                            (context as? Activity)?.runOnUiThread {
+                                isVideoPlaying = isPlayer
+                                if (isPlayer) {
+                                    areControlsVisible = false
+                                    isSettingsPillVisible = false
+                                }
+                            }
                         }
 
                         @JavascriptInterface
@@ -930,7 +970,7 @@ fun BrowserScreen(
 
         // Floating Quick Admin & Security Controls (Auto-fades after 3.5 seconds of inactivity)
         AnimatedVisibility(
-            visible = areControlsVisible && customVideoView == null,
+            visible = areControlsVisible && !isVideoPlaying && customVideoView == null,
             enter = fadeIn() + slideInVertically(initialOffsetY = { -it / 2 }),
             exit = fadeOut() + slideOutVertically(targetOffsetY = { -it / 2 }),
             modifier = Modifier
@@ -1197,50 +1237,61 @@ fun BrowserScreen(
             }
         }
 
-        // Individual Portal Maintenance Mode Alert Banner
-        AnimatedVisibility(
-            visible = portalConfig.isMaintenance(currentPortal) && !isPermanentUnlocked && !maintenanceInfo.isActive,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically(),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 56.dp, start = 12.dp, end = 12.dp)
-        ) {
+        // Individual Portal Maintenance Mode - Full Screen Blocking Overlay
+        if (portalConfig.isMaintenance(currentPortal) && !isPermanentUnlocked && !maintenanceInfo.isActive) {
             val altPortal = if (currentPortal == SecurityManager.Portal.STUDYPARCHAM) SecurityManager.Portal.PWTHOR else SecurityManager.Portal.STUDYPARCHAM
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = DarkSurface.copy(alpha = 0.95f),
-                border = BorderStroke(1.5.dp, GoldenAccent),
-                shadowElevation = 10.dp
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DarkBackground.copy(alpha = 0.98f))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(GoldenAccent.copy(alpha = 0.2f))
+                            .border(1.5.dp, GoldenAccent, CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Security,
                             contentDescription = "Maintenance",
                             tint = GoldenAccent,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = "${currentPortal.displayName} Under Maintenance",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = "${currentPortal.displayName.uppercase()} MAINTENANCE",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.sp,
+                            color = TextPrimary
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Text(
                         text = portalConfig.getMaintenanceMessage(currentPortal),
-                        style = MaterialTheme.typography.bodySmall.copy(color = TextMuted)
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = TextMuted,
+                            lineHeight = 22.sp
+                        ),
+                        textAlign = TextAlign.Center
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     if (!portalConfig.isMaintenance(altPortal) && !portalConfig.isBlocked(altPortal)) {
                         Button(
@@ -1252,10 +1303,12 @@ fun BrowserScreen(
                                 showToast("Switched to ${altPortal.displayName}")
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldSuccess),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
                         ) {
-                            Text("Switch to ${altPortal.displayName}", color = DarkBackground, fontWeight = FontWeight.Bold)
+                            Text("Switch to ${altPortal.displayName}", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
                 }
@@ -1264,7 +1317,7 @@ fun BrowserScreen(
 
         // Floating Mini Navigation Bar (Auto-fades out after 3.5 seconds of inactivity)
         AnimatedVisibility(
-            visible = areControlsVisible && customVideoView == null && !isPlayerUrl(currentUrl),
+            visible = areControlsVisible && !isVideoPlaying && customVideoView == null && !isPlayerUrl(currentUrl),
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 }),
             modifier = Modifier

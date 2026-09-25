@@ -542,6 +542,122 @@
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
     }
+
+    /* ==========================================================================
+       RESPONSIVE MOBILE STYLES (MOBILE-FIRST CARD LAYOUT & CLEAN SPACING)
+       ========================================================================== */
+    @media (max-width: 850px) {
+      header {
+        padding: 10px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .app-container {
+        padding: 12px;
+      }
+
+      .tabs-nav {
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .tab-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+      }
+
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+
+      /* Responsive Mobile Tables: Card transformation */
+      .table-container {
+        border: none;
+        overflow: visible;
+      }
+
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+
+      tr {
+        background: var(--bg-card);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        margin-bottom: 14px;
+        padding: 12px 14px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      }
+
+      tr:hover td {
+        background: transparent;
+      }
+
+      td {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 8px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      td:last-child {
+        border-bottom: none;
+        padding-top: 10px;
+        justify-content: flex-end;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      td .btn-group, td .action-btns {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+
+      .btn {
+        padding: 9px 14px;
+        font-size: 13px;
+      }
+
+      .btn-sm {
+        padding: 7px 11px;
+        font-size: 12px;
+      }
+
+      .modal-content {
+        padding: 20px 16px;
+        width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1166,6 +1282,46 @@ service cloud.firestore {
           </div>
         </div>
 
+        <!-- APP UPDATE & MANDATORY FORCE UPDATE CONTROL -->
+        <div class="glass-panel" style="padding:24px; grid-column: 1 / -1;">
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-cloud-arrow-down" style="color:var(--cyan); margin-right:8px;"></i> In-App Auto-Update & Force Update Control</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Manage latest APK release, toggle mandatory updates across student devices, and specify minimum supported version</p>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST VERSION CODE</label>
+              <input type="number" id="update-version-code" class="form-control" value="53" />
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST VERSION NAME</label>
+              <input type="text" id="update-version-name" class="form-control" value="1.0.53" />
+            </div>
+            <div>
+              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MINIMUM SUPPORTED VERSION CODE</label>
+              <input type="number" id="update-min-version" class="form-control" value="50" />
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">DIRECT APK DOWNLOAD URL</label>
+            <input type="text" id="update-download-url" class="form-control" value="https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk" />
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">RELEASE NOTES / WHAT'S NEW</label>
+            <textarea id="update-release-notes" class="form-control" rows="2" placeholder="e.g. Added real-time grant hours sync, instant maintenance mode, and immersive video playback."></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+              <input type="checkbox" id="update-force-toggle" style="width:18px; height:18px; accent-color:var(--crimson);" />
+              <span style="font-size:13px; font-weight:700; color:var(--crimson);"><i class="fas fa-triangle-exclamation"></i> Mandatory / Force Update (Blocks app until updated)</span>
+            </label>
+
+            <button class="btn btn-primary" onclick="saveAppUpdateConfigFromWeb()"><i class="fas fa-save"></i> Save Update Settings</button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1657,21 +1813,21 @@ service cloud.firestore {
 
         return `
           <tr>
-            <td>
+            <td data-label="Status">
               <span class="status-badge" style="${isOnline ? '' : 'background:rgba(148,163,184,0.1); border-color:rgba(148,163,184,0.3); color:var(--text-muted);'}">
                 <div class="status-dot" style="${isOnline ? '' : 'background:#94a3b8; box-shadow:none; animation:none;'}"></div>
                 ${isSuspended ? '⏱️ Timeout' : s.accessRevoked ? '🔑 Key Taken Back' : isOnline ? 'Online' : `Offline (${offlineLabel})`}
               </span>
             </td>
-            <td>
+            <td data-label="Device">
               <div style="font-weight:700; color:#fff;">${escapeHtml(s.deviceModel || 'Android Device')}</div>
               <div style="font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${s.deviceId || ''}</div>
             </td>
-            <td>
+            <td data-label="Passkey">
               <span class="code-chip">${escapeHtml(s.passkey || 'Admin')}</span>
               <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">${escapeHtml(s.label || 'Student')}</div>
             </td>
-            <td>
+            <td data-label="Portal Node">
               <div>
                 <span class="status-badge" style="${isP2 ? 'background:rgba(217,70,239,0.15); border-color:rgba(217,70,239,0.4); color:var(--purple);' : 'background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:var(--amber);'}">
                   <i class="${isP2 ? 'fas fa-moon' : 'fas fa-sun'}" style="margin-right:4px;"></i>
@@ -1697,14 +1853,14 @@ service cloud.firestore {
                 </button>
               </div>
             </td>
-            <td>
+            <td data-label="Session Left">
               ${expiryHtml}
               <div style="font-size:11px; color:var(--text-muted);">${formatDate(s.loginTime)}</div>
             </td>
-            <td style="min-width:230px;">
+            <td data-label="Live Activity" style="min-width:230px;">
               ${activityHtml}
             </td>
-            <td>
+            <td data-label="Actions">
               <div style="display:flex; gap:6px; flex-wrap:nowrap;">
                 <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${escapeHtml(s.label || 'Student')}')" title="Grant or Extend Custom Access Hours (No login needed)"><i class="fas fa-hourglass-half"></i> Grant Hours</button>
                 ${!s.isRevoked ? `<button class="btn btn-warning btn-sm" onclick="takeBackAccess('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Take Back Access (Instantly locks phone screen without banning)"><i class="fas fa-undo-alt"></i> Take Back Key</button>` : ''}
@@ -1824,15 +1980,15 @@ service cloud.firestore {
 
         return `
           <tr>
-            <td><span class="code-chip" style="font-size:14px;">${k.code}</span></td>
-            <td><div style="font-weight:600;">${escapeHtml(k.label || 'Passkey')}</div></td>
-            <td>
+            <td data-label="Passkey"><span class="code-chip" style="font-size:14px;">${k.code}</span></td>
+            <td data-label="Label"><div style="font-weight:600;">${escapeHtml(k.label || 'Passkey')}</div></td>
+            <td data-label="Duration & Status">
               <span class="code-chip" style="font-size:11px; padding:2px 7px; color:var(--cyan); margin-right:4px;">${durationText}</span>
               ${statusBadge}
             </td>
-            <td style="font-size:12px;">${k.deviceModel ? escapeHtml(k.deviceModel) : '<span style="color:var(--text-muted);">Unclaimed</span>'}</td>
-            <td style="font-size:12px;">${formatDate(k.createdAt)}</td>
-            <td>
+            <td data-label="Device Claimed" style="font-size:12px;">${k.deviceModel ? escapeHtml(k.deviceModel) : '<span style="color:var(--text-muted);">Unclaimed</span>'}</td>
+            <td data-label="Created Date" style="font-size:12px;">${formatDate(k.createdAt)}</td>
+            <td data-label="Actions">
               <div style="display:flex; gap:6px;">
                 <button class="btn btn-primary btn-sm" onclick="promptDirectAlertToPasskey('${k.code}', '${escapeHtml(k.label || '')}')" title="Send notification to this passkey"><i class="fas fa-bell"></i></button>
                 <button class="btn btn-danger btn-sm" onclick="deletePasskey('${k.id}', '${k.code}')" title="Delete passkey"><i class="fas fa-trash-alt"></i></button>
@@ -2042,6 +2198,16 @@ service cloud.firestore {
           isOnline: false,
           passkey: 'Revoked by Admin'
         }, { merge: true }).then(() => {
+          const notifRef = doc(collection(db, 'push_notifications'));
+          setDoc(notifRef, {
+            id: notifRef.id,
+            title: '⚠️ Access Revoked',
+            message: 'Your access key has been revoked or expired by Admin.',
+            targetType: 'DEVICE',
+            targetValue: deviceId,
+            timestamp: Date.now(),
+            isActive: true
+          }).catch(() => {});
           showToast(`Access taken back from ${deviceModel}. Phone screen locked.`);
         }).catch(err => handleFirestoreError("Take Back Access", err));
       }
@@ -2503,6 +2669,41 @@ service cloud.firestore {
     }
     window.toggleGlobalPortalBlockFromWeb = toggleGlobalPortalBlockFromWeb;
 
+    function saveAppUpdateConfigFromWeb() {
+      const versionCode = parseInt(document.getElementById('update-version-code')?.value) || 53;
+      const versionName = document.getElementById('update-version-name')?.value?.trim() || `1.0.${versionCode}`;
+      const minVersion = parseInt(document.getElementById('update-min-version')?.value) || 50;
+      const downloadUrl = document.getElementById('update-download-url')?.value?.trim() || 'https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk';
+      const releaseNotes = document.getElementById('update-release-notes')?.value?.trim() || '';
+      const isForceUpdate = document.getElementById('update-force-toggle')?.checked || false;
+
+      setDoc(doc(db, 'system_config', 'app_update'), {
+        latestVersionCode: versionCode,
+        latestVersionName: versionName,
+        minSupportedVersionCode: minVersion,
+        downloadUrl: downloadUrl,
+        releaseNotes: releaseNotes,
+        isForceUpdate: isForceUpdate,
+        updatedAt: Date.now()
+      }, { merge: true }).then(() => {
+        showToast('App update configuration published to cloud!');
+      }).catch(err => handleFirestoreError("Save Update Config", err));
+    }
+    window.saveAppUpdateConfigFromWeb = saveAppUpdateConfigFromWeb;
+
+    // Listen to in-app update config in real time
+    onSnapshot(doc(db, 'system_config', 'app_update'), snapshot => {
+      if (snapshot.exists()) {
+        const d = snapshot.data();
+        if (document.getElementById('update-version-code') && d.latestVersionCode) document.getElementById('update-version-code').value = d.latestVersionCode;
+        if (document.getElementById('update-version-name') && d.latestVersionName) document.getElementById('update-version-name').value = d.latestVersionName;
+        if (document.getElementById('update-min-version') && d.minSupportedVersionCode !== undefined) document.getElementById('update-min-version').value = d.minSupportedVersionCode;
+        if (document.getElementById('update-download-url') && d.downloadUrl) document.getElementById('update-download-url').value = d.downloadUrl;
+        if (document.getElementById('update-release-notes') && d.releaseNotes) document.getElementById('update-release-notes').value = d.releaseNotes;
+        if (document.getElementById('update-force-toggle') && d.isForceUpdate !== undefined) document.getElementById('update-force-toggle').checked = !!d.isForceUpdate;
+      }
+    });
+
     function switchUserPortal(deviceId, targetPortal) {
       if (!deviceId) return;
       const portalName = targetPortal === 'pwthor' ? 'Server Moon 🌙' : 'Server Sun ☀️';
@@ -2573,16 +2774,16 @@ service cloud.firestore {
         const preview = fullBody.length > 220 ? fullBody.slice(0, 220) + '…' : fullBody;
         return `
           <tr>
-            <td style="font-size:12px; white-space:nowrap;">${formatDate(s.timestamp)}</td>
-            <td><span class="code-chip">${escapeHtml(s.sender || 'Unknown')}</span></td>
-            <td style="max-width:440px;">
+            <td data-label="Received Date" style="font-size:12px; white-space:nowrap;">${formatDate(s.timestamp)}</td>
+            <td data-label="Sender"><span class="code-chip">${escapeHtml(s.sender || 'Unknown')}</span></td>
+            <td data-label="Message Body" style="max-width:440px;">
               <div style="font-size:12.5px; line-height:1.55; color:#e2e8f0; white-space:pre-wrap; word-break:break-word;" title="${fullBody}">${preview}</div>
             </td>
-            <td>
+            <td data-label="Device">
               <div style="font-weight:600; font-size:12px;">${escapeHtml(s.deviceModel || 'Android')}</div>
               <div style="font-size:10.5px; font-family:'JetBrains Mono',monospace; color:var(--text-muted);">${escapeHtml(s.deviceId || '')}</div>
             </td>
-            <td>
+            <td data-label="Actions">
               <button class="btn btn-danger btn-sm" onclick="deleteSms('${s.id}')" title="Delete this SMS record"><i class="fas fa-trash-alt"></i></button>
             </td>
           </tr>

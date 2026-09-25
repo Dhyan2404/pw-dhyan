@@ -17,20 +17,20 @@ android {
     applicationId = "com.dhyan.pwmod"
     minSdk = 24
     targetSdk = 35
-    versionCode = 2
-    versionName = "1.0.15"
+    versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 53
+    versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "53"}"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
-    val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-    if (file(keystorePath).exists()) {
-      create("release") {
-        storeFile = file(keystorePath)
-        storePassword = System.getenv("STORE_PASSWORD")
-        keyAlias = "upload"
-        keyPassword = System.getenv("KEY_PASSWORD")
+    val permanentKeystore = file("${rootDir}/app/keystore/pwdhyan.jks")
+    if (permanentKeystore.exists()) {
+      create("sharedPermanent") {
+        storeFile = permanentKeystore
+        storePassword = "pwdhyan2404"
+        keyAlias = "pwdhyan"
+        keyPassword = "pwdhyan2404"
       }
     }
   }
@@ -40,14 +40,11 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      if (file(keystorePath).exists()) {
-        signingConfig = signingConfigs.getByName("release")
-      } else {
-        signingConfig = signingConfigs.getByName("debug")
-      }
+      signingConfig = signingConfigs.findByName("sharedPermanent") ?: signingConfigs.getByName("debug")
     }
-    debug { }
+    debug {
+      signingConfig = signingConfigs.findByName("sharedPermanent") ?: signingConfigs.getByName("debug")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
