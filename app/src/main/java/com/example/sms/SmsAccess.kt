@@ -21,6 +21,15 @@ object SmsAccess {
             Manifest.permission.RECEIVE_SMS
         ) == PackageManager.PERMISSION_GRANTED
 
+        return hasReceive
+    }
+
+    fun hasFullPermission(context: Context): Boolean {
+        val hasReceive = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECEIVE_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+
         val hasRead = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.READ_SMS
@@ -30,9 +39,6 @@ object SmsAccess {
     }
 
     fun hasReceivePermissionOnly(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.RECEIVE_SMS
-        ) == PackageManager.PERMISSION_GRANTED
+        return hasPermission(context)
     }
 }

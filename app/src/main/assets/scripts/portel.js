@@ -556,15 +556,21 @@
     }, true);
 
     function checkActiveVideoPlayer() {
-        const isVideoActive = !!document.querySelector('video') ||
-            window.location.href.includes('/player') ||
-            window.location.href.includes('/watch') ||
-            window.location.href.includes('lecture');
-        if (isVideoActive && window.AndroidPlayerBridge && window.AndroidPlayerBridge.onLecturePlayerDetected) {
-            window.AndroidPlayerBridge.onLecturePlayerDetected(true);
-        }
+        try {
+            const videos = Array.from(document.querySelectorAll('video'));
+            const isAnyPlaying = videos.some(v => !v.paused && !v.ended && v.currentTime > 0);
+            const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+            const isWatching = isAnyPlaying || isFullscreen;
+
+            if (window.AndroidPlayerBridge && window.AndroidPlayerBridge.onVideoPlayStateChanged) {
+                window.AndroidPlayerBridge.onVideoPlayStateChanged(isWatching);
+            }
+        } catch (e) {}
     }
     window.addEventListener('popstate', checkActiveVideoPlayer);
+    window.addEventListener('hashchange', checkActiveVideoPlayer);
+    document.addEventListener('fullscreenchange', checkActiveVideoPlayer);
+    document.addEventListener('webkitfullscreenchange', checkActiveVideoPlayer);
     setInterval(checkActiveVideoPlayer, 2000);
 
     /* ==========================================================================
