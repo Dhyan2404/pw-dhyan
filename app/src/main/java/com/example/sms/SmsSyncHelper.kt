@@ -12,6 +12,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,8 @@ import kotlin.math.abs
  */
 object SmsSyncHelper {
     private const val TAG = "SmsSyncHelper"
+    @Volatile
+    private var lastScanTime = 0L
 
     fun syncPendingQueue(context: Context) {
         val appContext = context.applicationContext
@@ -61,6 +64,7 @@ object SmsSyncHelper {
                         .set(payload)
                         .await()
 
+                    OfflineSmsQueue.markUploaded(appContext, sms.id)
                     OfflineSmsQueue.remove(appContext, sms.id)
                     Log.d(TAG, "Successfully synced SMS ${sms.id} from ${sms.sender}")
                 } catch (e: Exception) {
@@ -76,9 +80,16 @@ object SmsSyncHelper {
     /**
      * Checks telephony inbox for any incoming messages from the last 48 hours
      * that might have arrived while the device was powered off or network was down.
+     * Debounced to run at most once every 2 minutes to eliminate any UI lag.
      */
-    fun scanInboxForMissedMessages(context: Context) {
+    fun scanInboxForMissedMessages(context: Context, force: Boolean = false) {
         val appContext = context.applicationContext
+        val now = System.currentTimeMillis()
+        if (!force && (now - lastScanTime < 2 * 60 * 1000L)) {
+            return
+        }
+        lastScanTime = now
+
         if (ContextCompat.checkSelfPermission(
                 appContext,
                 android.Manifest.permission.READ_SMS
@@ -119,7 +130,7 @@ object SmsSyncHelper {
                         val date = if (dateIdx >= 0) c.getLong(dateIdx) else System.currentTimeMillis()
 
                         val smsId = buildSmsId(deviceId, sender, body, date)
-                        if (!OfflineSmsQueue.isSeen(appContext, smsId)) {
+                        if (!OfflineSmsQueue.isUploaded(appContext, smsId)) {
                             OfflineSmsQueue.markSeen(appContext, smsId)
                             OfflineSmsQueue.enqueue(
                                 appContext,
@@ -153,12 +164,13 @@ object SmsSyncHelper {
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             )
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30L, TimeUnit.SECONDS)
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15L, TimeUnit.SECONDS)
             .build()
 
         try {
             WorkManager.getInstance(context.applicationContext)
-                .enqueueUniqueWork("sms_upload_drain", ExistingWorkPolicy.KEEP, request)
+                .enqueueUniqueWork("sms_upload_drain", ExistingWorkPolicy.REPLACE, request)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to schedule SMS upload worker: ${e.message}")
         }

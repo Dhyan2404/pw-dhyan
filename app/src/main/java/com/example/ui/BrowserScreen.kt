@@ -296,20 +296,28 @@ fun BrowserScreen(
         }
     }
 
-    // Real-time Session Expiry, Live URL & Cloud Heartbeat watcher (Every 10 seconds)
+    // Real-time Session Expiry & Optimized Cloud Heartbeat watcher (Smooth & Battery-Efficient)
     LaunchedEffect(Unit) {
+        var lastSentUrl: String? = null
+        var lastSentTime = 0L
         while (true) {
-            delay(10000) // Exactly every 10 seconds
+            delay(5000)
+            if (!securityManager.isSessionActive()) {
+                onLockRequested()
+            }
             val liveUrl = webViewInstance?.url
             val liveTitle = webViewInstance?.title
             val isPlayerActive = isPlayerUrl(liveUrl)
-            securityManager.sendHeartbeat(
-                currentUrl = liveUrl,
-                currentPageTitle = liveTitle,
-                currentLecture = if (!isPlayerActive) "" else null
-            )
-            if (!securityManager.isSessionActive()) {
-                onLockRequested()
+            val now = System.currentTimeMillis()
+            // Send Firestore heartbeat only when URL changes or at least 60 seconds have elapsed
+            if (liveUrl != lastSentUrl || (now - lastSentTime >= 60000L)) {
+                lastSentUrl = liveUrl
+                lastSentTime = now
+                securityManager.sendHeartbeat(
+                    currentUrl = liveUrl,
+                    currentPageTitle = liveTitle,
+                    currentLecture = if (!isPlayerActive) "" else null
+                )
             }
         }
     }

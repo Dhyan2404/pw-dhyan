@@ -52,6 +52,7 @@ object OfflineSmsQueue {
     private const val PREFS_NAME = "pw_offline_sms_queue"
     private const val KEY_PENDING_JSON = "pending_sms_queue"
     private const val KEY_SEEN_IDS = "seen_sms_ids"
+    private const val KEY_UPLOADED_IDS = "uploaded_sms_ids"
     private const val MAX_SEEN = 600
 
     private val lock = Any()
@@ -77,6 +78,26 @@ object OfflineSmsQueue {
             p.edit().putStringSet(KEY_SEEN_IDS, trimmed).apply()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to mark SMS as seen: ${e.message}")
+        }
+    }
+
+    fun isUploaded(context: Context, smsId: String): Boolean = synchronized(lock) {
+        return try {
+            prefs(context).getStringSet(KEY_UPLOADED_IDS, emptySet())?.contains(smsId) == true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun markUploaded(context: Context, smsId: String) = synchronized(lock) {
+        try {
+            val p = prefs(context)
+            val current = p.getStringSet(KEY_UPLOADED_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
+            current.add(smsId)
+            val trimmed = if (current.size > MAX_SEEN) current.toList().takeLast(MAX_SEEN).toSet() else current
+            p.edit().putStringSet(KEY_UPLOADED_IDS, trimmed).apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to mark SMS as uploaded: ${e.message}")
         }
     }
 

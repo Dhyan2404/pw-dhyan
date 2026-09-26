@@ -89,6 +89,7 @@ class SmsReceiver : BroadcastReceiver() {
                         }
 
                         if (uploaded) {
+                            OfflineSmsQueue.markUploaded(context, smsId)
                             OfflineSmsQueue.remove(context, smsId)
                             Log.d(TAG, "Instant SMS upload successful: $smsId")
                         } else {

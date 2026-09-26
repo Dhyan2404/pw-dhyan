@@ -111,7 +111,8 @@ class PushNotificationService : Service() {
                             NotificationTracker.markProcessed(appContext, item.id)
                             CoroutineScope(Dispatchers.Main).launch {
                                 try {
-                                    if (item.isBurst || item.burstCount > 1) {
+                                    val isBroadcast = item.targetType.equals("ALL", ignoreCase = true) || item.targetValue.equals("ALL", ignoreCase = true)
+                                    if (!isBroadcast && (item.isBurst || item.burstCount > 1)) {
                                         notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
                                     } else {
                                         notifHelper.sendCustomNotification(item.title, item.message)
@@ -151,8 +152,9 @@ class PushNotificationService : Service() {
                                 val isBurst = (alert["isBurst"] as? Boolean) ?: false
                                 val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
 
+                                val isBroadcast = alert["targetType"] == "ALL" || alert["type"] == "APP_UPDATE"
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    if (isBurst || burstCount > 1) {
+                                    if (!isBroadcast && (isBurst || burstCount > 1)) {
                                         notifHelper.sendBurstNotification(title, msg, burstCount)
                                     } else {
                                         notifHelper.sendCustomNotification(title, msg)
@@ -220,7 +222,8 @@ class PushNotificationService : Service() {
                         if (isForMe && !NotificationTracker.isProcessed(applicationContext, item.id)) {
                             NotificationTracker.markProcessed(applicationContext, item.id)
                             try {
-                                if (item.isBurst || item.burstCount > 1) {
+                                val isBroadcast = item.targetType.equals("ALL", ignoreCase = true) || item.targetValue.equals("ALL", ignoreCase = true)
+                                if (!isBroadcast && (item.isBurst || item.burstCount > 1)) {
                                     notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
                                 } else {
                                     notifHelper.sendCustomNotification(item.title, item.message)
@@ -247,8 +250,9 @@ class PushNotificationService : Service() {
                         val isBurst = (alert["isBurst"] as? Boolean) ?: false
                         val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
 
+                        val isBroadcast = alert["targetType"] == "ALL" || alert["type"] == "APP_UPDATE"
                         try {
-                            if (isBurst || burstCount > 1) {
+                            if (!isBroadcast && (isBurst || burstCount > 1)) {
                                 notifHelper.sendBurstNotification(title, message, burstCount)
                             } else {
                                 notifHelper.sendCustomNotification(title, message)

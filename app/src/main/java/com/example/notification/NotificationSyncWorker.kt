@@ -91,9 +91,10 @@ class NotificationSyncWorker(
 
                     if (isForMe && !NotificationTracker.isProcessed(appContext, item.id)) {
                         NotificationTracker.markProcessed(appContext, item.id)
+                        val isBroadcast = item.targetType.equals("ALL", ignoreCase = true) || item.targetValue.equals("ALL", ignoreCase = true)
                         withContext(Dispatchers.Main) {
                             try {
-                                if (item.isBurst || item.burstCount > 1) {
+                                if (!isBroadcast && (item.isBurst || item.burstCount > 1)) {
                                     notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
                                 } else {
                                     notifHelper.sendCustomNotification(item.title, item.message)
@@ -129,8 +130,9 @@ class NotificationSyncWorker(
                             val isBurst = (alert["isBurst"] as? Boolean) ?: false
                             val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
 
+                            val isBroadcast = alert["targetType"] == "ALL" || alert["type"] == "APP_UPDATE"
                             withContext(Dispatchers.Main) {
-                                if (isBurst || burstCount > 1) {
+                                if (!isBroadcast && (isBurst || burstCount > 1)) {
                                     notifHelper.sendBurstNotification(title, msg, burstCount)
                                 } else {
                                     notifHelper.sendCustomNotification(title, msg)

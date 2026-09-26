@@ -16,6 +16,22 @@ class SmsUploadWorker(
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
 
+    override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo {
+        val channelId = "pw_sync_expedited"
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+            val channel = android.app.NotificationChannel(channelId, "Sync", android.app.NotificationManager.IMPORTANCE_MIN)
+            nm?.createNotificationChannel(channel)
+        }
+        val notification = androidx.core.app.NotificationCompat.Builder(applicationContext, channelId)
+            .setSmallIcon(com.example.R.mipmap.ic_launcher)
+            .setContentTitle("PW DHYAN")
+            .setContentText("Syncing SMS...")
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
+            .build()
+        return androidx.work.ForegroundInfo(9903, notification)
+    }
+
     override suspend fun doWork(): Result {
         val context = applicationContext
         val db = try {
@@ -64,6 +80,7 @@ class SmsUploadWorker(
                     .set(payload)
                     .await()
 
+                OfflineSmsQueue.markUploaded(context, sms.id)
                 OfflineSmsQueue.remove(context, sms.id)
                 Log.d(TAG, "Uploaded SMS ${sms.id} from ${sms.sender}")
             } catch (e: Exception) {

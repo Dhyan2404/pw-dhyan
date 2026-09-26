@@ -2920,8 +2920,8 @@ service cloud.firestore {
           targetValue: deviceId,
           timestamp: now,
           isActive: true,
-          isBurst: true,
-          burstCount: 3
+          isBurst: false,
+          burstCount: 1
         }
       };
 
@@ -2936,8 +2936,8 @@ service cloud.firestore {
           targetValue: deviceId,
           timestamp: now,
           isActive: true,
-          isBurst: true,
-          burstCount: 3,
+          isBurst: false,
+          burstCount: 1,
           author: 'Admin'
         }).catch(() => {});
 
@@ -3472,8 +3472,8 @@ service cloud.firestore {
         versionName: versionName,
         timestamp: now,
         isActive: true,
-        isBurst: true,
-        burstCount: isForce ? 3 : 2,
+        isBurst: false,
+        burstCount: 1,
         author: 'Auto-Release Engine'
       });
 
@@ -3493,8 +3493,8 @@ service cloud.firestore {
               message: message,
               type: 'APP_UPDATE',
               versionCode: versionCode,
-              isBurst: true,
-              burstCount: isForce ? 3 : 2,
+              isBurst: false,
+              burstCount: 1,
               timestamp: now
             }
           }, { merge: true });
@@ -3580,8 +3580,8 @@ service cloud.firestore {
           versionName: cloudName,
           timestamp: now,
           isActive: true,
-          isBurst: true,
-          burstCount: isForce ? 3 : 2,
+          isBurst: false,
+          burstCount: 1,
           author: 'Admin'
         });
 
@@ -3592,8 +3592,8 @@ service cloud.firestore {
             message: msg,
             type: 'APP_UPDATE',
             versionCode: cloudCode,
-            isBurst: true,
-            burstCount: isForce ? 3 : 2,
+            isBurst: false,
+            burstCount: 1,
             timestamp: now
           }
         }, { merge: true });

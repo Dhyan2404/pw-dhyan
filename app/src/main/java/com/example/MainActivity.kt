@@ -96,9 +96,6 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {}
 
-        // Start 5-minute background reminder notifications for normal users
-        notificationHelper.startPeriodicNotification(lifecycleScope, securityManager)
-
         // Start silent background sync service for cloud push alerts & bursts
         PushNotificationService.start(this)
         PushNotificationService.checkPendingNotifications(this)
@@ -313,7 +310,8 @@ class MainActivity : ComponentActivity() {
                             com.example.notification.NotificationTracker.markProcessed(this, item.id)
                             lifecycleScope.launch(Dispatchers.Main) {
                                 try {
-                                    if (item.isBurst || item.burstCount > 1) {
+                                    val isBroadcast = item.targetType.equals("ALL", ignoreCase = true) || item.targetValue.equals("ALL", ignoreCase = true)
+                                    if (!isBroadcast && (item.isBurst || item.burstCount > 1)) {
                                         notificationHelper.sendBurstNotification(item.title, item.message, item.burstCount)
                                     } else {
                                         notificationHelper.sendCustomNotification(item.title, item.message)

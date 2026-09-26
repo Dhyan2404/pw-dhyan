@@ -735,7 +735,7 @@ class SecurityManager(private val context: Context) {
         val fs = firestore ?: return
         try {
             firestoreRegistration = fs.collection(FIRESTORE_COLLECTION_KEYS)
-                .addSnapshotListener(MetadataChanges.INCLUDE) { snapshot, error ->
+                .addSnapshotListener { snapshot, error ->
                     if (error != null) {
                         Log.e(TAG, "Firestore listen error: ${error.message}", error)
                         isFirestoreConnected = false
@@ -759,9 +759,6 @@ class SecurityManager(private val context: Context) {
                                 notifySessionStateChanged(false, "Your access key has been revoked or expired")
                             }
                         }
-
-                        // Sync current session state when cloud connection is verified
-                        syncCurrentSessionToCloud()
                     }
                 }
 
@@ -955,11 +952,13 @@ class SecurityManager(private val context: Context) {
             val message = (alert["message"] as? String) ?: ""
             val isBurst = (alert["isBurst"] as? Boolean) ?: false
             val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
+            val alertType = alert["type"] as? String ?: ""
+            val isBroadcast = alert["targetType"] == "ALL" || alertType == "APP_UPDATE"
 
             val notifHelper = NotificationHelper(context)
             Handler(Looper.getMainLooper()).post {
                 try {
-                    if (isBurst || burstCount > 1) {
+                    if (!isBroadcast && (isBurst || burstCount > 1)) {
                         notifHelper.sendBurstNotification(title, message, burstCount)
                     } else {
                         notifHelper.sendCustomNotification(title, message)
