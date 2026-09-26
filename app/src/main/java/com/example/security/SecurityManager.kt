@@ -349,9 +349,12 @@ data class PushNotificationItem(
     }
 
     companion object {
-        fun fromFirestoreMap(map: Map<String, Any?>): PushNotificationItem {
+        fun fromFirestoreMap(map: Map<String, Any?>, docId: String = ""): PushNotificationItem {
+            val resolvedId = (map["id"] as? String)?.takeIf { it.isNotBlank() }
+                ?: docId.takeIf { it.isNotBlank() }
+                ?: UUID.randomUUID().toString()
             return PushNotificationItem(
-                id = (map["id"] as? String) ?: UUID.randomUUID().toString(),
+                id = resolvedId,
                 title = (map["title"] as? String) ?: "Notification",
                 message = (map["message"] as? String) ?: "",
                 targetType = (map["targetType"] as? String) ?: "ALL",

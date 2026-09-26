@@ -16,8 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.util.Log
 import com.example.BuildConfig
 import com.example.notification.NotificationHelper
+import com.example.notification.NotificationSyncWorker
 import com.example.notification.PushNotificationService
 import com.example.script.ScriptManager
 import com.example.security.AppMaintenanceInfo
@@ -93,6 +99,11 @@ class MainActivity : ComponentActivity() {
         // Start silent background sync service for cloud push alerts & bursts
         PushNotificationService.start(this)
         PushNotificationService.checkPendingNotifications(this)
+
+        // Schedule WorkManager periodic and immediate offline recovery sync
+        NotificationSyncWorker.schedulePeriodicSync(this)
+        NotificationSyncWorker.enqueueImmediateSync(this)
+        registerNetworkMonitor()
 
         val initialUnlocked = securityManager.isSessionActive()
         val alreadyPermanentlyUnlocked = securityManager.isPermanentUnlocked()
@@ -243,10 +254,36 @@ class MainActivity : ComponentActivity() {
         securityManager.setDeviceOffline()
     }
 
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
+    private fun registerNetworkMonitor() {
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+            val builder = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            networkCallback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    Log.d("MainActivity", "Network restored (offline -> online) - triggering immediate notification sync")
+                    PushNotificationService.checkPendingNotifications(this@MainActivity)
+                    NotificationSyncWorker.enqueueImmediateSync(this@MainActivity)
+                    securityManager.ensureDeviceRegistered()
+                    securityManager.sendHeartbeat()
+                }
+            }
+            cm.registerNetworkCallback(builder.build(), networkCallback!!)
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Failed to register network monitor: ${e.message}")
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         securityManager.setDeviceOffline()
         pushNotificationListener?.remove()
         notificationHelper.stopPeriodicNotification()
+        networkCallback?.let {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            try { cm?.unregisterNetworkCallback(it) } catch (_: Exception) {}
+        }
     }
 }

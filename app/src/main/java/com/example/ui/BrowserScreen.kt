@@ -121,6 +121,7 @@ import com.example.ui.theme.CrimsonAlert
 import com.example.ui.theme.CyberCyan
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.DarkSurface
+import com.example.ui.theme.DarkSurfaceGlass
 import com.example.ui.theme.DarkSurfaceVariant
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.GlassBorder
@@ -175,6 +176,30 @@ fun BrowserScreen(
     var portalFailureOffer by remember { mutableStateOf(false) }
     var portalFailureMsg by remember { mutableStateOf("") }
     var portalConfig by remember { mutableStateOf(securityManager.getPortalConfig()) }
+    var isDeviceOnline by remember { mutableStateOf(true) }
+
+    // Live Network State Monitor for Offline Awareness
+    DisposableEffect(context) {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                isDeviceOnline = true
+            }
+            override fun onLost(network: android.net.Network) {
+                isDeviceOnline = false
+            }
+        }
+        val builder = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        try {
+            cm?.registerNetworkCallback(builder.build(), callback)
+            val active = cm?.activeNetworkInfo
+            isDeviceOnline = active != null && active.isConnected
+        } catch (_: Exception) {}
+        onDispose {
+            try { cm?.unregisterNetworkCallback(callback) } catch (_: Exception) {}
+        }
+    }
 
     // Direct download helper saving files to user mobile's Downloads folder
     fun downloadFileToDownloads(url: String, suggestedName: String? = null) {
@@ -903,6 +928,63 @@ fun BrowserScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                         }
+                    }
+                }
+            }
+        }
+
+        // Real-Time Offline Mode Detection Banner
+        AnimatedVisibility(
+            visible = !isDeviceOnline && customVideoView == null,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = if (activeAnnouncement != null && activeAnnouncement?.id != dismissedAnnouncementId) 70.dp else 14.dp, start = 12.dp, end = 12.dp)
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = DarkSurfaceGlass),
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CrimsonAlert.copy(alpha = 0.6f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(CrimsonAlert.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Offline Mode",
+                            tint = CrimsonAlert,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "OFFLINE MODE ACTIVE",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = CrimsonAlert,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 10.sp
+                            )
+                        )
+                        Text(
+                            text = "No internet connection. Push notifications & cloud sync will auto-deliver when back online.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = TextPrimary,
+                                fontSize = 11.sp
+                            )
+                        )
                     }
                 }
             }

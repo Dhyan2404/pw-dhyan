@@ -908,12 +908,12 @@ service cloud.firestore {
 
           <div style="margin-bottom:16px;">
             <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">NOTIFICATION TITLE</label>
-            <input type="text" id="notif-title" class="form-control" value="🔥 Study Alert • PW DHYAN" />
+            <input type="text" id="notif-title" class="form-control" value="🔥 Study Alert • PW DHYAN" oninput="updateNotifPreview()" />
           </div>
 
           <div style="margin-bottom:18px;">
             <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">MESSAGE CONTENT</label>
-            <textarea id="notif-message" class="form-control" rows="3" placeholder="Type notification text here..."></textarea>
+            <textarea id="notif-message" class="form-control" rows="3" placeholder="Type notification text here..." oninput="updateNotifPreview()"></textarea>
           </div>
 
           <div style="margin-bottom:20px;">
@@ -927,11 +927,34 @@ service cloud.firestore {
             </div>
           </div>
 
+          <!-- Live Phone Push Notification Simulator Preview (Chakra/MUI Cyber-Glass) -->
+          <div style="margin-bottom:20px; padding:14px; border-radius:14px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.35); box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+            <div style="font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.8px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+              <span><i class="fas fa-mobile-screen-button"></i> LIVE PHONE PREVIEW (STUDENT SCREEN)</span>
+              <span id="preview-burst-badge" style="display:none; font-size:10px; background:rgba(245,158,11,0.25); color:var(--amber); border:1px solid rgba(245,158,11,0.5); padding:2px 8px; border-radius:6px; font-weight:700;">⚡ BURST ACTIVE</span>
+            </div>
+            <div style="background:#070b14; border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:12px; box-shadow:0 4px 16px rgba(0,0,0,0.6);">
+              <div style="display:flex; align-items:flex-start; gap:10px;">
+                <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #0284c7, #38bdf8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; flex-shrink:0; box-shadow:0 0 12px rgba(56,189,248,0.4);">
+                  PW
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:10.5px; font-weight:700; color:#94a3b8; letter-spacing:0.5px;">PW DHYAN • now</span>
+                    <span id="preview-target-badge" style="font-size:9.5px; background:rgba(56,189,248,0.18); color:var(--cyan); border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:4px; font-weight:700;">🌐 BROADCAST</span>
+                  </div>
+                  <div id="preview-title" style="font-size:13px; font-weight:700; color:#f8fafc; margin-top:2px;">🔥 Study Alert • PW DHYAN</div>
+                  <div id="preview-message" style="font-size:12px; color:#cbd5e1; margin-top:3px; word-break:break-word; line-height:1.4;">Type notification text here...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Burst Notification Mode Box -->
           <div style="margin-bottom:20px; padding:14px; border-radius:12px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <label style="font-size:13px; font-weight:700; color:var(--amber); cursor:pointer; display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="notif-burst-mode" style="accent-color:var(--amber); width:18px; height:18px; cursor:pointer;" onchange="toggleBurstCountVisibility()" />
+                <input type="checkbox" id="notif-burst-mode" style="accent-color:var(--amber); width:18px; height:18px; cursor:pointer;" onchange="toggleBurstCountVisibility(); updateNotifPreview();" />
                 ⚡ Enable Burst Notification Mode
               </label>
               <span style="font-size:10.5px; background:rgba(245,158,11,0.25); color:var(--amber); padding:2px 8px; border-radius:8px; font-weight:700;">Multi-Alert Spam</span>
@@ -2276,9 +2299,30 @@ service cloud.firestore {
     }
     window.handleTargetTypeChange = handleTargetTypeChange;
 
+    function updateNotifPreview() {
+      const title = document.getElementById('notif-title')?.value || '🔥 Study Alert • PW DHYAN';
+      const msg = document.getElementById('notif-message')?.value || 'Type notification text here...';
+      const targetType = document.getElementById('notif-target-type')?.value || 'ALL';
+      const isBurst = document.getElementById('notif-burst-mode')?.checked || false;
+
+      const pTitle = document.getElementById('preview-title');
+      const pMsg = document.getElementById('preview-message');
+      const pTarget = document.getElementById('preview-target-badge');
+      const pBurst = document.getElementById('preview-burst-badge');
+
+      if (pTitle) pTitle.innerText = title;
+      if (pMsg) pMsg.innerText = msg;
+      if (pTarget) pTarget.innerText = targetType === 'ALL' ? '🌐 BROADCAST' : targetType === 'DEVICE' ? '📱 DEVICE' : '🔑 PASSKEY';
+      if (pBurst) pBurst.style.display = isBurst ? 'inline-block' : 'none';
+    }
+    window.updateNotifPreview = updateNotifPreview;
+
     function setNotifPreset(text) {
       const msg = document.getElementById('notif-message');
-      if (msg) msg.value = text;
+      if (msg) {
+        msg.value = text;
+        updateNotifPreview();
+      }
     }
     window.setNotifPreset = setNotifPreset;
 
@@ -2344,7 +2388,9 @@ service cloud.firestore {
       const isBurst = document.getElementById('notif-burst-mode')?.checked || false;
       const burstCount = isBurst ? (parseInt(document.getElementById('notif-burst-count')?.value, 10) || 5) : 1;
 
+      const notifRef = doc(collection(db, 'push_notifications'));
       const notifItem = {
+        id: notifRef.id,
         title: title || '🔥 PW DHYAN ALERT',
         message: message,
         targetType: targetType,
@@ -2356,7 +2402,7 @@ service cloud.firestore {
         burstCount: burstCount
       };
 
-      addDoc(collection(db, 'push_notifications'), notifItem).then(() => {
+      setDoc(notifRef, notifItem).then(() => {
         if (targetType === 'DEVICE' && targetValue && targetValue !== 'ALL') {
           setDoc(doc(db, 'user_sessions', targetValue), {
             pendingAlert: notifItem

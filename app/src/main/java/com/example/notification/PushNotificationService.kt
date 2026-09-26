@@ -41,6 +41,8 @@ class PushNotificationService : Service() {
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to start PushNotificationService: ${e.message}")
             }
+            // Ensure WorkManager periodic sync is registered for offline recovery
+            NotificationSyncWorker.schedulePeriodicSync(context)
             checkPendingNotifications(context)
         }
 
@@ -80,7 +82,7 @@ class PushNotificationService : Service() {
 
                     var hasNew = false
                     snapshot.documents.mapNotNull { doc ->
-                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it) }
+                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it, doc.id) }
                     }.filter { it.isActive }.forEach { item ->
                         val isForMe = when (item.targetType) {
                             "DEVICE" -> item.targetValue.equals(myDeviceId, ignoreCase = true)
@@ -199,7 +201,7 @@ class PushNotificationService : Service() {
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
                     val items = snapshot.documents.mapNotNull { doc ->
-                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it) }
+                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it, doc.id) }
                     }
                     items.filter { it.isActive }.forEach { item ->
                         val isForMe = when (item.targetType) {
