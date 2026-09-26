@@ -1,0 +1,67 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Calculating task graph as no cached configuration is available for tasks: assembleDebug
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugResources FROM-CACHE
+> Task :app:processDebugGoogleServices
+> Task :app:generateDebugBuildConfig
+> Task :app:javaPreCompileDebug FROM-CACHE
+> Task :app:packageDebugResources
+> Task :app:processDebugNavigationResources FROM-CACHE
+> Task :app:mergeDebugAssets
+> Task :app:checkDebugDuplicateClasses
+> Task :app:desugarDebugFileDependencies FROM-CACHE
+> Task :app:parseDebugLocalResources
+> Task :app:generateDebugRFile FROM-CACHE
+> Task :app:mergeExtDexDebug FROM-CACHE
+> Task :app:compressDebugAssets
+> Task :app:checkDebugAarMetadata SKIPPED
+> Task :app:mergeLibDexDebug FROM-CACHE
+> Task :app:mapDebugSourceSetPaths
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:compileDebugNavigationResources FROM-CACHE
+> Task :app:extractDeepLinksDebug FROM-CACHE
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeDebugNativeLibs
+> Task :app:processDebugMainManifest
+> Task :app:stripDebugDebugSymbols
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:mergeDebugResources
+> Task :app:processDebugResources
+> Task :app:kspDebugKotlin
+
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/security/SecurityManager.kt:717:22 'fun setPersistenceEnabled(p0: Boolean): FirebaseFirestoreSettings.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/security/SecurityManager.kt:718:22 'fun setCacheSizeBytes(p0: Long): FirebaseFirestoreSettings.Builder' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/security/SecurityManager.kt:814:72 Unchecked cast of 'Any?' to 'Map<String, Any?>'.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/security/SecurityManager.kt:815:66 Unchecked cast of 'Any?' to 'Map<String, Any?>'.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/BrowserScreen.kt:196:30 'val activeNetworkInfo: NetworkInfo?' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/BrowserScreen.kt:197:55 'val isConnected: Boolean' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/BrowserScreen.kt:476:25 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/BrowserScreen.kt:1454:57 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/BrowserScreen.kt:1472:57 'val Icons.Filled.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowForward.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/NotificationRequiredScreen.kt:81:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/SettingsDialogs.kt:274:61 'val Icons.Filled.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.OpenInNew.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/SettingsDialogs.kt:784:53 'val Icons.Filled.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.OpenInNew.
+w: file:///home/runner/work/pw-dhyan/pw-dhyan/app/src/main/java/com/example/ui/SmsAccessRequiredScreen.kt:81:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugJavaResource
+> Task :app:compileDebugJavaWithJavac
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:packageDebug
+> Task :app:assembleDebug
+> Task :app:createDebugApkListingFileRedirect
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1790411628028.json
+
+BUILD SUCCESSFUL in 1m 17s
+38 actionable tasks: 29 executed, 9 from cache
+Configuration cache entry stored.
