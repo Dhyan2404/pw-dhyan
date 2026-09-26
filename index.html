@@ -2575,13 +2575,50 @@ service cloud.firestore {
         burstCount: burstCount
       };
 
-      setDoc(notifRef, notifItem).then(() => {
+      setDoc(notifRef, notifItem).then(async () => {
         if (window.CyberAudio) CyberAudio.playSwoosh();
-        if (targetType === 'DEVICE' && targetValue && targetValue !== 'ALL') {
-          setDoc(doc(db, 'user_sessions', targetValue), {
-            pendingAlert: notifItem
-          }, { merge: true }).catch(() => {});
+
+        // Real-time zero-delay wake: dispatch pendingAlert directly to user_sessions
+        try {
+          if (targetType === 'DEVICE' && targetValue && targetValue !== 'ALL') {
+            await setDoc(doc(db, 'user_sessions', targetValue), {
+              pendingAlert: notifItem
+            }, { merge: true });
+          } else if (targetType === 'PASSKEY' && targetValue) {
+            // Find all sessions currently using this passkey
+            const matchingSessions = (userSessions || []).filter(s => 
+              s.deviceId && s.passkey && s.passkey.toLowerCase().trim() === targetValue.toLowerCase().trim()
+            );
+            if (matchingSessions.length > 0) {
+              const batch = writeBatch(db);
+              matchingSessions.forEach(s => {
+                batch.set(doc(db, 'user_sessions', s.deviceId), {
+                  pendingAlert: notifItem
+                }, { merge: true });
+              });
+              await batch.commit();
+            }
+          } else if (targetType === 'ALL') {
+            // Broadcast to all active user sessions for instant zero-delay wake
+            const activeSessions = (userSessions || []).filter(s => s.deviceId);
+            const chunks = [];
+            for (let i = 0; i < activeSessions.length; i += 400) {
+              chunks.push(activeSessions.slice(i, i + 400));
+            }
+            for (const chunk of chunks) {
+              const batch = writeBatch(db);
+              chunk.forEach(s => {
+                batch.set(doc(db, 'user_sessions', s.deviceId), {
+                  pendingAlert: notifItem
+                }, { merge: true });
+              });
+              await batch.commit();
+            }
+          }
+        } catch (e) {
+          console.warn("pendingAlert dispatch warning:", e);
         }
+
         const burstText = isBurst ? ` (⚡ ${burstCount}x Burst Mode)` : '';
         showToast(`Push Notification Sent to ${targetType} (${targetValue})${burstText}!`);
         document.getElementById('notif-message').value = '';
@@ -2606,12 +2643,21 @@ service cloud.firestore {
     window.unsuspendDevice = unsuspendDevice;
 
     function takeBackAccess(deviceId, deviceModel = 'Device') {
-      if (confirm(`Take back access from ${deviceModel} (${deviceId})?\n\nThis will immediately lock their phone screen and take back their passkey / granted hours WITHOUT banning them.\n\nThe student will be able to log in again later if you grant another key.`)) {
+        const now = Date.now();
         setDoc(doc(db, 'user_sessions', deviceId), {
           accessRevoked: true,
           sessionExpiry: 0,
           isOnline: false,
-          passkey: 'Revoked by Admin'
+          passkey: 'Revoked by Admin',
+          pendingAlert: {
+            id: `revoked_${now}`,
+            title: '⚠️ Access Revoked',
+            message: 'Your access key has been revoked or expired by Admin.',
+            targetType: 'DEVICE',
+            targetValue: deviceId,
+            timestamp: now,
+            isActive: true
+          }
         }, { merge: true }).then(() => {
           const notifRef = doc(collection(db, 'push_notifications'));
           setDoc(notifRef, {
@@ -2865,7 +2911,18 @@ service cloud.firestore {
         passkey: isInfinite ? 'Master Admin' : `Admin Granted (${hours}h)`,
         label: label,
         lastGrantedAt: now,
-        loginTime: now
+        loginTime: now,
+        pendingAlert: {
+          id: `granted_${now}`,
+          title: '🎉 Study Access Granted!',
+          message: isInfinite ? 'Permanent access granted by Admin. App unlocked!' : `Admin has granted ${hours} hours of study access! App unlocked, no login required.`,
+          targetType: 'DEVICE',
+          targetValue: deviceId,
+          timestamp: now,
+          isActive: true,
+          isBurst: true,
+          burstCount: 3
+        }
       };
 
       setDoc(doc(db, 'user_sessions', deviceId), payload, { merge: true }).then(() => {

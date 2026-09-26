@@ -19,6 +19,8 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.example.notification.NotificationHelper
+import com.example.notification.NotificationTracker
 
 /**
  * Represents an access key created by Admin.
@@ -329,6 +331,18 @@ data class PushNotificationItem(
     val isBurst: Boolean = false,
     val burstCount: Int = 1
 ) {
+    fun matchesTarget(myDeviceId: String, currentPasskey: String, rawSessionCode: String = ""): Boolean {
+        return when (targetType.uppercase()) {
+            "DEVICE" -> targetValue.equals(myDeviceId, ignoreCase = true)
+            "PASSKEY" -> {
+                if (targetValue.isBlank()) false
+                else targetValue.equals(currentPasskey, ignoreCase = true) ||
+                        (rawSessionCode.isNotBlank() && targetValue.equals(rawSessionCode, ignoreCase = true))
+            }
+            else -> true // "ALL"
+        }
+    }
+
     fun getFormattedTime(): String {
         return SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(timestamp))
     }
@@ -909,10 +923,53 @@ class SecurityManager(private val context: Context) {
                             showToast("${cur.displayName} is blocked by Admin. Switched to ${alt.displayName}.")
                         }
                     }
+
+                    // 5. Direct remote pending alert / notification for this device (Instant <100ms wake)
+                    val alert = data["pendingAlert"] as? Map<*, *>
+                    if (alert != null) {
+                        handleDevicePendingAlert(alert)
+                    }
                 }
         } catch (e: Exception) {
             Log.e(TAG, "Error attaching Firestore listener", e)
             isFirestoreConnected = false
+        }
+    }
+
+    fun getActiveSessionCode(): String {
+        return prefs.getString(KEY_SESSION_CODE, "") ?: ""
+    }
+
+    fun handleDevicePendingAlert(alert: Map<*, *>) {
+        try {
+            val alertId = (alert["id"] as? String)?.takeIf { it.isNotBlank() } ?: "alert_${alert["timestamp"]}"
+            val alertTime = (alert["timestamp"] as? Number)?.toLong() ?: 0L
+            val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
+
+            if (alertTime < cutoff) return
+            if (NotificationTracker.isProcessed(context, alertId)) return
+
+            NotificationTracker.markProcessed(context, alertId)
+
+            val title = (alert["title"] as? String)?.takeIf { it.isNotBlank() } ?: "🔥 PW DHYAN ALERT"
+            val message = (alert["message"] as? String) ?: ""
+            val isBurst = (alert["isBurst"] as? Boolean) ?: false
+            val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
+
+            val notifHelper = NotificationHelper(context)
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    if (isBurst || burstCount > 1) {
+                        notifHelper.sendBurstNotification(title, message, burstCount)
+                    } else {
+                        notifHelper.sendCustomNotification(title, message)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error displaying device pendingAlert: ${e.message}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed handling device pendingAlert: ${e.message}")
         }
     }
 
@@ -2057,27 +2114,23 @@ class SecurityManager(private val context: Context) {
     fun listenToPushNotifications(onNotification: (PushNotificationItem) -> Unit): ListenerRegistration? {
         val fs = firestore ?: return null
         val myDeviceId = getDeviceId()
-        val myPasskey = prefs.getString(KEY_SESSION_CODE, "") ?: ""
+        val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
 
         return try {
             fs.collection(FIRESTORE_COLLECTION_NOTIFICATIONS)
+                .whereGreaterThan("timestamp", cutoff)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
+                    val curPasskey = getCurrentUserSession().passkey
+                    val rawCode = getActiveSessionCode()
                     val items = snapshot.documents.mapNotNull { doc ->
-                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it) }
+                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it, doc.id) }
                     }
                     items.filter { it.isActive }.forEach { item ->
-                        val isForMe = when (item.targetType) {
-                            "DEVICE" -> item.targetValue.equals(myDeviceId, ignoreCase = true)
-                            "PASSKEY" -> item.targetValue.equals(myPasskey, ignoreCase = true)
-                            else -> true // "ALL"
-                        }
-                        if (isForMe && !processedNotificationIds.contains(item.id)) {
-                            // Check if notification is recent (created within last 24 hours)
-                            if (System.currentTimeMillis() - item.timestamp < 24 * 60 * 60 * 1000L) {
-                                processedNotificationIds.add(item.id)
-                                onNotification(item)
-                            }
+                        val isForMe = item.matchesTarget(myDeviceId, curPasskey, rawCode)
+                        if (isForMe && !NotificationTracker.isProcessed(context, item.id)) {
+                            NotificationTracker.markProcessed(context, item.id)
+                            onNotification(item)
                         }
                     }
                 }

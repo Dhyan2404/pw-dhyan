@@ -1135,9 +1135,9 @@ function startCloudSync() {
           tType === 'ALL' || 
           tVal === 'ALL' || 
           (tType === 'DEVICE' && tVal.toLowerCase() === myDev) || 
-          (tType === 'PASSKEY' && myCode && tVal === myCode) ||
+          (tType === 'PASSKEY' && myCode && tVal.toLowerCase() === myCode.toLowerCase()) ||
           (tVal.toLowerCase() === myDev) || 
-          (myCode && tVal === myCode);
+          (myCode && tVal.toLowerCase() === myCode.toLowerCase());
 
         if (isForMe) {
           markNotifProcessed(notifId);

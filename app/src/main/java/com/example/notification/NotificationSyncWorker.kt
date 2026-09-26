@@ -1,19 +1,27 @@
 package com.example.notification
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.example.R
 import com.example.security.PushNotificationItem
 import com.example.security.SecurityManager
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -32,47 +40,57 @@ class NotificationSyncWorker(
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val channelId = "pw_sync_expedited"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            val channel = NotificationChannel(channelId, "Notification Sync", NotificationManager.IMPORTANCE_MIN)
+            nm?.createNotificationChannel(channel)
+        }
+        val notification = NotificationCompat.Builder(appContext, channelId)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("PW DHYAN")
+            .setContentText("Syncing notifications...")
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .build()
+        return ForegroundInfo(9902, notification)
+    }
+
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
             Log.d(TAG, "NotificationSyncWorker started checking for missed notifications...")
             val sm = SecurityManager(appContext)
             val myDeviceId = sm.getDeviceId()
-            val myPasskey = sm.getCurrentUserSession().passkey
+            val currentPasskey = sm.getCurrentUserSession().passkey
+            val rawSessionCode = sm.getActiveSessionCode()
             val notifHelper = NotificationHelper(appContext)
-
-            val sp = appContext.getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
-            val saved = sp.getStringSet(KEY_PROCESSED_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
 
             val fs = FirebaseFirestore.getInstance()
             // Check notifications dispatched in the last 48 hours
             val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
 
-            var hasNew = false
-
-            // 1. Check global/targeted push_notifications collection
+            // 1. Check global/targeted push_notifications collection (Prefer SERVER source to get newly pushed notifications)
             try {
-                val snapshot = fs.collection("push_notifications")
+                val notifQuery = fs.collection("push_notifications")
                     .whereGreaterThan("timestamp", cutoff)
-                    .get()
-                    .await()
+
+                val snapshot = try {
+                    notifQuery.get(Source.SERVER).await()
+                } catch (_: Exception) {
+                    notifQuery.get().await()
+                }
 
                 val items = snapshot.documents.mapNotNull { doc ->
                     doc.data?.let { data ->
-                        // Pass doc.id as canonical fallback so map without "id" never generates random UUIDs
                         PushNotificationItem.fromFirestoreMap(data, doc.id)
                     }
                 }
 
                 items.filter { it.isActive }.forEach { item ->
-                    val isForMe = when (item.targetType) {
-                        "DEVICE" -> item.targetValue.equals(myDeviceId, ignoreCase = true)
-                        "PASSKEY" -> item.targetValue.equals(myPasskey, ignoreCase = true)
-                        else -> true // "ALL" broadcast
-                    }
+                    val isForMe = item.matchesTarget(myDeviceId, currentPasskey, rawSessionCode)
 
-                    if (isForMe && !saved.contains(item.id)) {
-                        saved.add(item.id)
-                        hasNew = true
+                    if (isForMe && !NotificationTracker.isProcessed(appContext, item.id)) {
+                        NotificationTracker.markProcessed(appContext, item.id)
                         withContext(Dispatchers.Main) {
                             try {
                                 if (item.isBurst || item.burstCount > 1) {
@@ -92,15 +110,20 @@ class NotificationSyncWorker(
 
             // 2. Check direct device pendingAlert in user_sessions/$myDeviceId
             try {
-                val sessionDoc = fs.collection("user_sessions").document(myDeviceId).get().await()
+                val sessionDocRef = fs.collection("user_sessions").document(myDeviceId)
+                val sessionDoc = try {
+                    sessionDocRef.get(Source.SERVER).await()
+                } catch (_: Exception) {
+                    sessionDocRef.get().await()
+                }
+
                 if (sessionDoc.exists()) {
                     val alert = sessionDoc.get("pendingAlert") as? Map<*, *>
                     if (alert != null) {
                         val alertId = (alert["id"] as? String)?.takeIf { it.isNotBlank() } ?: "alert_${alert["timestamp"]}"
                         val alertTime = (alert["timestamp"] as? Number)?.toLong() ?: 0L
-                        if (alertTime > cutoff && !saved.contains(alertId)) {
-                            saved.add(alertId)
-                            hasNew = true
+                        if (alertTime > cutoff && !NotificationTracker.isProcessed(appContext, alertId)) {
+                            NotificationTracker.markProcessed(appContext, alertId)
                             val title = (alert["title"] as? String) ?: "🔥 PW DHYAN ALERT"
                             val msg = (alert["message"] as? String) ?: ""
                             val isBurst = (alert["isBurst"] as? Boolean) ?: false
@@ -120,13 +143,6 @@ class NotificationSyncWorker(
                 Log.w(TAG, "Failed checking user_sessions pendingAlert: ${e.message}")
             }
 
-            // 3. Persist processed IDs cache (limited to latest 200 items to avoid unbounded growth)
-            if (hasNew) {
-                val toSave = if (saved.size > 200) saved.toList().takeLast(200).toSet() else saved.toSet()
-                sp.edit().putStringSet(KEY_PROCESSED_IDS, toSave).apply()
-                Log.d(TAG, "Successfully processed and delivered offline pending notifications.")
-            }
-
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "NotificationSyncWorker error: ${e.message}", e)
@@ -136,8 +152,6 @@ class NotificationSyncWorker(
 
     companion object {
         private const val TAG = "NotifSyncWorker"
-        const val PREFS_NOTIF = "pw_push_service_prefs"
-        const val KEY_PROCESSED_IDS = "processed_notification_ids"
         private const val UNIQUE_PERIODIC_WORK_NAME = "pw_dhyan_periodic_notif_sync"
         private const val UNIQUE_ONETIME_WORK_NAME = "pw_dhyan_onetime_notif_sync"
 
@@ -170,7 +184,7 @@ class NotificationSyncWorker(
         }
 
         /**
-         * Enqueues an immediate one-time sync worker with network constraint.
+         * Enqueues an immediate expedited sync worker with network constraint.
          * Executes immediately when network is available.
          */
         fun enqueueImmediateSync(context: Context) {
@@ -181,6 +195,7 @@ class NotificationSyncWorker(
 
                 val request = OneTimeWorkRequestBuilder<NotificationSyncWorker>()
                     .setConstraints(constraints)
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .build()
 
                 WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
@@ -188,7 +203,7 @@ class NotificationSyncWorker(
                     ExistingWorkPolicy.REPLACE,
                     request
                 )
-                Log.d(TAG, "Enqueued immediate notification sync worker on network available")
+                Log.d(TAG, "Enqueued expedited notification sync worker on network available")
             } catch (e: Exception) {
                 Log.w(TAG, "Failed enqueuing immediate sync: ${e.message}")
             }

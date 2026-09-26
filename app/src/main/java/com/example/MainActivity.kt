@@ -16,6 +16,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -99,6 +102,7 @@ class MainActivity : ComponentActivity() {
         // Start silent background sync service for cloud push alerts & bursts
         PushNotificationService.start(this)
         PushNotificationService.checkPendingNotifications(this)
+        setupForegroundPushListener()
 
         // Schedule WorkManager periodic and immediate offline recovery sync
         NotificationSyncWorker.schedulePeriodicSync(this)
@@ -247,6 +251,7 @@ class MainActivity : ComponentActivity() {
         securityManager.ensureDeviceRegistered()
         securityManager.sendHeartbeat()
         PushNotificationService.checkPendingNotifications(this)
+        PushNotificationService.recoverMissedNotificationsFromServer(this)
     }
 
     override fun onStop() {
@@ -265,14 +270,63 @@ class MainActivity : ComponentActivity() {
                 override fun onAvailable(network: Network) {
                     Log.d("MainActivity", "Network restored (offline -> online) - triggering immediate notification sync")
                     PushNotificationService.checkPendingNotifications(this@MainActivity)
+                    PushNotificationService.recoverMissedNotificationsFromServer(this@MainActivity)
                     NotificationSyncWorker.enqueueImmediateSync(this@MainActivity)
                     securityManager.ensureDeviceRegistered()
                     securityManager.sendHeartbeat()
+
+                    // Staggered retries as gRPC TLS handshakes complete (1.5s and 3.5s)
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        kotlinx.coroutines.delay(1500L)
+                        PushNotificationService.recoverMissedNotificationsFromServer(this@MainActivity)
+                        kotlinx.coroutines.delay(2000L)
+                        PushNotificationService.recoverMissedNotificationsFromServer(this@MainActivity)
+                    }
                 }
             }
             cm.registerNetworkCallback(builder.build(), networkCallback!!)
         } catch (e: Exception) {
             Log.w("MainActivity", "Failed to register network monitor: ${e.message}")
+        }
+    }
+
+    private fun setupForegroundPushListener() {
+        try {
+            val fs = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val myDeviceId = securityManager.getDeviceId()
+            val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
+
+            pushNotificationListener?.remove()
+            pushNotificationListener = fs.collection("push_notifications")
+                .whereGreaterThan("timestamp", cutoff)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null || snapshot == null) return@addSnapshotListener
+                    val currentPasskey = securityManager.getCurrentUserSession().passkey
+                    val rawSessionCode = securityManager.getActiveSessionCode()
+
+                    val items = snapshot.documents.mapNotNull { doc ->
+                        doc.data?.let { com.example.security.PushNotificationItem.fromFirestoreMap(it, doc.id) }
+                    }
+                    items.filter { it.isActive }.forEach { item ->
+                        val isForMe = item.matchesTarget(myDeviceId, currentPasskey, rawSessionCode)
+                        if (isForMe && !com.example.notification.NotificationTracker.isProcessed(this, item.id)) {
+                            com.example.notification.NotificationTracker.markProcessed(this, item.id)
+                            lifecycleScope.launch(Dispatchers.Main) {
+                                try {
+                                    if (item.isBurst || item.burstCount > 1) {
+                                        notificationHelper.sendBurstNotification(item.title, item.message, item.burstCount)
+                                    } else {
+                                        notificationHelper.sendCustomNotification(item.title, item.message)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("MainActivity", "Error displaying foreground notification: ${e.message}")
+                                }
+                            }
+                        }
+                    }
+                }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Failed setting up foreground push listener: ${e.message}")
         }
     }
 

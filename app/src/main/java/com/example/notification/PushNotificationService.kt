@@ -8,28 +8,26 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ServiceCompat
-import com.example.MainActivity
-import com.example.R
 import com.example.security.PushNotificationItem
 import com.example.security.SecurityManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 /**
- * Silent Background Service to sync push notifications from PW Dhyan Cloud.
- * Runs silently in the background without any persistent or unremovable notifications.
+ * Background Service to sync push notifications from PW Dhyan Cloud.
+ * Dual-listens to both push_notifications and direct user_sessions/$myDeviceId alerts
+ * for instant 0ms latency when online, and recovers missed offline notifications.
  */
 class PushNotificationService : Service() {
     companion object {
         private const val TAG = "PushNotifService"
         const val FOREGROUND_CHANNEL_ID = "pw_dhyan_sync_channel"
         const val FOREGROUND_NOTIF_ID = 9901
-        private const val PREFS_NOTIF = "pw_push_service_prefs"
-        private const val KEY_PROCESSED_IDS = "processed_notification_ids"
 
         @Volatile
         private var isRunning = false
@@ -62,37 +60,56 @@ class PushNotificationService : Service() {
         fun checkPendingNotifications(context: Context) {
             val appContext = context.applicationContext
             CoroutineScope(Dispatchers.IO).launch {
+                recoverMissedNotificationsInternal(appContext, useServerFirst = false)
+            }
+        }
+
+        /**
+         * Expedited server recovery: Forces a fetch directly from Cloud Firestore servers
+         * (bypassing stale offline cache) to retrieve notifications dispatched while device was offline.
+         */
+        fun recoverMissedNotificationsFromServer(context: Context) {
+            val appContext = context.applicationContext
+            CoroutineScope(Dispatchers.IO).launch {
+                recoverMissedNotificationsInternal(appContext, useServerFirst = true)
+            }
+        }
+
+        private suspend fun recoverMissedNotificationsInternal(appContext: Context, useServerFirst: Boolean) {
+            try {
+                val sm = SecurityManager(appContext)
+                val myDeviceId = sm.getDeviceId()
+                val currentPasskey = sm.getCurrentUserSession().passkey
+                val rawSessionCode = sm.getActiveSessionCode()
+                val notifHelper = NotificationHelper(appContext)
+
+                val fs = FirebaseFirestore.getInstance()
+                val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
+
+                // 1. Query push_notifications collection (Prefer SERVER source when recovering from offline)
                 try {
-                    val sm = SecurityManager(appContext)
-                    val myDeviceId = sm.getDeviceId()
-                    val myPasskey = sm.getCurrentUserSession().passkey
-                    val notifHelper = NotificationHelper(appContext)
-
-                    val sp = appContext.getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
-                    val saved = sp.getStringSet(KEY_PROCESSED_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
-
-                    val fs = FirebaseFirestore.getInstance()
-                    val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
-
-                    // 1. Query push_notifications collection
-                    val snapshot = fs.collection("push_notifications")
+                    val notifQuery = fs.collection("push_notifications")
                         .whereGreaterThan("timestamp", cutoff)
-                        .get()
-                        .await()
 
-                    var hasNew = false
-                    snapshot.documents.mapNotNull { doc ->
-                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it, doc.id) }
-                    }.filter { it.isActive }.forEach { item ->
-                        val isForMe = when (item.targetType) {
-                            "DEVICE" -> item.targetValue.equals(myDeviceId, ignoreCase = true)
-                            "PASSKEY" -> item.targetValue.equals(myPasskey, ignoreCase = true)
-                            else -> true
+                    val snapshot = if (useServerFirst) {
+                        try {
+                            notifQuery.get(Source.SERVER).await()
+                        } catch (_: Exception) {
+                            notifQuery.get().await()
                         }
-                        if (isForMe && !saved.contains(item.id)) {
-                            saved.add(item.id)
-                            hasNew = true
-                            launch(Dispatchers.Main) {
+                    } else {
+                        notifQuery.get().await()
+                    }
+
+                    val items = snapshot.documents.mapNotNull { doc ->
+                        doc.data?.let { PushNotificationItem.fromFirestoreMap(it, doc.id) }
+                    }
+
+                    items.filter { it.isActive }.forEach { item ->
+                        val isForMe = item.matchesTarget(myDeviceId, currentPasskey, rawSessionCode)
+                        if (isForMe && !NotificationTracker.isProcessed(appContext, item.id)) {
+                            NotificationTracker.markProcessed(appContext, item.id)
+                            CoroutineScope(Dispatchers.Main).launch {
                                 try {
                                     if (item.isBurst || item.burstCount > 1) {
                                         notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
@@ -105,47 +122,56 @@ class PushNotificationService : Service() {
                             }
                         }
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error querying push_notifications for offline catchup: ${e.message}")
+                }
 
-                    // 2. Also check user_sessions for direct pending alert
-                    try {
-                        val sessionDoc = fs.collection("user_sessions").document(myDeviceId).get().await()
-                        if (sessionDoc.exists()) {
-                            val alert = sessionDoc.get("pendingAlert") as? Map<*, *>
-                            if (alert != null) {
-                                val alertId = alert["id"] as? String ?: "alert_${alert["timestamp"]}"
-                                val alertTime = (alert["timestamp"] as? Number)?.toLong() ?: 0L
-                                if (alertTime > cutoff && !saved.contains(alertId)) {
-                                    saved.add(alertId)
-                                    hasNew = true
-                                    val title = alert["title"] as? String ?: "🔥 PW DHYAN ALERT"
-                                    val msg = alert["message"] as? String ?: ""
-                                    val isBurst = alert["isBurst"] as? Boolean ?: false
-                                    val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
-                                    launch(Dispatchers.Main) {
-                                        if (isBurst || burstCount > 1) {
-                                            notifHelper.sendBurstNotification(title, msg, burstCount)
-                                        } else {
-                                            notifHelper.sendCustomNotification(title, msg)
-                                        }
+                // 2. Also check user_sessions for direct pending alert
+                try {
+                    val sessionDocRef = fs.collection("user_sessions").document(myDeviceId)
+                    val sessionDoc = if (useServerFirst) {
+                        try {
+                            sessionDocRef.get(Source.SERVER).await()
+                        } catch (_: Exception) {
+                            sessionDocRef.get().await()
+                        }
+                    } else {
+                        sessionDocRef.get().await()
+                    }
+
+                    if (sessionDoc.exists()) {
+                        val alert = sessionDoc.get("pendingAlert") as? Map<*, *>
+                        if (alert != null) {
+                            val alertId = (alert["id"] as? String)?.takeIf { it.isNotBlank() } ?: "alert_${alert["timestamp"]}"
+                            val alertTime = (alert["timestamp"] as? Number)?.toLong() ?: 0L
+                            if (alertTime > cutoff && !NotificationTracker.isProcessed(appContext, alertId)) {
+                                NotificationTracker.markProcessed(appContext, alertId)
+                                val title = (alert["title"] as? String)?.takeIf { it.isNotBlank() } ?: "🔥 PW DHYAN ALERT"
+                                val msg = (alert["message"] as? String) ?: ""
+                                val isBurst = (alert["isBurst"] as? Boolean) ?: false
+                                val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
+
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    if (isBurst || burstCount > 1) {
+                                        notifHelper.sendBurstNotification(title, msg, burstCount)
+                                    } else {
+                                        notifHelper.sendCustomNotification(title, msg)
                                     }
                                 }
                             }
                         }
-                    } catch (_: Exception) {}
-
-                    if (hasNew) {
-                        val toSave = if (saved.size > 200) saved.toList().takeLast(200).toSet() else saved.toSet()
-                        sp.edit().putStringSet(KEY_PROCESSED_IDS, toSave).apply()
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Offline pending notification recovery note: ${e.message}")
+                    Log.w(TAG, "Error checking user_sessions pendingAlert for offline catchup: ${e.message}")
                 }
+            } catch (e: Exception) {
+                Log.w(TAG, "Offline pending notification recovery note: ${e.message}")
             }
         }
     }
 
-    private var listenerRegistration: ListenerRegistration? = null
-    private val processedIds = mutableSetOf<String>()
+    private var pushListenerRegistration: ListenerRegistration? = null
+    private var sessionAlertRegistration: ListenerRegistration? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -163,77 +189,83 @@ class PushNotificationService : Service() {
             }
         } catch (_: Exception) {}
 
-        loadProcessedIds()
-        attachCloudListener()
-        Log.d(TAG, "PushNotificationService created and active (silent background sync)")
+        attachCloudListeners()
+        Log.d(TAG, "PushNotificationService created and active (silent dual-channel sync)")
     }
 
-    private fun loadProcessedIds() {
-        try {
-            val sp = getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
-            val saved = sp.getStringSet(KEY_PROCESSED_IDS, emptySet()) ?: emptySet()
-            processedIds.addAll(saved)
-        } catch (_: Exception) {}
-    }
+    private fun attachCloudListeners() {
+        pushListenerRegistration?.remove()
+        sessionAlertRegistration?.remove()
 
-    private fun markIdProcessed(id: String) {
-        processedIds.add(id)
-        if (processedIds.size > 200) {
-            val toRemove = processedIds.take(50)
-            processedIds.removeAll(toRemove.toSet())
-        }
-        try {
-            val sp = getSharedPreferences(PREFS_NOTIF, Context.MODE_PRIVATE)
-            sp.edit().putStringSet(KEY_PROCESSED_IDS, processedIds.toSet()).apply()
-        } catch (_: Exception) {}
-    }
-
-    private fun attachCloudListener() {
-        listenerRegistration?.remove()
         try {
             val sm = SecurityManager(applicationContext)
             val myDeviceId = sm.getDeviceId()
-            val myPasskey = sm.getCurrentUserSession().passkey
             val notifHelper = NotificationHelper(applicationContext)
-
             val fs = FirebaseFirestore.getInstance()
-            listenerRegistration = fs.collection("push_notifications")
+            val cutoff = System.currentTimeMillis() - 48 * 60 * 60 * 1000L
+
+            // Channel 1: Real-time broadcast and targeted push_notifications listener
+            pushListenerRegistration = fs.collection("push_notifications")
+                .whereGreaterThan("timestamp", cutoff)
                 .addSnapshotListener { snapshot, error ->
                     if (error != null || snapshot == null) return@addSnapshotListener
+                    val currentPasskey = sm.getCurrentUserSession().passkey
+                    val rawSessionCode = sm.getActiveSessionCode()
+
                     val items = snapshot.documents.mapNotNull { doc ->
                         doc.data?.let { PushNotificationItem.fromFirestoreMap(it, doc.id) }
                     }
                     items.filter { it.isActive }.forEach { item ->
-                        val isForMe = when (item.targetType) {
-                            "DEVICE" -> item.targetValue.equals(myDeviceId, ignoreCase = true)
-                            "PASSKEY" -> item.targetValue.equals(myPasskey, ignoreCase = true)
-                            else -> true // "ALL"
-                        }
-                        if (isForMe && !processedIds.contains(item.id)) {
-                            // Check if recent (last 24 hours)
-                            if (System.currentTimeMillis() - item.timestamp < 24 * 60 * 60 * 1000L) {
-                                markIdProcessed(item.id)
-                                try {
-                                    if (item.isBurst || item.burstCount > 1) {
-                                        notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
-                                    } else {
-                                        notifHelper.sendCustomNotification(item.title, item.message)
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Error displaying push notification: ${e.message}")
+                        val isForMe = item.matchesTarget(myDeviceId, currentPasskey, rawSessionCode)
+                        if (isForMe && !NotificationTracker.isProcessed(applicationContext, item.id)) {
+                            NotificationTracker.markProcessed(applicationContext, item.id)
+                            try {
+                                if (item.isBurst || item.burstCount > 1) {
+                                    notifHelper.sendBurstNotification(item.title, item.message, item.burstCount)
+                                } else {
+                                    notifHelper.sendCustomNotification(item.title, item.message)
                                 }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error displaying push notification: ${e.message}")
                             }
                         }
                     }
                 }
+
+            // Channel 2: Direct device session pendingAlert listener (<100ms instant wake)
+            sessionAlertRegistration = fs.collection("user_sessions").document(myDeviceId)
+                .addSnapshotListener { doc, error ->
+                    if (error != null || doc == null || !doc.exists()) return@addSnapshotListener
+                    val alert = doc.get("pendingAlert") as? Map<*, *> ?: return@addSnapshotListener
+                    val alertId = (alert["id"] as? String)?.takeIf { it.isNotBlank() } ?: "alert_${alert["timestamp"]}"
+                    val alertTime = (alert["timestamp"] as? Number)?.toLong() ?: 0L
+
+                    if (alertTime > cutoff && !NotificationTracker.isProcessed(applicationContext, alertId)) {
+                        NotificationTracker.markProcessed(applicationContext, alertId)
+                        val title = (alert["title"] as? String)?.takeIf { it.isNotBlank() } ?: "🔥 PW DHYAN ALERT"
+                        val message = (alert["message"] as? String) ?: ""
+                        val isBurst = (alert["isBurst"] as? Boolean) ?: false
+                        val burstCount = (alert["burstCount"] as? Number)?.toInt() ?: 1
+
+                        try {
+                            if (isBurst || burstCount > 1) {
+                                notifHelper.sendBurstNotification(title, message, burstCount)
+                            } else {
+                                notifHelper.sendCustomNotification(title, message)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error displaying session pendingAlert: ${e.message}")
+                        }
+                    }
+                }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to attach cloud listener in service: ${e.message}")
+            Log.e(TAG, "Failed to attach cloud listeners in service: ${e.message}")
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (listenerRegistration == null) {
-            attachCloudListener()
+        if (pushListenerRegistration == null || sessionAlertRegistration == null) {
+            attachCloudListeners()
         }
         return START_STICKY
     }
@@ -241,8 +273,10 @@ class PushNotificationService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
-        listenerRegistration?.remove()
-        listenerRegistration = null
+        pushListenerRegistration?.remove()
+        sessionAlertRegistration?.remove()
+        pushListenerRegistration = null
+        sessionAlertRegistration = null
         Log.d(TAG, "PushNotificationService destroyed")
     }
 }
