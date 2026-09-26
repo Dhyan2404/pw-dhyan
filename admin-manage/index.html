@@ -338,10 +338,53 @@
     }
 
     .metric-card {
-      padding: 20px;
+      padding: 22px;
       display: flex;
       align-items: center;
       gap: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: default;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--glass-border-strong);
+      box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.6), 0 0 20px -4px var(--cyan-glow);
+    }
+
+    .metric-card:hover::before {
+      opacity: 1;
+    }
+
+    .live-beacon {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .live-beacon::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 1.5px solid var(--emerald);
+      animation: ripple 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
+    }
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(2.4); opacity: 0; }
     }
 
     .metric-icon {
@@ -764,7 +807,14 @@
         <div class="brand-subtitle">Real-Time Multi-Device & Lecture Management</div>
       </div>
     </div>
-    <div style="display:flex; align-items:center; gap:16px;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div class="status-badge" style="background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.3); color: var(--cyan); font-weight:700;">
+        <i class="fas fa-database"></i>
+        <span>pw-dhyan</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-sound-toggle" onclick="CyberAudio.toggleMute()" title="Toggle Sound Feedback" style="padding:6px 12px;">
+        <i class="fas fa-volume-up" id="sound-icon" style="color:var(--cyan);"></i>
+      </button>
       <div class="status-badge">
         <div class="status-dot"></div>
         <span id="cloud-status-text">Cloud Firestore Live</span>
@@ -1492,6 +1542,122 @@ service cloud.firestore {
     try { analytics = getAnalytics(app); } catch (e) { }
     const db = getFirestore(app);
 
+    // CyberAudio: Synthesizer using Web Audio API (Zero external audio files needed)
+    const CyberAudio = (() => {
+      let ctx = null;
+      let muted = localStorage.getItem('pw_admin_muted') === 'true';
+
+      function getCtx() {
+        if (!ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) ctx = new AudioContext();
+        }
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        return ctx;
+      }
+
+      function updateSoundBtn() {
+        const btn = document.getElementById('sound-icon');
+        if (btn) {
+          btn.className = muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+          btn.style.color = muted ? 'var(--crimson)' : 'var(--cyan)';
+        }
+      }
+
+      // Initialize initial icon state
+      setTimeout(updateSoundBtn, 100);
+
+      return {
+        isMuted: () => muted,
+        toggleMute: () => {
+          muted = !muted;
+          localStorage.setItem('pw_admin_muted', muted);
+          updateSoundBtn();
+          if (!muted) CyberAudio.playClick();
+          showToast(muted ? 'Sound Feedback: Muted 🔇' : 'Sound Feedback: Enabled 🔊');
+        },
+        playClick: () => {
+          if (muted) return;
+          try {
+            const ac = getCtx();
+            if (!ac) return;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(820, ac.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(320, ac.currentTime + 0.038);
+            gain.gain.setValueAtTime(0.08, ac.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.038);
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.start();
+            osc.stop(ac.currentTime + 0.04);
+          } catch(e){}
+        },
+        playChime: () => {
+          if (muted) return;
+          try {
+            const ac = getCtx();
+            if (!ac) return;
+            const now = ac.currentTime;
+            [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+              const osc = ac.createOscillator();
+              const gain = ac.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(freq, now + i * 0.06);
+              gain.gain.setValueAtTime(0.09, now + i * 0.06);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.06 + 0.3);
+              osc.connect(gain);
+              gain.connect(ac.destination);
+              osc.start(now + i * 0.06);
+              osc.stop(now + i * 0.06 + 0.32);
+            });
+          } catch(e){}
+        },
+        playSwoosh: () => {
+          if (muted) return;
+          try {
+            const ac = getCtx();
+            if (!ac) return;
+            const osc = ac.createOscillator();
+            const gain = ac.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(240, ac.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ac.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.12, ac.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12);
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.start();
+            osc.stop(ac.currentTime + 0.13);
+          } catch(e){}
+        },
+        playAlert: () => {
+          if (muted) return;
+          try {
+            const ac = getCtx();
+            if (!ac) return;
+            const now = ac.currentTime;
+            [880, 1174.66].forEach((freq, idx) => {
+              const osc = ac.createOscillator();
+              const gain = ac.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+              gain.gain.setValueAtTime(0.07, now + idx * 0.08);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.07);
+              osc.connect(gain);
+              gain.connect(ac.destination);
+              osc.start(now + idx * 0.08);
+              osc.stop(now + idx * 0.08 + 0.075);
+            });
+          } catch(e){}
+        }
+      };
+    })();
+    window.CyberAudio = CyberAudio;
+
     let cloudAdminPin = "240411";
     let enteredPin = "";
 
@@ -1607,6 +1773,7 @@ service cloud.firestore {
     // PIN Authentication Functions
     function typePin(digit) {
       if (enteredPin.length < 6) {
+        if (window.CyberAudio) CyberAudio.playClick();
         enteredPin += digit;
         updatePinUI();
         if (enteredPin.length === 6) {
@@ -1617,6 +1784,7 @@ service cloud.firestore {
     window.typePin = typePin;
 
     function backspacePin() {
+      if (window.CyberAudio) CyberAudio.playClick();
       enteredPin = enteredPin.slice(0, -1);
       updatePinUI();
       const err = document.getElementById('auth-error');
@@ -1625,6 +1793,7 @@ service cloud.firestore {
     window.backspacePin = backspacePin;
 
     function clearPin() {
+      if (window.CyberAudio) CyberAudio.playClick();
       enteredPin = '';
       updatePinUI();
       const err = document.getElementById('auth-error');
@@ -1676,12 +1845,14 @@ service cloud.firestore {
 
     function verifyPin() {
       if (enteredPin === cloudAdminPin || enteredPin === "240411") {
+        if (window.CyberAudio) CyberAudio.playChime();
         sessionStorage.setItem('pw_admin_authenticated', 'true');
         const gate = document.getElementById('auth-gate');
         if (gate) gate.style.display = 'none';
         showToast('Admin Authenticated Successfully!');
         startFirestoreListeners();
       } else {
+        if (window.CyberAudio) CyberAudio.playAlert();
         const err = document.getElementById('auth-error');
         if (err) err.innerText = 'Invalid Admin Passkey. Access Denied.';
         setTimeout(clearPin, 600);
@@ -1716,6 +1887,7 @@ service cloud.firestore {
 
     // Tab Navigation
     function switchTab(tabId) {
+      if (window.CyberAudio) CyberAudio.playClick();
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
       
@@ -2403,6 +2575,7 @@ service cloud.firestore {
       };
 
       setDoc(notifRef, notifItem).then(() => {
+        if (window.CyberAudio) CyberAudio.playSwoosh();
         if (targetType === 'DEVICE' && targetValue && targetValue !== 'ALL') {
           setDoc(doc(db, 'user_sessions', targetValue), {
             pendingAlert: notifItem
@@ -2538,6 +2711,7 @@ service cloud.firestore {
       };
 
       setDoc(docRef, newKey).then(() => {
+        if (window.CyberAudio) CyberAudio.playChime();
         // Increment daily quota count
         const newCount = (dailyKeyQuota.count || 0) + 1;
         setDoc(doc(db, 'system_config', 'key_quota'), {
@@ -2591,6 +2765,7 @@ service cloud.firestore {
       }
 
       batch.commit().then(() => {
+        if (window.CyberAudio) CyberAudio.playChime();
         const newCount = (dailyKeyQuota.count || 0) + count;
         setDoc(doc(db, 'system_config', 'key_quota'), {
           date: getTodayDateString(),

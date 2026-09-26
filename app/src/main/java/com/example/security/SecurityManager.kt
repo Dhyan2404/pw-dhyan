@@ -1213,6 +1213,36 @@ class SecurityManager(private val context: Context) {
         return expired.size
     }
 
+    /**
+     * Purges and deletes all access keys from Firestore to eliminate database lag.
+     */
+    fun purgeAllKeys(onComplete: ((Int) -> Unit)? = null): Int {
+        val fs = firestore ?: return 0
+        val total = cloudKeysList.size
+        if (total == 0) {
+            onComplete?.invoke(0)
+            return 0
+        }
+        try {
+            val keysToPurge = cloudKeysList.toList()
+            keysToPurge.chunked(450).forEach { chunk ->
+                val batch = fs.batch()
+                chunk.forEach { key ->
+                    batch.delete(fs.collection(FIRESTORE_COLLECTION_KEYS).document(key.id))
+                }
+                batch.commit().addOnCompleteListener {
+                    cloudKeysList.removeAll(chunk)
+                    notifyListeners(cloudKeysList)
+                    onComplete?.invoke(total)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Purge all keys failed: ${e.message}")
+            onComplete?.invoke(0)
+        }
+        return total
+    }
+
     fun refreshFromCloud(onComplete: ((Boolean) -> Unit)? = null) {
         val fs = firestore
         if (fs == null) {

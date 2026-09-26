@@ -128,6 +128,7 @@ fun AdminKeyDialog(
     val notificationHelper = remember { NotificationHelper(context) }
     val coroutineScope = rememberCoroutineScope()
     var customNotificationInput by remember { mutableStateOf("") }
+    var showPurgeConfirmDialog by remember { mutableStateOf(false) }
 
     fun refreshKeys() {
         keysList = securityManager.getAllKeys()
@@ -740,6 +741,18 @@ fun AdminKeyDialog(
                                         }
                                         .padding(4.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(color = TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp)
+                                )
+                            }
+
+                            if (keysList.isNotEmpty()) {
+                                Text(
+                                    text = "Purge All",
+                                    modifier = Modifier
+                                        .clickable {
+                                            showPurgeConfirmDialog = true
+                                        }
+                                        .padding(4.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(color = CrimsonAlert, fontWeight = FontWeight.Bold, fontSize = 9.5.sp)
                                 )
                             }
                         }
@@ -1356,6 +1369,42 @@ fun AdminKeyDialog(
                 }
             }
         }
+    }
+
+    if (showPurgeConfirmDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPurgeConfirmDialog = false },
+            title = {
+                Text("Purge ALL Passkeys?", color = CrimsonAlert, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete all ${keysList.size} passkeys from Google Cloud Firestore?\n\nThis will instantly remove all keys and eliminate database lag. This action cannot be undone.",
+                    color = TextPrimary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val count = securityManager.purgeAllKeys { purged ->
+                            refreshKeys()
+                            Toast.makeText(context, "Purged $purged passkeys!", Toast.LENGTH_SHORT).show()
+                        }
+                        showPurgeConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CrimsonAlert)
+                ) {
+                    Text("Delete Everything", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showPurgeConfirmDialog = false }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+            containerColor = DarkBackground,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
 
