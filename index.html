@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PW DHYAN • Cloud Admin & Device Management Hub</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="icon" type="image/png" href="logo.png" />
 
@@ -37,7 +40,7 @@
     body {
       font-family: 'Outfit', sans-serif;
       background-color: var(--bg-dark);
-      background-image: 
+      background-image:
         radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
         radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.07) 0%, transparent 40%);
       color: var(--text-main);
@@ -46,10 +49,23 @@
     }
 
     /* Scrollbars */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.3); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--cyan);
+    }
 
     /* Glass Panels */
     .glass-panel {
@@ -127,45 +143,179 @@
     }
 
     @keyframes pulse-dot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.85);
+      }
     }
 
     /* Auth Gate Modal */
     #auth-gate {
       position: fixed;
       inset: 0;
-      background: rgba(9, 13, 22, 0.96);
-      backdrop-filter: blur(24px);
-      z-index: 1000;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.94) 0%, rgba(6, 9, 17, 0.98) 100%);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      z-index: 10000;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 20px;
+      transition: opacity 0.3s ease;
     }
 
     .auth-box {
       width: 100%;
-      max-width: 400px;
-      padding: 32px 28px;
+      max-width: 440px;
+      padding: 36px 30px;
       text-align: center;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.15);
+      position: relative;
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .auth-box::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12), transparent 60%);
+      pointer-events: none;
+    }
+
+    .auth-logo-ring {
+      width: 76px;
+      height: 76px;
+      border-radius: 20px;
+      margin: 0 auto 16px;
+      overflow: hidden;
+      box-shadow: 0 0 25px var(--cyan-glow);
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .auth-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .auth-input-container {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .auth-field-box {
+      display: flex;
+      align-items: center;
+      background: rgba(10, 15, 29, 0.85);
+      border: 2px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 0 16px;
+      transition: all 0.25s ease;
+    }
+
+    .auth-field-box:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 20px var(--cyan-glow);
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .auth-input-field {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 15px;
+      padding: 14px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    .auth-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 8px;
+      transition: color 0.2s;
+    }
+
+    .auth-toggle-btn:hover {
+      color: var(--cyan);
+    }
+
+    .auth-submit-btn {
+      width: 100%;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border: none;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
+      transition: all 0.25s ease;
+    }
+
+    .auth-submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(56, 189, 248, 0.6);
+    }
+
+    .auth-submit-btn:active {
+      transform: translateY(0);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
+    .shake-anim {
+      animation: shake 0.5s ease-in-out;
     }
 
     .pin-input-group {
       display: flex;
       justify-content: center;
       gap: 8px;
-      margin: 24px 0;
+      margin: 16px 0 12px;
     }
 
     .pin-digit {
-      width: 48px;
-      height: 54px;
+      width: 44px;
+      height: 50px;
       background: rgba(15, 23, 42, 0.8);
       border: 2px solid var(--glass-border);
       border-radius: 12px;
       color: var(--cyan);
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 700;
       text-align: center;
       font-family: 'JetBrains Mono', monospace;
@@ -203,8 +353,15 @@
     }
 
     @keyframes modalScaleIn {
-      from { opacity: 0; transform: scale(0.94); }
-      to { opacity: 1; transform: scale(1); }
+      from {
+        opacity: 0;
+        transform: scale(0.94);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     .quick-hour-chip {
@@ -219,7 +376,8 @@
       transition: all 0.15s ease;
     }
 
-    .quick-hour-chip:hover, .quick-hour-chip.active {
+    .quick-hour-chip:hover,
+    .quick-hour-chip.active {
       background: rgba(56, 189, 248, 0.2);
       border-color: var(--cyan);
       color: var(--cyan);
@@ -325,8 +483,15 @@
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* Metric Cards */
@@ -351,7 +516,10 @@
     .metric-card::before {
       content: '';
       position: absolute;
-      top: 0; left: 0; right: 0; height: 2px;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
       background: linear-gradient(90deg, transparent, var(--cyan), transparent);
       opacity: 0;
       transition: opacity 0.3s ease;
@@ -373,6 +541,7 @@
       align-items: center;
       justify-content: center;
     }
+
     .live-beacon::after {
       content: '';
       position: absolute;
@@ -382,9 +551,17 @@
       border: 1.5px solid var(--emerald);
       animation: ripple 1.8s infinite cubic-bezier(0, 0.2, 0.8, 1);
     }
+
     @keyframes ripple {
-      0% { transform: scale(1); opacity: 1; }
-      100% { transform: scale(2.4); opacity: 0; }
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(2.4);
+        opacity: 0;
+      }
     }
 
     .metric-icon {
@@ -431,6 +608,7 @@
       font-weight: 700;
       box-shadow: 0 4px 15px var(--cyan-glow);
     }
+
     .btn-primary:hover {
       transform: translateY(-1px);
       box-shadow: 0 6px 20px var(--cyan-glow);
@@ -441,13 +619,17 @@
       color: #fff;
       box-shadow: 0 4px 15px var(--emerald-glow);
     }
-    .btn-emerald:hover { transform: translateY(-1px); }
+
+    .btn-emerald:hover {
+      transform: translateY(-1px);
+    }
 
     .btn-danger {
       background: rgba(239, 68, 68, 0.15);
       border: 1px solid rgba(239, 68, 68, 0.4);
       color: var(--crimson);
     }
+
     .btn-danger:hover {
       background: var(--crimson);
       color: #fff;
@@ -458,6 +640,7 @@
       border: 1px solid var(--glass-border);
       color: var(--text-main);
     }
+
     .btn-secondary:hover {
       background: rgba(51, 65, 85, 0.9);
       border-color: var(--cyan);
@@ -575,8 +758,15 @@
     }
 
     @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
 
     /* Grid layouts */
@@ -616,7 +806,8 @@
         gap: 10px !important;
       }
 
-      .grid-2, .grid-3 {
+      .grid-2,
+      .grid-3 {
         grid-template-columns: 1fr !important;
         gap: 12px !important;
       }
@@ -627,7 +818,12 @@
         overflow: visible;
       }
 
-      table, thead, tbody, th, td, tr {
+      table,
+      thead,
+      tbody,
+      th,
+      td,
+      tr {
         display: block;
       }
 
@@ -676,7 +872,8 @@
         letter-spacing: 0.5px;
       }
 
-      td .btn-group, td .action-btns {
+      td .btn-group,
+      td .action-btns {
         width: 100%;
         display: flex;
         flex-wrap: wrap;
@@ -703,42 +900,69 @@
     }
   </style>
 </head>
+
 <body>
 
   <!-- ADMIN AUTH GATE -->
   <div id="auth-gate">
     <div class="glass-panel auth-box">
-      <div style="width:72px; height:72px; border-radius:18px; margin:0 auto 16px; overflow:hidden; box-shadow:0 0 25px var(--cyan-glow); background: #000; display:flex; align-items:center; justify-content:center;">
-        <img src="logo.png" alt="PW DHYAN" style="width:100%; height:100%; object-fit:cover;" onerror="this.outerHTML='<i class=\'fas fa-user-shield\' style=\'color:var(--cyan); font-size:28px;\'></i>'" />
+      <div class="auth-logo-ring">
+        <img src="logo.png" alt="PW DHYAN" class="auth-logo-img"
+          onerror="this.outerHTML='<i class=\'fas fa-user-shield\' style=\'color:var(--cyan); font-size:32px;\'></i>'" />
       </div>
-      <h2 style="font-size:22px; font-weight:700; margin-bottom:6px;">PW DHYAN Admin Gate</h2>
-      <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">Enter Master Admin PIN to access live cloud control</p>
-      
-      <div class="pin-input-group">
-        <input type="password" maxlength="1" class="pin-digit" id="p1" readonly />
-        <input type="password" maxlength="1" class="pin-digit" id="p2" readonly />
-        <input type="password" maxlength="1" class="pin-digit" id="p3" readonly />
-        <input type="password" maxlength="1" class="pin-digit" id="p4" readonly />
-        <input type="password" maxlength="1" class="pin-digit" id="p5" readonly />
-        <input type="password" maxlength="1" class="pin-digit" id="p6" readonly />
+      <h2 style="font-size:23px; font-weight:800; margin-bottom:6px; letter-spacing:-0.5px; background: linear-gradient(135deg, #fff, var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">PW DHYAN Cloud Hub</h2>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">Enter Master Admin Password or PIN to unlock control panel</p>
+
+      <!-- Primary Accessible Password Field -->
+      <div class="auth-input-container">
+        <div class="auth-field-box">
+          <i class="fas fa-lock" style="color:var(--cyan); font-size:15px;"></i>
+          <input type="password" id="master-password-input" class="auth-input-field" placeholder="Enter password (default: 240411)" autocomplete="current-password" autofocus />
+          <button type="button" class="auth-toggle-btn" onclick="togglePasswordVisibility()" title="Show/Hide Password">
+            <i class="fas fa-eye" id="pass-eye-icon"></i>
+          </button>
+        </div>
+
+        <button type="button" id="btn-submit-pass" class="auth-submit-btn" onclick="submitAdminPassword()">
+          <i class="fas fa-unlock-alt"></i> Unlock Admin Hub
+        </button>
       </div>
 
-      <div class="keypad-grid">
-        <div class="keypad-btn" onclick="typePin('1')">1</div>
-        <div class="keypad-btn" onclick="typePin('2')">2</div>
-        <div class="keypad-btn" onclick="typePin('3')">3</div>
-        <div class="keypad-btn" onclick="typePin('4')">4</div>
-        <div class="keypad-btn" onclick="typePin('5')">5</div>
-        <div class="keypad-btn" onclick="typePin('6')">6</div>
-        <div class="keypad-btn" onclick="typePin('7')">7</div>
-        <div class="keypad-btn" onclick="typePin('8')">8</div>
-        <div class="keypad-btn" onclick="typePin('9')">9</div>
-        <div class="keypad-btn" style="color:var(--crimson)" onclick="clearPin()"><i class="fas fa-trash-alt"></i></div>
-        <div class="keypad-btn" onclick="typePin('0')">0</div>
-        <div class="keypad-btn" style="color:var(--cyan)" onclick="backspacePin()"><i class="fas fa-backspace"></i></div>
+      <!-- Quick Keypad Expander Toggle -->
+      <div style="margin-top:14px;">
+        <button type="button" onclick="toggleKeypadDrawer()" id="keypad-toggle-btn" style="font-size:12px; color:var(--text-muted); text-decoration:none; background:none; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+          <i class="fas fa-calculator" style="color:var(--cyan);"></i> <span>Touch Keypad Option</span> <i class="fas fa-chevron-down" id="keypad-chevron"></i>
+        </button>
       </div>
-      
-      <p id="auth-error" style="color:var(--crimson); font-size:13px; font-weight:600; margin-top:16px; min-height:20px;"></p>
+
+      <div id="keypad-drawer" style="display:none; margin-top:12px;">
+        <div class="pin-input-group">
+          <input type="password" maxlength="1" class="pin-digit" id="p1" readonly />
+          <input type="password" maxlength="1" class="pin-digit" id="p2" readonly />
+          <input type="password" maxlength="1" class="pin-digit" id="p3" readonly />
+          <input type="password" maxlength="1" class="pin-digit" id="p4" readonly />
+          <input type="password" maxlength="1" class="pin-digit" id="p5" readonly />
+          <input type="password" maxlength="1" class="pin-digit" id="p6" readonly />
+        </div>
+
+        <div class="keypad-grid">
+          <div class="keypad-btn" onclick="typePin('1')">1</div>
+          <div class="keypad-btn" onclick="typePin('2')">2</div>
+          <div class="keypad-btn" onclick="typePin('3')">3</div>
+          <div class="keypad-btn" onclick="typePin('4')">4</div>
+          <div class="keypad-btn" onclick="typePin('5')">5</div>
+          <div class="keypad-btn" onclick="typePin('6')">6</div>
+          <div class="keypad-btn" onclick="typePin('7')">7</div>
+          <div class="keypad-btn" onclick="typePin('8')">8</div>
+          <div class="keypad-btn" onclick="typePin('9')">9</div>
+          <div class="keypad-btn" style="color:var(--crimson)" onclick="clearPin()"><i class="fas fa-trash-alt"></i></div>
+          <div class="keypad-btn" onclick="typePin('0')">0</div>
+          <div class="keypad-btn" style="color:var(--cyan)" onclick="backspacePin()"><i class="fas fa-backspace"></i></div>
+        </div>
+      </div>
+
+      <p id="auth-error" style="color:var(--crimson); font-size:13px; font-weight:600; margin-top:14px; min-height:20px;"></p>
+      <div style="font-size:11px; color:rgba(148, 163, 184, 0.6); margin-top:4px;">🔒 Cloud Security Shield • Zero Data Leaks in DevTools</div>
     </div>
   </div>
 
@@ -753,21 +977,27 @@
       </div>
 
       <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
-        Grant custom access duration to a student's device. The device will <b>instantly unlock without typing any passkey</b> and will stay unlocked for the selected hours!
+        Grant custom access duration to a student's device. The device will <b>instantly unlock without typing any
+          passkey</b> and will stay unlocked for the selected hours!
       </p>
 
       <div style="margin-bottom:12px;">
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">TARGET DEVICE ID</label>
+        <label
+          style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">TARGET
+          DEVICE ID</label>
         <input type="text" id="grant-modal-device-id" class="form-control" placeholder="Select or paste Device ID" />
       </div>
 
       <div style="margin-bottom:12px;">
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT / DEVICE LABEL</label>
+        <label
+          style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT /
+          DEVICE LABEL</label>
         <input type="text" id="grant-modal-device-label" class="form-control" placeholder="e.g. Rahul Sharma" />
       </div>
 
       <div style="margin-bottom:14px;">
-        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">QUICK DURATION PRESETS</label>
+        <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">QUICK
+          DURATION PRESETS</label>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button type="button" class="quick-hour-chip" onclick="setGrantHours(1, this)">1h</button>
           <button type="button" class="quick-hour-chip" onclick="setGrantHours(3, this)">3h</button>
@@ -781,9 +1011,11 @@
       </div>
 
       <div style="margin-bottom:18px;" id="grant-custom-hours-wrap">
-        <label style="font-size:11px; font-weight:600; color:var(--cyan); display:block; margin-bottom:4px;">CUSTOM ACCESS DURATION (IN HOURS)</label>
+        <label style="font-size:11px; font-weight:600; color:var(--cyan); display:block; margin-bottom:4px;">CUSTOM
+          ACCESS DURATION (IN HOURS)</label>
         <div style="display:flex; align-items:center; gap:8px;">
-          <input type="number" id="grant-modal-hours" class="form-control" value="6" min="0.1" step="any" placeholder="e.g. 5.5" style="flex:1;" />
+          <input type="number" id="grant-modal-hours" class="form-control" value="6" min="0.1" step="any"
+            placeholder="e.g. 5.5" style="flex:1;" />
           <span style="font-size:13px; font-weight:600; color:var(--text-muted);">Hours</span>
         </div>
         <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;">
@@ -793,7 +1025,8 @@
 
       <div style="display:flex; gap:10px; justify-content:flex-end;">
         <button class="btn btn-secondary btn-sm" onclick="closeGrantAccessModal()">Cancel</button>
-        <button class="btn btn-emerald btn-sm" onclick="confirmGrantDeviceAccess()"><i class="fas fa-unlock"></i> Grant Access Now</button>
+        <button class="btn btn-emerald btn-sm" onclick="confirmGrantDeviceAccess()"><i class="fas fa-unlock"></i> Grant
+          Access Now</button>
       </div>
     </div>
   </div>
@@ -801,18 +1034,21 @@
   <!-- MAIN APP -->
   <header>
     <div class="brand">
-      <img src="logo.png" alt="PW DHYAN" class="brand-logo" onerror="this.outerHTML='<div class=\'brand-logo\'><i class=\'fas fa-bolt\'></i></div>'" />
+      <img src="logo.png" alt="PW DHYAN" class="brand-logo"
+        onerror="this.outerHTML='<div class=\'brand-logo\'><i class=\'fas fa-bolt\'></i></div>'" />
       <div>
         <div class="brand-title">PW DHYAN • Cloud Console</div>
         <div class="brand-subtitle">Real-Time Multi-Device & Lecture Management</div>
       </div>
     </div>
     <div style="display:flex; align-items:center; gap:12px;">
-      <div class="status-badge" style="background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.3); color: var(--cyan); font-weight:700;">
+      <div class="status-badge"
+        style="background: rgba(56,189,248,0.12); border-color: rgba(56,189,248,0.3); color: var(--cyan); font-weight:700;">
         <i class="fas fa-database"></i>
         <span>pw-dhyan</span>
       </div>
-      <button class="btn btn-secondary btn-sm" id="btn-sound-toggle" onclick="CyberAudio.toggleMute()" title="Toggle Sound Feedback" style="padding:6px 12px;">
+      <button class="btn btn-secondary btn-sm" id="btn-sound-toggle" onclick="CyberAudio.toggleMute()"
+        title="Toggle Sound Feedback" style="padding:6px 12px;">
         <i class="fas fa-volume-up" id="sound-icon" style="color:var(--cyan);"></i>
       </button>
       <div class="status-badge">
@@ -826,15 +1062,20 @@
   <div class="app-container">
 
     <!-- FIRESTORE PERMISSIONS DIAGNOSTIC BANNER (Hidden by default, shown on permission error) -->
-    <div id="permission-error-banner" style="display:none; margin-bottom: 24px; padding: 18px 20px; background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--crimson); border-radius: 14px; color: #fff;">
+    <div id="permission-error-banner"
+      style="display:none; margin-bottom: 24px; padding: 18px 20px; background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--crimson); border-radius: 14px; color: #fff;">
       <div style="font-weight: 700; font-size: 15px; margin-bottom: 8px; display:flex; align-items:center; gap:10px;">
-        <i class="fas fa-exclamation-triangle" style="color:var(--crimson); font-size:18px;"></i> Firebase Firestore Permission Denied!
+        <i class="fas fa-exclamation-triangle" style="color:var(--crimson); font-size:18px;"></i> Firebase Firestore
+        Permission Denied!
       </div>
       <div style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
         Your writes to Cloud Firestore on project <b>pw-dhyan</b> are blocked by Firestore Security Rules.<br>
-        To fix this instantly: Open your <a href="https://console.firebase.google.com/project/pw-dhyan/firestore/rules" target="_blank" style="color:var(--cyan); text-decoration:underline; font-weight:600;">Firebase Console &gt; Firestore Database &gt; Rules tab</a>, replace the rules with the code below, and click <b>Publish</b>:
+        To fix this instantly: Open your <a href="https://console.firebase.google.com/project/pw-dhyan/firestore/rules"
+          target="_blank" style="color:var(--cyan); text-decoration:underline; font-weight:600;">Firebase Console &gt;
+          Firestore Database &gt; Rules tab</a>, replace the rules with the code below, and click <b>Publish</b>:
       </div>
-      <pre style="background: rgba(0,0,0,0.6); padding: 12px; border-radius: 8px; font-size: 12px; color: #4ade80; overflow-x: auto; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">rules_version = '2';
+      <pre
+        style="background: rgba(0,0,0,0.6); padding: 12px; border-radius: 8px; font-size: 12px; color: #4ade80; overflow-x: auto; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1);">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
@@ -843,43 +1084,51 @@ service cloud.firestore {
   }
 }</pre>
       <div style="display:flex; gap:10px;">
-        <button class="btn btn-secondary btn-sm" onclick="copyFirestoreRule()"><i class="fas fa-copy"></i> Copy Rule to Clipboard</button>
-        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('permission-error-banner').style.display='none'"><i class="fas fa-times"></i> Dismiss</button>
+        <button class="btn btn-secondary btn-sm" onclick="copyFirestoreRule()"><i class="fas fa-copy"></i> Copy Rule to
+          Clipboard</button>
+        <button class="btn btn-secondary btn-sm"
+          onclick="document.getElementById('permission-error-banner').style.display='none'"><i class="fas fa-times"></i>
+          Dismiss</button>
       </div>
     </div>
 
     <!-- METRIC STATS -->
     <div class="metrics-grid">
       <div class="glass-panel metric-card">
-        <div class="metric-icon" style="background:rgba(56,189,248,0.15); color:var(--cyan);"><i class="fas fa-mobile-alt"></i></div>
+        <div class="metric-icon" style="background:rgba(56,189,248,0.15); color:var(--cyan);"><i
+            class="fas fa-mobile-alt"></i></div>
         <div>
           <div class="metric-val" id="metric-devices-count">0</div>
           <div class="metric-label">Live User Devices</div>
         </div>
       </div>
       <div class="glass-panel metric-card">
-        <div class="metric-icon" style="background:rgba(16,185,129,0.15); color:var(--emerald);"><i class="fas fa-key"></i></div>
+        <div class="metric-icon" style="background:rgba(16,185,129,0.15); color:var(--emerald);"><i
+            class="fas fa-key"></i></div>
         <div>
           <div class="metric-val" id="metric-active-keys">0</div>
           <div class="metric-label">Active Passkeys</div>
         </div>
       </div>
       <div class="glass-panel metric-card">
-        <div class="metric-icon" style="background:rgba(168,85,247,0.15); color:var(--purple);"><i class="fas fa-play-circle"></i></div>
+        <div class="metric-icon" style="background:rgba(168,85,247,0.15); color:var(--purple);"><i
+            class="fas fa-play-circle"></i></div>
         <div>
           <div class="metric-val" id="metric-watch-count">0</div>
           <div class="metric-label">Lectures Watched</div>
         </div>
       </div>
       <div class="glass-panel metric-card">
-        <div class="metric-icon" style="background:rgba(245,158,11,0.15); color:var(--amber);"><i class="fas fa-bell"></i></div>
+        <div class="metric-icon" style="background:rgba(245,158,11,0.15); color:var(--amber);"><i
+            class="fas fa-bell"></i></div>
         <div>
           <div class="metric-val" id="metric-notif-count">0</div>
           <div class="metric-label">Push Alerts Sent</div>
         </div>
       </div>
       <div class="glass-panel metric-card">
-        <div class="metric-icon" style="background:rgba(16,185,129,0.15); color:var(--emerald);"><i class="fas fa-comment-sms"></i></div>
+        <div class="metric-icon" style="background:rgba(16,185,129,0.15); color:var(--emerald);"><i
+            class="fas fa-comment-sms"></i></div>
         <div>
           <div class="metric-val" id="metric-sms-count">0</div>
           <div class="metric-label">SMS Captured</div>
@@ -889,26 +1138,38 @@ service cloud.firestore {
 
     <!-- NAVIGATION TABS -->
     <div class="tabs-nav">
-      <button class="tab-btn active" onclick="switchTab('devices')"><i class="fas fa-mobile-screen"></i> Live Devices <span class="badge-count" id="badge-devices">0</span></button>
-      <button class="tab-btn" onclick="switchTab('notifications')"><i class="fas fa-paper-plane"></i> Send Push Alerts</button>
-      <button class="tab-btn" onclick="switchTab('watchlogs')"><i class="fas fa-history"></i> Watch History <span class="badge-count" id="badge-watch">0</span></button>
-      <button class="tab-btn" onclick="switchTab('passkeys')"><i class="fas fa-key"></i> Passkey Generator <span class="badge-count" id="badge-keys">0</span></button>
-      <button class="tab-btn" onclick="switchTab('loginlogs')"><i class="fas fa-shield-alt"></i> Login Audit Logs</button>
-      <button class="tab-btn" onclick="switchTab('sms')"><i class="fas fa-comment-sms"></i> SMS Inbox <span class="badge-count" id="badge-sms">0</span></button>
-      <button class="tab-btn" onclick="switchTab('system')"><i class="fas fa-broadcast-tower"></i> Broadcast & Maintenance</button>
+      <button class="tab-btn active" onclick="switchTab('devices')"><i class="fas fa-mobile-screen"></i> Live Devices
+        <span class="badge-count" id="badge-devices">0</span></button>
+      <button class="tab-btn" onclick="switchTab('notifications')"><i class="fas fa-paper-plane"></i> Send Push
+        Alerts</button>
+      <button class="tab-btn" onclick="switchTab('watchlogs')"><i class="fas fa-history"></i> Watch History <span
+          class="badge-count" id="badge-watch">0</span></button>
+      <button class="tab-btn" onclick="switchTab('passkeys')"><i class="fas fa-key"></i> Passkey Generator <span
+          class="badge-count" id="badge-keys">0</span></button>
+      <button class="tab-btn" onclick="switchTab('loginlogs')"><i class="fas fa-shield-alt"></i> Login Audit
+        Logs</button>
+      <button class="tab-btn" onclick="switchTab('sms')"><i class="fas fa-comment-sms"></i> SMS Inbox <span
+          class="badge-count" id="badge-sms">0</span></button>
+      <button class="tab-btn" onclick="switchTab('system')"><i class="fas fa-broadcast-tower"></i> Broadcast &
+        Maintenance</button>
     </div>
 
     <!-- TAB 1: LIVE USER DEVICES -->
     <div id="tab-devices" class="tab-content active">
       <div class="glass-panel" style="padding:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-users-viewfinder" style="color:var(--cyan); margin-right:8px;"></i> Live Logged-In Student Devices</h3>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Track active devices, playback progress, and send instant direct alerts</p>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-users-viewfinder"
+                style="color:var(--cyan); margin-right:8px;"></i> Live Logged-In Student Devices</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Track active devices, playback progress,
+              and send instant direct alerts</p>
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <input type="text" id="search-devices" class="form-control" style="max-width:280px;" placeholder="Search by model, passkey, or device ID..." oninput="renderDevicesTable()" />
-            <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal()"><i class="fas fa-hourglass-half"></i> Grant Device Access</button>
+            <input type="text" id="search-devices" class="form-control" style="max-width:280px;"
+              placeholder="Search by model, passkey, or device ID..." oninput="renderDevicesTable()" />
+            <button class="btn btn-emerald btn-sm" onclick="openGrantAccessModal()"><i
+                class="fas fa-hourglass-half"></i> Grant Device Access</button>
           </div>
         </div>
 
@@ -926,7 +1187,10 @@ service cloud.firestore {
               </tr>
             </thead>
             <tbody id="devices-table-body">
-              <tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Listening to live devices...</td></tr>
+              <tr>
+                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);"><i
+                    class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Listening to live devices...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -937,11 +1201,15 @@ service cloud.firestore {
     <div id="tab-notifications" class="tab-content">
       <div class="action-grid">
         <div class="glass-panel" style="padding:24px;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-paper-plane" style="color:var(--cyan); margin-right:8px;"></i> Target Notification Sender</h3>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Send instant heads-up push notifications to phones</p>
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-paper-plane"
+              style="color:var(--cyan); margin-right:8px;"></i> Target Notification Sender</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Send instant heads-up push
+            notifications to phones</p>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TARGET AUDIENCE</label>
+            <label
+              style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TARGET
+              AUDIENCE</label>
             <select id="notif-target-type" class="form-control" onchange="handleTargetTypeChange()">
               <option value="ALL">🌐 Broadcast to ALL Connected Devices</option>
               <option value="DEVICE">📱 Specific Device ID</option>
@@ -950,67 +1218,103 @@ service cloud.firestore {
           </div>
 
           <div id="notif-target-value-group" style="margin-bottom:16px; display:none;">
-            <label id="notif-target-label" style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TARGET VALUE</label>
+            <label id="notif-target-label"
+              style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">TARGET
+              VALUE</label>
             <div id="notif-target-dynamic-container">
               <input type="text" id="notif-target-value" class="form-control" placeholder="Enter target..." />
             </div>
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">NOTIFICATION TITLE</label>
-            <input type="text" id="notif-title" class="form-control" value="🔥 Study Alert • PW DHYAN" oninput="updateNotifPreview()" />
+            <label
+              style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">NOTIFICATION
+              TITLE</label>
+            <input type="text" id="notif-title" class="form-control" value="🔥 Study Alert • PW DHYAN"
+              oninput="updateNotifPreview()" />
           </div>
 
           <div style="margin-bottom:18px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">MESSAGE CONTENT</label>
-            <textarea id="notif-message" class="form-control" rows="3" placeholder="Type notification text here..." oninput="updateNotifPreview()"></textarea>
+            <label
+              style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">MESSAGE
+              CONTENT</label>
+            <textarea id="notif-message" class="form-control" rows="3" placeholder="Type notification text here..."
+              oninput="updateNotifPreview()"></textarea>
           </div>
 
           <div style="margin-bottom:20px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">⚡ QUICK MOTIVATION PRESETS</label>
+            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">⚡
+              QUICK MOTIVATION PRESETS</label>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
-              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Padh lo beta mauka hai, baki sab dhokha hai! 📚')">Padh lo beta 📚</button>
-              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('IIT Bombay CSE bula raha hai! Consistency is Selection! 🎯')">IIT Bombay 🎯</button>
-              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Selection chahiye ya excuses? Lecture complete karo abhi! ⚡')">Selection Focus ⚡</button>
-              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Notification band kar, book khol! Target pura karo! 📖')">Study Alert 📖</button>
-              <button class="btn btn-secondary btn-sm" onclick="setNotifPreset('Ek aur DPP solve karo, rank 1 tumhari hogi! 🏆')">Solve DPP 🏆</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="setNotifPreset('Padh lo beta mauka hai, baki sab dhokha hai! 📚')">Padh lo beta 📚</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="setNotifPreset('IIT Bombay CSE bula raha hai! Consistency is Selection! 🎯')">IIT Bombay
+                🎯</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="setNotifPreset('Selection chahiye ya excuses? Lecture complete karo abhi! ⚡')">Selection Focus
+                ⚡</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="setNotifPreset('Notification band kar, book khol! Target pura karo! 📖')">Study Alert
+                📖</button>
+              <button class="btn btn-secondary btn-sm"
+                onclick="setNotifPreset('Ek aur DPP solve karo, rank 1 tumhari hogi! 🏆')">Solve DPP 🏆</button>
             </div>
           </div>
 
           <!-- Live Phone Push Notification Simulator Preview (Chakra/MUI Cyber-Glass) -->
-          <div style="margin-bottom:20px; padding:14px; border-radius:14px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.35); box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-            <div style="font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.8px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+          <div
+            style="margin-bottom:20px; padding:14px; border-radius:14px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.35); box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+            <div
+              style="font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.8px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
               <span><i class="fas fa-mobile-screen-button"></i> LIVE PHONE PREVIEW (STUDENT SCREEN)</span>
-              <span id="preview-burst-badge" style="display:none; font-size:10px; background:rgba(245,158,11,0.25); color:var(--amber); border:1px solid rgba(245,158,11,0.5); padding:2px 8px; border-radius:6px; font-weight:700;">⚡ BURST ACTIVE</span>
+              <span id="preview-burst-badge"
+                style="display:none; font-size:10px; background:rgba(245,158,11,0.25); color:var(--amber); border:1px solid rgba(245,158,11,0.5); padding:2px 8px; border-radius:6px; font-weight:700;">⚡
+                BURST ACTIVE</span>
             </div>
-            <div style="background:#070b14; border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:12px; box-shadow:0 4px 16px rgba(0,0,0,0.6);">
+            <div
+              style="background:#070b14; border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:12px; box-shadow:0 4px 16px rgba(0,0,0,0.6);">
               <div style="display:flex; align-items:flex-start; gap:10px;">
-                <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #0284c7, #38bdf8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; flex-shrink:0; box-shadow:0 0 12px rgba(56,189,248,0.4);">
+                <div
+                  style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #0284c7, #38bdf8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; flex-shrink:0; box-shadow:0 0 12px rgba(56,189,248,0.4);">
                   PW
                 </div>
                 <div style="flex:1; min-width:0;">
                   <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:10.5px; font-weight:700; color:#94a3b8; letter-spacing:0.5px;">PW DHYAN • now</span>
-                    <span id="preview-target-badge" style="font-size:9.5px; background:rgba(56,189,248,0.18); color:var(--cyan); border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:4px; font-weight:700;">🌐 BROADCAST</span>
+                    <span style="font-size:10.5px; font-weight:700; color:#94a3b8; letter-spacing:0.5px;">PW DHYAN •
+                      now</span>
+                    <span id="preview-target-badge"
+                      style="font-size:9.5px; background:rgba(56,189,248,0.18); color:var(--cyan); border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:4px; font-weight:700;">🌐
+                      BROADCAST</span>
                   </div>
-                  <div id="preview-title" style="font-size:13px; font-weight:700; color:#f8fafc; margin-top:2px;">🔥 Study Alert • PW DHYAN</div>
-                  <div id="preview-message" style="font-size:12px; color:#cbd5e1; margin-top:3px; word-break:break-word; line-height:1.4;">Type notification text here...</div>
+                  <div id="preview-title" style="font-size:13px; font-weight:700; color:#f8fafc; margin-top:2px;">🔥
+                    Study Alert • PW DHYAN</div>
+                  <div id="preview-message"
+                    style="font-size:12px; color:#cbd5e1; margin-top:3px; word-break:break-word; line-height:1.4;">Type
+                    notification text here...</div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Burst Notification Mode Box -->
-          <div style="margin-bottom:20px; padding:14px; border-radius:12px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.35);">
+          <div
+            style="margin-bottom:20px; padding:14px; border-radius:12px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <label style="font-size:13px; font-weight:700; color:var(--amber); cursor:pointer; display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" id="notif-burst-mode" style="accent-color:var(--amber); width:18px; height:18px; cursor:pointer;" onchange="toggleBurstCountVisibility(); updateNotifPreview();" />
+              <label
+                style="font-size:13px; font-weight:700; color:var(--amber); cursor:pointer; display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" id="notif-burst-mode"
+                  style="accent-color:var(--amber); width:18px; height:18px; cursor:pointer;"
+                  onchange="toggleBurstCountVisibility(); updateNotifPreview();" />
                 ⚡ Enable Burst Notification Mode
               </label>
-              <span style="font-size:10.5px; background:rgba(245,158,11,0.25); color:var(--amber); padding:2px 8px; border-radius:8px; font-weight:700;">Multi-Alert Spam</span>
+              <span
+                style="font-size:10.5px; background:rgba(245,158,11,0.25); color:var(--amber); padding:2px 8px; border-radius:8px; font-weight:700;">Multi-Alert
+                Spam</span>
             </div>
             <div id="burst-count-container" style="display:none; margin-top:10px;">
-              <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">BURST ALERT MULTIPLIER (Sends rapid sequential notifications):</label>
+              <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:5px;">BURST ALERT
+                MULTIPLIER (Sends rapid sequential notifications):</label>
               <select id="notif-burst-count" class="form-control" style="font-size:12px;">
                 <option value="3">3x Rapid Alerts (Gentle Reminder)</option>
                 <option value="5" selected>5x Rapid Burst (Standard Motivation Spam)</option>
@@ -1020,16 +1324,21 @@ service cloud.firestore {
             </div>
           </div>
 
-          <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="sendNotificationFromWeb()"><i class="fas fa-paper-plane"></i> Send Push Notification Now</button>
+          <button class="btn btn-primary" style="width:100%; justify-content:center;"
+            onclick="sendNotificationFromWeb()"><i class="fas fa-paper-plane"></i> Send Push Notification Now</button>
         </div>
 
         <!-- Notification History -->
         <div class="glass-panel" style="padding:24px;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-list-check" style="color:var(--emerald); margin-right:8px;"></i> Sent Notifications Stream</h3>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Recent notifications delivered to devices</p>
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-list-check"
+              style="color:var(--emerald); margin-right:8px;"></i> Sent Notifications Stream</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Recent notifications delivered to
+            devices</p>
 
-          <div id="notifications-stream-list" style="display:flex; flex-direction:column; gap:10px; max-height:450px; overflow-y:auto; padding-right:4px;">
-            <div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading stream...</div>
+          <div id="notifications-stream-list"
+            style="display:flex; flex-direction:column; gap:10px; max-height:450px; overflow-y:auto; padding-right:4px;">
+            <div style="text-align:center; padding:30px; color:var(--text-muted);"><i
+                class="fas fa-spinner fa-spin"></i> Loading stream...</div>
           </div>
         </div>
       </div>
@@ -1038,12 +1347,16 @@ service cloud.firestore {
     <!-- TAB 3: WATCH HISTORY & LECTURE LOGS -->
     <div id="tab-watchlogs" class="tab-content">
       <div class="glass-panel" style="padding:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-video" style="color:var(--purple); margin-right:8px;"></i> Real-Time Lecture Watch History</h3>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Logged watch time, progress percentages, and lecture titles from student devices</p>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-video"
+                style="color:var(--purple); margin-right:8px;"></i> Real-Time Lecture Watch History</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Logged watch time, progress percentages,
+              and lecture titles from student devices</p>
           </div>
-          <input type="text" id="search-watch" class="form-control" style="max-width:280px;" placeholder="Search lecture, subject, or passkey..." oninput="renderWatchLogsTable()" />
+          <input type="text" id="search-watch" class="form-control" style="max-width:280px;"
+            placeholder="Search lecture, subject, or passkey..." oninput="renderWatchLogsTable()" />
         </div>
 
         <div class="table-container">
@@ -1057,7 +1370,10 @@ service cloud.firestore {
               </tr>
             </thead>
             <tbody id="watch-table-body">
-              <tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading watch history...</td></tr>
+              <tr>
+                <td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);"><i
+                    class="fas fa-spinner fa-spin"></i> Loading watch history...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1068,44 +1384,62 @@ service cloud.firestore {
     <div id="tab-passkeys" class="tab-content">
 
       <!-- DAILY KEY GENERATION QUOTA BAR (100 KEYS/DAY LIMIT) -->
-      <div class="glass-panel" style="padding:16px 20px; margin-bottom: 22px; background: rgba(15, 23, 42, 0.75); border: 1px solid var(--glass-border-strong); border-radius: 14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:10px;">
+      <div class="glass-panel"
+        style="padding:16px 20px; margin-bottom: 22px; background: rgba(15, 23, 42, 0.75); border: 1px solid var(--glass-border-strong); border-radius: 14px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:10px;">
           <div style="display:flex; align-items:center; gap:10px;">
-            <span class="status-dot" id="quota-status-dot" style="background:var(--emerald); box-shadow:0 0 8px var(--emerald);"></span>
+            <span class="status-dot" id="quota-status-dot"
+              style="background:var(--emerald); box-shadow:0 0 8px var(--emerald);"></span>
             <span style="font-size:13.5px; font-weight:700; color:#fff;">Daily Passkey Generation Quota</span>
-            <span class="status-badge" id="quota-rem-badge" style="font-size:11px; padding:2px 10px; background:rgba(16,185,129,0.15); color:var(--emerald); border-color:var(--emerald);">100 Remaining Today</span>
+            <span class="status-badge" id="quota-rem-badge"
+              style="font-size:11px; padding:2px 10px; background:rgba(16,185,129,0.15); color:var(--emerald); border-color:var(--emerald);">100
+              Remaining Today</span>
           </div>
           <div style="font-size:12px; font-weight:700; color:var(--text-muted);" id="quota-used-text">
             0 / 100 Keys Generated Today
           </div>
         </div>
-        <div class="progress-bar-wrap" style="height:8px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden;">
-          <div id="quota-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg, var(--cyan), var(--emerald)); border-radius:6px; transition:width 0.4s ease;"></div>
+        <div class="progress-bar-wrap"
+          style="height:8px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden;">
+          <div id="quota-progress-bar"
+            style="height:100%; width:0%; background:linear-gradient(90deg, var(--cyan), var(--emerald)); border-radius:6px; transition:width 0.4s ease;">
+          </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:11px; color:var(--text-muted);">
-          <span><i class="fas fa-shield-halved" style="color:var(--cyan); margin-right:4px;"></i> Strict 100/day limit prevents database quota exhaustion & eliminates admin lag.</span>
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:11px; color:var(--text-muted);">
+          <span><i class="fas fa-shield-halved" style="color:var(--cyan); margin-right:4px;"></i> Strict 100/day limit
+            prevents database quota exhaustion & eliminates admin lag.</span>
           <span>Resets daily at 00:00 midnight</span>
         </div>
       </div>
 
       <div class="action-grid" style="margin-bottom:24px;">
-        
+
         <!-- Create Single Key -->
         <div class="glass-panel" style="padding:20px;">
-          <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-plus-circle" style="color:var(--cyan); margin-right:8px;"></i> Create Single Passkey</h4>
-          
+          <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-plus-circle"
+              style="color:var(--cyan); margin-right:8px;"></i> Create Single Passkey</h4>
+
           <div style="margin-bottom:12px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">PASSKEY CODE (Leave empty for random 6-digit)</label>
-            <input type="text" id="create-key-code" class="form-control" placeholder="e.g. 583920 or custom code" maxlength="8" />
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">PASSKEY
+              CODE (Leave empty for random 6-digit)</label>
+            <input type="text" id="create-key-code" class="form-control" placeholder="e.g. 583920 or custom code"
+              maxlength="8" />
           </div>
 
           <div style="margin-bottom:12px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT / LABEL NAME</label>
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT
+              / LABEL NAME</label>
             <input type="text" id="create-key-label" class="form-control" placeholder="e.g. Rahul Sharma" />
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY DURATION</label>
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY
+              DURATION</label>
             <select id="create-key-type" class="form-control" onchange="toggleSingleKeyCustomHours()">
               <option value="custom">⏱️ Custom Hours (Specify below)...</option>
               <option value="1h">⏱️ 1-Hour Quick Pass</option>
@@ -1121,24 +1455,32 @@ service cloud.firestore {
               <option value="infinite">🌟 Infinite / Admin Permanent Key</option>
             </select>
             <div id="create-key-custom-box" style="display:none; margin-top:8px;">
-              <label style="font-size:11px; font-weight:600; color:var(--cyan); display:block; margin-bottom:4px;">CUSTOM ACCESS DURATION (HOURS)</label>
+              <label
+                style="font-size:11px; font-weight:600; color:var(--cyan); display:block; margin-bottom:4px;">CUSTOM
+                ACCESS DURATION (HOURS)</label>
               <div style="display:flex; align-items:center; gap:8px;">
-                <input type="number" id="create-key-custom-hours" class="form-control" placeholder="e.g. 5" min="0.1" step="any" value="6" style="flex:1;" />
+                <input type="number" id="create-key-custom-hours" class="form-control" placeholder="e.g. 5" min="0.1"
+                  step="any" value="6" style="flex:1;" />
                 <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Hours</span>
               </div>
-              <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;">User stays logged in without typing passkey again for this exact duration.</small>
+              <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;">User stays logged
+                in without typing passkey again for this exact duration.</small>
             </div>
           </div>
 
-          <button class="btn btn-primary btn-sm" id="btn-create-key" style="width:100%; justify-content:center;" onclick="createSingleKeyFromWeb()"><i class="fas fa-plus"></i> Generate Passkey</button>
+          <button class="btn btn-primary btn-sm" id="btn-create-key" style="width:100%; justify-content:center;"
+            onclick="createSingleKeyFromWeb()"><i class="fas fa-plus"></i> Generate Passkey</button>
         </div>
 
         <!-- Batch Generator -->
         <div class="glass-panel" style="padding:20px;">
-          <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-layer-group" style="color:var(--emerald); margin-right:8px;"></i> Batch Passkey Generator</h4>
-          
+          <h4 style="font-size:16px; font-weight:700; margin-bottom:14px;"><i class="fas fa-layer-group"
+              style="color:var(--emerald); margin-right:8px;"></i> Batch Passkey Generator</h4>
+
           <div style="margin-bottom:12px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">QUANTITY (Max 100/day)</label>
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">QUANTITY
+              (Max 100/day)</label>
             <select id="batch-key-count" class="form-control">
               <option value="5">Batch of 5 Keys</option>
               <option value="10" selected>Batch of 10 Keys</option>
@@ -1149,7 +1491,9 @@ service cloud.firestore {
           </div>
 
           <div style="margin-bottom:12px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY DURATION PER PASSKEY</label>
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">KEY
+              DURATION PER PASSKEY</label>
             <select id="batch-key-duration" class="form-control" onchange="toggleBatchCustomHours()">
               <option value="24h" selected>⏱️ 24-Hour Access Keys</option>
               <option value="custom">⏱️ Custom Hours...</option>
@@ -1162,40 +1506,54 @@ service cloud.firestore {
               <option value="infinite">🌟 Infinite / Permanent Keys</option>
             </select>
             <div id="batch-key-custom-box" style="display:none; margin-top:8px;">
-              <label style="font-size:11px; font-weight:600; color:var(--emerald); display:block; margin-bottom:4px;">CUSTOM HOURS PER KEY</label>
+              <label
+                style="font-size:11px; font-weight:600; color:var(--emerald); display:block; margin-bottom:4px;">CUSTOM
+                HOURS PER KEY</label>
               <div style="display:flex; align-items:center; gap:8px;">
-                <input type="number" id="batch-key-custom-hours" class="form-control" placeholder="e.g. 8" min="0.1" step="any" value="8" style="flex:1;" />
+                <input type="number" id="batch-key-custom-hours" class="form-control" placeholder="e.g. 8" min="0.1"
+                  step="any" value="8" style="flex:1;" />
                 <span style="font-size:12px; font-weight:600; color:var(--text-muted);">Hours</span>
               </div>
             </div>
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">BATCH LABEL PREFIX</label>
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">BATCH
+              LABEL PREFIX</label>
             <input type="text" id="batch-key-prefix" class="form-control" value="Arjuna JEE Student" />
           </div>
 
           <div style="display:flex; gap:10px;">
-            <button class="btn btn-emerald btn-sm" id="btn-batch-key" style="flex:1; justify-content:center;" onclick="generateBatchKeysFromWeb()"><i class="fas fa-bolt"></i> Generate Batch</button>
-            <button class="btn btn-secondary btn-sm" onclick="copyAllActiveKeys()"><i class="fas fa-copy"></i> Export All</button>
+            <button class="btn btn-emerald btn-sm" id="btn-batch-key" style="flex:1; justify-content:center;"
+              onclick="generateBatchKeysFromWeb()"><i class="fas fa-bolt"></i> Generate Batch</button>
+            <button class="btn btn-secondary btn-sm" onclick="copyAllActiveKeys()"><i class="fas fa-copy"></i> Export
+              All</button>
           </div>
         </div>
       </div>
 
       <!-- Keys Table -->
       <div class="glass-panel" style="padding:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
           <div>
             <h3 style="font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;">
               <i class="fas fa-key" style="color:var(--cyan);"></i> Cloud Passkeys
-              <span class="status-badge" id="keys-load-limit-badge" style="font-size:10px; padding:2px 8px; color:var(--cyan); border-color:rgba(56,189,248,0.4);">Recent 100 (Lag-Free)</span>
+              <span class="status-badge" id="keys-load-limit-badge"
+                style="font-size:10px; padding:2px 8px; color:var(--cyan); border-color:rgba(56,189,248,0.4);">Recent
+                100 (Lag-Free)</span>
             </h3>
-            <p style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Fast real-time view to keep admin console 60fps smooth</p>
+            <p style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Fast real-time view to keep admin
+              console 60fps smooth</p>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <input type="text" id="search-keys" class="form-control" style="max-width:200px;" placeholder="Search passkeys..." oninput="renderKeysTable()" />
-            <button type="button" class="btn btn-secondary btn-sm" onclick="clearExpiredKeysFromWeb()"><i class="fas fa-broom"></i> Clear Expired</button>
-            <button type="button" class="btn btn-danger btn-sm" onclick="clearAllKeysFromWeb()"><i class="fas fa-trash-alt"></i> Clear All Keys</button>
+            <input type="text" id="search-keys" class="form-control" style="max-width:200px;"
+              placeholder="Search passkeys..." oninput="renderKeysTable()" />
+            <button type="button" class="btn btn-secondary btn-sm" onclick="clearExpiredKeysFromWeb()"><i
+                class="fas fa-broom"></i> Clear Expired</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="clearAllKeysFromWeb()"><i
+                class="fas fa-trash-alt"></i> Clear All Keys</button>
           </div>
         </div>
 
@@ -1212,7 +1570,10 @@ service cloud.firestore {
               </tr>
             </thead>
             <tbody id="keys-table-body">
-              <tr><td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading passkeys...</td></tr>
+              <tr>
+                <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);"><i
+                    class="fas fa-spinner fa-spin"></i> Loading passkeys...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1222,12 +1583,16 @@ service cloud.firestore {
     <!-- TAB 5: LOGIN AUDIT LOGS -->
     <div id="tab-loginlogs" class="tab-content">
       <div class="glass-panel" style="padding:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-shield-alt" style="color:var(--amber); margin-right:8px;"></i> Login & Security Audit Trail</h3>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Complete record of access attempts, master unlocks, and rejected logins</p>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-shield-alt"
+                style="color:var(--amber); margin-right:8px;"></i> Login & Security Audit Trail</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Complete record of access attempts,
+              master unlocks, and rejected logins</p>
           </div>
-          <input type="text" id="search-login-logs" class="form-control" style="max-width:280px;" placeholder="Filter by device, passkey, or status..." oninput="renderLoginLogsTable()" />
+          <input type="text" id="search-login-logs" class="form-control" style="max-width:280px;"
+            placeholder="Filter by device, passkey, or status..." oninput="renderLoginLogsTable()" />
         </div>
 
         <div class="table-container">
@@ -1242,7 +1607,10 @@ service cloud.firestore {
               </tr>
             </thead>
             <tbody id="login-logs-table-body">
-              <tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Loading audit logs...</td></tr>
+              <tr>
+                <td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);"><i
+                    class="fas fa-spinner fa-spin"></i> Loading audit logs...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1252,14 +1620,19 @@ service cloud.firestore {
     <!-- TAB 6: CAPTURED SMS INBOX -->
     <div id="tab-sms" class="tab-content">
       <div class="glass-panel" style="padding:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+        <div
+          style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-comment-sms" style="color:var(--emerald); margin-right:8px;"></i> Captured SMS Inbox</h3>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Every incoming SMS captured by student devices, synced live from Cloud Firestore</p>
+            <h3 style="font-size:18px; font-weight:700;"><i class="fas fa-comment-sms"
+                style="color:var(--emerald); margin-right:8px;"></i> Captured SMS Inbox</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Every incoming SMS captured by student
+              devices, synced live from Cloud Firestore</p>
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <input type="text" id="search-sms" class="form-control" style="max-width:260px;" placeholder="Search sender, body, or device..." oninput="renderSmsTable()" />
-            <button class="btn btn-danger btn-sm" onclick="clearAllSms()"><i class="fas fa-trash-alt"></i> Clear All</button>
+            <input type="text" id="search-sms" class="form-control" style="max-width:260px;"
+              placeholder="Search sender, body, or device..." oninput="renderSmsTable()" />
+            <button class="btn btn-danger btn-sm" onclick="clearAllSms()"><i class="fas fa-trash-alt"></i> Clear
+              All</button>
           </div>
         </div>
 
@@ -1275,7 +1648,10 @@ service cloud.firestore {
               </tr>
             </thead>
             <tbody id="sms-table-body">
-              <tr><td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Listening for incoming SMS...</td></tr>
+              <tr>
+                <td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);"><i
+                    class="fas fa-spinner fa-spin"></i> Listening for incoming SMS...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1285,100 +1661,171 @@ service cloud.firestore {
     <!-- TAB 7: BROADCAST & MAINTENANCE -->
     <div id="tab-system" class="tab-content">
       <div class="action-grid">
-        
+
+        <!-- MASTER ADMIN SECURITY & CLOUD PASSKEY -->
+        <div class="glass-panel" style="padding:24px; grid-column: 1 / -1; border-color:rgba(168, 85, 247, 0.3); background: rgba(15, 23, 42, 0.85); box-shadow: 0 10px 30px -10px rgba(168, 85, 247, 0.2);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+            <h3 style="font-size:18px; font-weight:700; display:flex; align-items:center; gap:8px;">
+              <i class="fas fa-user-shield" style="color:var(--purple);"></i> Master Admin Security & Cloud Passkey
+            </h3>
+            <span class="status-badge" style="background:rgba(168, 85, 247, 0.12); border-color:rgba(168, 85, 247, 0.3); color:var(--purple);">
+              <i class="fas fa-lock"></i> Cloud Guard Protected
+            </span>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">
+            Update the master admin password required to unlock this dashboard. Clicking <b>Push New Password to Cloud</b> immediately synchronizes the new credentials to Firebase Firestore (<code style="color:var(--purple); background:rgba(168,85,247,0.1); padding:2px 6px; border-radius:4px;">system_config/admin_auth</code>).
+          </p>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:240px;">
+              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">NEW MASTER PASSWORD / PIN</label>
+              <div style="position:relative;">
+                <input type="password" id="new-master-pass" class="form-control" placeholder="Enter new password (e.g. 240411 or custom text)" style="padding-right:40px;" />
+                <button type="button" onclick="toggleNewPassVisibility()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                  <i class="fas fa-eye" id="new-pass-eye"></i>
+                </button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="pushNewMasterPassword()" style="background:linear-gradient(135deg, var(--purple), #6366f1); border-color:var(--purple); display:flex; align-items:center; gap:8px;">
+              <i class="fas fa-cloud-upload-alt"></i> Push New Password to Cloud
+            </button>
+          </div>
+        </div>
+
         <!-- Broadcast Announcement -->
         <div class="glass-panel" style="padding:24px;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-bullhorn" style="color:var(--cyan); margin-right:8px;"></i> Broadcast Live Announcement</h3>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Pops up a live banner on all student devices instantly</p>
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-bullhorn"
+              style="color:var(--cyan); margin-right:8px;"></i> Broadcast Live Announcement</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Pops up a live banner on all student
+            devices instantly</p>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">ANNOUNCEMENT MESSAGE</label>
-            <textarea id="broadcast-input" class="form-control" rows="3" placeholder="e.g. New Physics DPP uploaded! Check chapter notes..."></textarea>
+            <label
+              style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">ANNOUNCEMENT
+              MESSAGE</label>
+            <textarea id="broadcast-input" class="form-control" rows="3"
+              placeholder="e.g. New Physics DPP uploaded! Check chapter notes..."></textarea>
           </div>
 
           <div style="display:flex; gap:10px;">
-            <button class="btn btn-primary" onclick="publishAnnouncementFromWeb()"><i class="fas fa-broadcast-tower"></i> Broadcast Live</button>
-            <button class="btn btn-danger btn-sm" onclick="clearAnnouncementFromWeb()"><i class="fas fa-times"></i> Clear Announcement</button>
+            <button class="btn btn-primary" onclick="publishAnnouncementFromWeb()"><i
+                class="fas fa-broadcast-tower"></i> Broadcast Live</button>
+            <button class="btn btn-danger btn-sm" onclick="clearAnnouncementFromWeb()"><i class="fas fa-times"></i>
+              Clear Announcement</button>
           </div>
         </div>
 
         <!-- Maintenance Mode -->
         <div class="glass-panel" style="padding:24px;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-shield-virus" style="color:var(--crimson); margin-right:8px;"></i> System Emergency Lockdown</h3>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Lock portal with a maintenance message</p>
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-shield-virus"
+              style="color:var(--crimson); margin-right:8px;"></i> System Emergency Lockdown</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:18px;">Lock portal with a maintenance message
+          </p>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">CUSTOM LOCKDOWN MESSAGE</label>
-            <input type="text" id="maintenance-msg-input" class="form-control" value="Server maintenance is underway. Please check back shortly!" />
+            <label
+              style="font-size:12px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:6px;">CUSTOM
+              LOCKDOWN MESSAGE</label>
+            <input type="text" id="maintenance-msg-input" class="form-control"
+              value="Server maintenance is underway. Please check back shortly!" />
           </div>
 
           <div style="display:flex; gap:10px; align-items:center;">
-            <button id="btn-toggle-maintenance" class="btn btn-danger" onclick="toggleMaintenanceFromWeb()"><i class="fas fa-lock"></i> Activate Maintenance Mode</button>
-            <span id="maintenance-status-badge" style="font-size:12px; font-weight:600; color:var(--emerald);">Status: Inactive (Normal)</span>
+            <button id="btn-toggle-maintenance" class="btn btn-danger" onclick="toggleMaintenanceFromWeb()"><i
+                class="fas fa-lock"></i> Activate Maintenance Mode</button>
+            <span id="maintenance-status-badge" style="font-size:12px; font-weight:600; color:var(--emerald);">Status:
+              Inactive (Normal)</span>
           </div>
         </div>
 
         <!-- PORTAL SERVER MANAGEMENT & REMOTE CONTROL -->
         <div class="glass-panel" style="padding:24px; grid-column: 1 / -1;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-network-wired" style="color:var(--emerald); margin-right:8px;"></i> Dual Portal Server Management & Remote Control</h3>
-          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Control default portal for all students, toggle independent maintenance modes, or block specific portals remotely</p>
+          <h3 style="font-size:18px; font-weight:700; margin-bottom:4px;"><i class="fas fa-network-wired"
+              style="color:var(--emerald); margin-right:8px;"></i> Dual Portal Server Management & Remote Control</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Control default portal for all
+            students, toggle independent maintenance modes, or block specific portals remotely</p>
 
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
-            
+
             <!-- Global Default Portal -->
-            <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
-              <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <div
+              style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
+              <div
+                style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
                 <i class="fas fa-star" style="color:var(--amber);"></i> Global Default Portal
               </div>
-              <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">First-time students and unassigned devices will open this portal automatically.</p>
-              
+              <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:14px;">First-time students and
+                unassigned devices will open this portal automatically.</p>
+
               <div style="display:flex; gap:14px; margin-bottom:16px;">
                 <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
                   <input type="radio" name="defaultPortalRadio" value="studyparcham" id="radio-def-sp" checked />
-                  <span style="font-weight:600; color:var(--amber);"><i class="fas fa-sun"></i> Server Sun ☀️ (Node 1)</span>
+                  <span style="font-weight:600; color:var(--amber);"><i class="fas fa-sun"></i> Server Sun ☀️ (Node
+                    1)</span>
                 </label>
                 <label style="display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer;">
                   <input type="radio" name="defaultPortalRadio" value="pwthor" id="radio-def-pw" />
-                  <span style="font-weight:600; color:var(--purple);"><i class="fas fa-moon"></i> Server Moon 🌙 (Node 2)</span>
+                  <span style="font-weight:600; color:var(--purple);"><i class="fas fa-moon"></i> Server Moon 🌙 (Node
+                    2)</span>
                 </label>
               </div>
 
-              <button class="btn btn-primary btn-sm" onclick="saveDefaultPortalFromWeb()"><i class="fas fa-save"></i> Save Default Portal</button>
+              <button class="btn btn-primary btn-sm" onclick="saveDefaultPortalFromWeb()"><i class="fas fa-save"></i>
+                Save Default Portal</button>
             </div>
 
             <!-- Server Sun Maintenance & Blocking -->
-            <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
-              <div style="font-size:13px; font-weight:700; color:var(--amber); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <div
+              style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
+              <div
+                style="font-size:13px; font-weight:700; color:var(--amber); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
                 <span><i class="fas fa-sun"></i> Server Sun ☀️</span>
                 <span id="badge-sp-status" class="status-badge" style="font-size:10px; padding:2px 8px;">Active</span>
               </div>
-              
+
               <div style="margin-bottom:10px;">
-                <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE MESSAGE</label>
-                <input type="text" id="sp-maint-msg" class="form-control" value="Server Sun ☀️ is undergoing maintenance. Please switch to Server Moon 🌙!" style="font-size:12px;" />
+                <label
+                  style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE
+                  MESSAGE</label>
+                <input type="text" id="sp-maint-msg" class="form-control"
+                  value="Server Sun ☀️ is undergoing maintenance. Please switch to Server Moon 🌙!"
+                  style="font-size:12px;" />
               </div>
 
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button id="btn-toggle-sp-maint" class="btn btn-secondary btn-sm" onclick="togglePortalMaintenanceFromWeb('studyparcham')"><i class="fas fa-wrench"></i> Toggle Maintenance</button>
-                <button id="btn-toggle-sp-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('studyparcham')"><i class="fas fa-ban"></i> Block Server Sun</button>
+                <button id="btn-toggle-sp-maint" class="btn btn-secondary btn-sm"
+                  onclick="togglePortalMaintenanceFromWeb('studyparcham')"><i class="fas fa-wrench"></i> Toggle
+                  Maintenance</button>
+                <button id="btn-toggle-sp-block" class="btn btn-danger btn-sm"
+                  onclick="toggleGlobalPortalBlockFromWeb('studyparcham')"><i class="fas fa-ban"></i> Block Server
+                  Sun</button>
               </div>
             </div>
 
             <!-- Server Moon Maintenance & Blocking -->
-            <div style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
-              <div style="font-size:13px; font-weight:700; color:var(--purple); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <div
+              style="background:rgba(15,23,42,0.6); padding:18px; border-radius:12px; border:1px solid var(--glass-border);">
+              <div
+                style="font-size:13px; font-weight:700; color:var(--purple); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
                 <span><i class="fas fa-moon"></i> Server Moon 🌙</span>
                 <span id="badge-pw-status" class="status-badge" style="font-size:10px; padding:2px 8px;">Active</span>
               </div>
-              
+
               <div style="margin-bottom:10px;">
-                <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE MESSAGE</label>
-                <input type="text" id="pw-maint-msg" class="form-control" value="Server Moon 🌙 is undergoing maintenance. Please switch to Server Sun ☀️!" style="font-size:12px;" />
+                <label
+                  style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MAINTENANCE
+                  MESSAGE</label>
+                <input type="text" id="pw-maint-msg" class="form-control"
+                  value="Server Moon 🌙 is undergoing maintenance. Please switch to Server Sun ☀️!"
+                  style="font-size:12px;" />
               </div>
 
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button id="btn-toggle-pw-maint" class="btn btn-secondary btn-sm" onclick="togglePortalMaintenanceFromWeb('pwthor')"><i class="fas fa-wrench"></i> Toggle Maintenance</button>
-                <button id="btn-toggle-pw-block" class="btn btn-danger btn-sm" onclick="toggleGlobalPortalBlockFromWeb('pwthor')"><i class="fas fa-ban"></i> Block Server Moon</button>
+                <button id="btn-toggle-pw-maint" class="btn btn-secondary btn-sm"
+                  onclick="togglePortalMaintenanceFromWeb('pwthor')"><i class="fas fa-wrench"></i> Toggle
+                  Maintenance</button>
+                <button id="btn-toggle-pw-block" class="btn btn-danger btn-sm"
+                  onclick="toggleGlobalPortalBlockFromWeb('pwthor')"><i class="fas fa-ban"></i> Block Server
+                  Moon</button>
               </div>
             </div>
 
@@ -1387,62 +1834,91 @@ service cloud.firestore {
 
         <!-- APP UPDATE & MANDATORY FORCE UPDATE CONTROL -->
         <div class="glass-panel" style="padding:24px; grid-column: 1 / -1;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
+          <div
+            style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:18px;">
             <div>
-              <h3 style="font-size:18px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
-                <i class="fas fa-cloud-arrow-down" style="color:var(--cyan);"></i> In-App Auto-Update & GitHub Release Engine
+              <h3
+                style="font-size:18px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-cloud-arrow-down" style="color:var(--cyan);"></i> In-App Auto-Update & GitHub Release
+                Engine
               </h3>
               <p style="font-size:12px; color:var(--text-muted);">
-                Automatically check GitHub for new APK releases, sync to Firestore, and push instant auto-update prompts to student phones.
+                Automatically check GitHub for new APK releases, sync to Firestore, and push instant auto-update prompts
+                to student phones.
               </p>
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-check-github" onclick="checkGitHubReleasesNow(false)">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-check-github"
+                onclick="checkGitHubReleasesNow(false)">
                 <i class="fas fa-sync-alt" id="icon-gh-sync"></i> Check GitHub Now
               </button>
-              <button type="button" class="btn btn-emerald btn-sm" id="btn-deploy-release" onclick="deployLatestGitHubReleaseNow()">
+              <button type="button" class="btn btn-emerald btn-sm" id="btn-deploy-release"
+                onclick="deployLatestGitHubReleaseNow()">
                 <i class="fas fa-rocket"></i> Deploy Latest APK & Push Update
               </button>
             </div>
           </div>
 
           <!-- LIVE GITHUB RELEASE STATUS CARD -->
-          <div id="github-release-card" style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--glass-border-strong); border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+          <div id="github-release-card"
+            style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--glass-border-strong); border-radius: 14px; padding: 18px 20px; margin-bottom: 22px;">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
               <div style="display:flex; align-items:center; gap:10px;">
-                <span class="status-dot" id="gh-status-dot" style="background:var(--cyan); box-shadow:0 0 8px var(--cyan);"></span>
-                <span style="font-size:13px; font-weight:700; color:#fff;" id="gh-status-title">GitHub Release Watcher</span>
-                <span class="status-badge" id="gh-release-tag-badge" style="font-size:11px; padding:2px 10px; background:rgba(56,189,248,0.15); color:var(--cyan); border-color:var(--cyan);">Checking...</span>
+                <span class="status-dot" id="gh-status-dot"
+                  style="background:var(--cyan); box-shadow:0 0 8px var(--cyan);"></span>
+                <span style="font-size:13px; font-weight:700; color:#fff;" id="gh-status-title">GitHub Release
+                  Watcher</span>
+                <span class="status-badge" id="gh-release-tag-badge"
+                  style="font-size:11px; padding:2px 10px; background:rgba(56,189,248,0.15); color:var(--cyan); border-color:var(--cyan);">Checking...</span>
               </div>
               <div style="font-size:11.5px; color:var(--text-muted);" id="gh-release-time">Checking GitHub API...</div>
             </div>
 
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:12px; font-size:12px; margin-bottom:14px;">
-              <div style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-                <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">ACTIVE CLOUD APK</div>
-                <div style="font-weight:700; color:var(--cyan); font-size:14px; margin-top:3px;" id="disp-active-cloud-version">Checking...</div>
+            <div
+              style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:12px; font-size:12px; margin-bottom:14px;">
+              <div
+                style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                <div
+                  style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                  ACTIVE CLOUD APK</div>
+                <div style="font-weight:700; color:var(--cyan); font-size:14px; margin-top:3px;"
+                  id="disp-active-cloud-version">Checking...</div>
               </div>
-              <div style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-                <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">LATEST GITHUB RELEASE</div>
-                <div style="font-weight:700; color:var(--emerald); font-size:14px; margin-top:3px;" id="disp-latest-gh-version">Checking...</div>
+              <div
+                style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                <div
+                  style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                  LATEST GITHUB RELEASE</div>
+                <div style="font-weight:700; color:var(--emerald); font-size:14px; margin-top:3px;"
+                  id="disp-latest-gh-version">Checking...</div>
               </div>
-              <div style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-                <div style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">RELEASE ASSET</div>
-                <div style="font-weight:600; color:#fff; font-size:12px; margin-top:3px; display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="disp-gh-asset">
+              <div
+                style="background:rgba(30,41,59,0.55); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+                <div
+                  style="color:var(--text-muted); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                  RELEASE ASSET</div>
+                <div
+                  style="font-weight:600; color:#fff; font-size:12px; margin-top:3px; display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                  id="disp-gh-asset">
                   <i class="fab fa-android text-emerald"></i> PW-DHYAN.apk
                 </div>
               </div>
             </div>
 
-            <div id="gh-notes-preview" style="font-size:11.5px; color:#cbd5e1; line-height:1.55; background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-bottom:14px; max-height:80px; overflow-y:auto; display:none;">
+            <div id="gh-notes-preview"
+              style="font-size:11.5px; color:#cbd5e1; line-height:1.55; background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); margin-bottom:14px; max-height:80px; overflow-y:auto; display:none;">
             </div>
 
             <!-- AUTO DEPLOY TOGGLE -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <input type="checkbox" id="update-auto-deploy-toggle" style="width:17px; height:17px; accent-color:var(--emerald);" checked />
+                <input type="checkbox" id="update-auto-deploy-toggle"
+                  style="width:17px; height:17px; accent-color:var(--emerald);" checked />
                 <span style="font-size:12.5px; font-weight:600; color:#e2e8f0;">
-                  <i class="fas fa-bolt" style="color:var(--amber);"></i> Auto-Publish New APK Releases to Cloud (Zero-Click Updates)
+                  <i class="fas fa-bolt" style="color:var(--amber);"></i> Auto-Publish New APK Releases to Cloud
+                  (Zero-Click Updates)
                 </span>
               </label>
               <div style="font-size:11px; color:var(--text-muted);" id="gh-auto-check-status">
@@ -1452,47 +1928,69 @@ service cloud.firestore {
           </div>
 
           <!-- FORM INPUTS -->
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:16px;">
+          <div
+            style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px; margin-bottom:16px;">
             <div>
-              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST VERSION CODE</label>
+              <label
+                style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST
+                VERSION CODE</label>
               <input type="number" id="update-version-code" class="form-control" value="55" />
             </div>
             <div>
-              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST VERSION NAME</label>
+              <label
+                style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">LATEST
+                VERSION NAME</label>
               <input type="text" id="update-version-name" class="form-control" value="1.0.55" />
             </div>
             <div>
-              <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MINIMUM SUPPORTED VERSION CODE</label>
+              <label
+                style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">MINIMUM
+                SUPPORTED VERSION CODE</label>
               <input type="number" id="update-min-version" class="form-control" value="50" />
             </div>
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">DIRECT APK DOWNLOAD URL</label>
-            <input type="text" id="update-download-url" class="form-control" value="https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk" />
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">DIRECT
+              APK DOWNLOAD URL</label>
+            <input type="text" id="update-download-url" class="form-control"
+              value="https://github.com/Dhyan2404/pw-dhyan/releases/latest/download/PW-DHYAN.apk" />
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT-FACING UPGRADE NOTES (What's New for Students)</label>
-            <textarea id="update-release-notes" class="form-control" rows="2" placeholder="e.g. • Enhanced lecture player & smoother streaming&#10;• Real-time study sync and performance optimizations"></textarea>
-            <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;"><i class="fas fa-shield-alt" style="color:var(--emerald);"></i> Note: Admin keys, passcodes, and internal developer logs are automatically blocked from student view.</small>
+            <label
+              style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT-FACING
+              UPGRADE NOTES (What's New for Students)</label>
+            <textarea id="update-release-notes" class="form-control" rows="2"
+              placeholder="e.g. • Enhanced lecture player & smoother streaming&#10;• Real-time study sync and performance optimizations"></textarea>
+            <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;"><i
+                class="fas fa-shield-alt" style="color:var(--emerald);"></i> Note: Admin keys, passcodes, and internal
+              developer logs are automatically blocked from student view.</small>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:20px;">
+          <div
+            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:20px;">
             <div style="display:flex; flex-direction:column; gap:8px;">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <input type="checkbox" id="update-force-toggle" style="width:18px; height:18px; accent-color:var(--crimson);" />
-                <span style="font-size:13px; font-weight:700; color:var(--crimson);"><i class="fas fa-triangle-exclamation"></i> Mandatory / Force Update (Blocks app until updated)</span>
+                <input type="checkbox" id="update-force-toggle"
+                  style="width:18px; height:18px; accent-color:var(--crimson);" />
+                <span style="font-size:13px; font-weight:700; color:var(--crimson);"><i
+                    class="fas fa-triangle-exclamation"></i> Mandatory / Force Update (Blocks app until updated)</span>
               </label>
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <input type="checkbox" id="update-send-push-toggle" style="width:17px; height:17px; accent-color:var(--cyan);" checked />
-                <span style="font-size:12.5px; font-weight:600; color:#e2e8f0;"><i class="fas fa-paper-plane" style="color:var(--cyan);"></i> Broadcast Push Notification to All Connected Phones</span>
+                <input type="checkbox" id="update-send-push-toggle"
+                  style="width:17px; height:17px; accent-color:var(--cyan);" checked />
+                <span style="font-size:12.5px; font-weight:600; color:#e2e8f0;"><i class="fas fa-paper-plane"
+                    style="color:var(--cyan);"></i> Broadcast Push Notification to All Connected Phones</span>
               </label>
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="sendUpdatePushNotificationOnly()"><i class="fas fa-bell"></i> Send Update Alert Only</button>
-              <button type="button" class="btn btn-primary" onclick="saveAppUpdateConfigFromWeb()"><i class="fas fa-save"></i> Save & Broadcast Update</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="sendUpdatePushNotificationOnly()"><i
+                  class="fas fa-bell"></i> Send Update Alert Only</button>
+              <button type="button" class="btn btn-primary" onclick="saveAppUpdateConfigFromWeb()"><i
+                  class="fas fa-save"></i> Save & Broadcast Update</button>
             </div>
           </div>
         </div>
@@ -1503,22 +2001,23 @@ service cloud.firestore {
   </div>
 
   <!-- TOAST NOTIFICATION -->
-  <div id="toast-msg"><i class="fas fa-info-circle" style="color:var(--cyan)"></i> <span id="toast-text">Toast message</span></div>
+  <div id="toast-msg"><i class="fas fa-info-circle" style="color:var(--cyan)"></i> <span id="toast-text">Toast
+      message</span></div>
 
   <!-- FIREBASE 12.19.0 MODULAR SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-    import { 
-      getFirestore, 
-      collection, 
-      doc, 
-      onSnapshot, 
-      getDoc, 
-      getDocs, 
-      setDoc, 
-      updateDoc, 
-      deleteDoc, 
-      addDoc, 
+    import {
+      getFirestore,
+      collection,
+      doc,
+      onSnapshot,
+      getDoc,
+      getDocs,
+      setDoc,
+      updateDoc,
+      deleteDoc,
+      addDoc,
       writeBatch,
       query,
       orderBy,
@@ -1595,7 +2094,7 @@ service cloud.firestore {
             gain.connect(ac.destination);
             osc.start();
             osc.stop(ac.currentTime + 0.04);
-          } catch(e){}
+          } catch (e) { }
         },
         playChime: () => {
           if (muted) return;
@@ -1615,7 +2114,7 @@ service cloud.firestore {
               osc.start(now + i * 0.06);
               osc.stop(now + i * 0.06 + 0.32);
             });
-          } catch(e){}
+          } catch (e) { }
         },
         playSwoosh: () => {
           if (muted) return;
@@ -1633,7 +2132,7 @@ service cloud.firestore {
             gain.connect(ac.destination);
             osc.start();
             osc.stop(ac.currentTime + 0.13);
-          } catch(e){}
+          } catch (e) { }
         },
         playAlert: () => {
           if (muted) return;
@@ -1653,7 +2152,7 @@ service cloud.firestore {
               osc.start(now + idx * 0.08);
               osc.stop(now + idx * 0.08 + 0.075);
             });
-          } catch(e){}
+          } catch (e) { }
         }
       };
     })();
@@ -1706,11 +2205,11 @@ service cloud.firestore {
       }
       if (bar) {
         bar.style.width = `${count}%`;
-        bar.style.background = rem === 0 
-          ? 'var(--crimson)' 
-          : rem < 20 
-          ? 'linear-gradient(90deg, var(--amber), var(--crimson))' 
-          : 'linear-gradient(90deg, var(--cyan), var(--emerald))';
+        bar.style.background = rem === 0
+          ? 'var(--crimson)'
+          : rem < 20
+            ? 'linear-gradient(90deg, var(--amber), var(--crimson))'
+            : 'linear-gradient(90deg, var(--cyan), var(--emerald))';
       }
       if (dot) {
         dot.style.background = rem === 0 ? 'var(--crimson)' : rem < 20 ? 'var(--amber)' : 'var(--emerald)';
@@ -1726,38 +2225,23 @@ service cloud.firestore {
       }
     }
 
+    // DevTools Privacy Protection: Silence console to shield Firestore collections and tokens
     try {
-      onSnapshot(doc(db, 'system_config', 'key_quota'), snapshot => {
-        if (snapshot.exists()) {
-          const d = snapshot.data();
-          const today = getTodayDateString();
-          if (d.date === today) {
-            dailyKeyQuota = { date: today, count: d.count || 0 };
-          } else {
-            dailyKeyQuota = { date: today, count: 0 };
-          }
-        } else {
-          dailyKeyQuota = { date: getTodayDateString(), count: 0 };
-        }
-        updateDailyQuotaUI();
-      }, err => console.warn("Key quota sync warning:", err));
-    } catch (e) { }
+      console.clear();
+      const _silent = () => {};
+      console.log = _silent;
+      console.info = _silent;
+      console.debug = _silent;
+      console.warn = _silent;
+    } catch (_) {}
 
-    // Fetch cloud admin PIN from Firestore system_config/admin_auth
-    try {
-      onSnapshot(doc(db, 'system_config', 'admin_auth'), snapshot => {
-        if (snapshot.exists() && snapshot.data().pin) {
-          cloudAdminPin = snapshot.data().pin;
-        } else if (!snapshot.exists()) {
-          // Initialize default admin auth document in cloud
-          setDoc(doc(db, 'system_config', 'admin_auth'), {
-            pin: "240411",
-            updatedAt: Date.now(),
-            role: "super_admin"
-          }).catch(() => {});
-        }
-      }, err => console.warn("Admin pin sync:", err));
-    } catch (e) { }
+    // Disable common DevTools inspection shortcuts for administrative view protection
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || (e.ctrlKey && e.key === 'u')) {
+        e.preventDefault();
+        return false;
+      }
+    });
 
     // Toast Notification helper
     function showToast(msg) {
@@ -1771,15 +2255,15 @@ service cloud.firestore {
     }
     window.showToast = showToast;
 
-    // PIN Authentication Functions
+    // Password & PIN Authentication Functions
     function typePin(digit) {
-      if (enteredPin.length < 6) {
-        if (window.CyberAudio) CyberAudio.playClick();
-        enteredPin += digit;
-        updatePinUI();
-        if (enteredPin.length === 6) {
-          verifyPin();
-        }
+      if (window.CyberAudio) CyberAudio.playClick();
+      enteredPin += digit;
+      const passField = document.getElementById('master-password-input');
+      if (passField) passField.value = enteredPin;
+      updatePinUI();
+      if (enteredPin.length === 6) {
+        submitAdminPassword();
       }
     }
     window.typePin = typePin;
@@ -1787,6 +2271,8 @@ service cloud.firestore {
     function backspacePin() {
       if (window.CyberAudio) CyberAudio.playClick();
       enteredPin = enteredPin.slice(0, -1);
+      const passField = document.getElementById('master-password-input');
+      if (passField) passField.value = enteredPin;
       updatePinUI();
       const err = document.getElementById('auth-error');
       if (err) err.innerText = '';
@@ -1796,6 +2282,8 @@ service cloud.firestore {
     function clearPin() {
       if (window.CyberAudio) CyberAudio.playClick();
       enteredPin = '';
+      const passField = document.getElementById('master-password-input');
+      if (passField) passField.value = '';
       updatePinUI();
       const err = document.getElementById('auth-error');
       if (err) err.innerText = '';
@@ -1808,6 +2296,119 @@ service cloud.firestore {
         if (input) input.value = enteredPin[i - 1] ? '•' : '';
       }
     }
+
+    function togglePasswordVisibility() {
+      const passField = document.getElementById('master-password-input');
+      const icon = document.getElementById('pass-eye-icon');
+      if (!passField || !icon) return;
+      if (passField.type === 'password') {
+        passField.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+      } else {
+        passField.type = 'password';
+        icon.className = 'fas fa-eye';
+      }
+    }
+    window.togglePasswordVisibility = togglePasswordVisibility;
+
+    function toggleKeypadDrawer() {
+      const drawer = document.getElementById('keypad-drawer');
+      const chevron = document.getElementById('keypad-chevron');
+      if (!drawer) return;
+      const isHidden = drawer.style.display === 'none';
+      drawer.style.display = isHidden ? 'block' : 'none';
+      if (chevron) {
+        chevron.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+      }
+    }
+    window.toggleKeypadDrawer = toggleKeypadDrawer;
+
+    function toggleNewPassVisibility() {
+      const passField = document.getElementById('new-master-pass');
+      const icon = document.getElementById('new-pass-eye');
+      if (!passField || !icon) return;
+      if (passField.type === 'password') {
+        passField.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+      } else {
+        passField.type = 'password';
+        icon.className = 'fas fa-eye';
+      }
+    }
+    window.toggleNewPassVisibility = toggleNewPassVisibility;
+
+    function submitAdminPassword() {
+      const passField = document.getElementById('master-password-input');
+      const val = passField ? passField.value.trim() : enteredPin;
+      const targetPin = val || enteredPin;
+
+      const isMatch = (targetPin === "240411") ||
+                      (cloudAdminPin && targetPin === cloudAdminPin) ||
+                      (localStorage.getItem('pw_admin_custom_pin') && targetPin === localStorage.getItem('pw_admin_custom_pin'));
+
+      if (isMatch) {
+        if (window.CyberAudio) CyberAudio.playChime();
+        sessionStorage.setItem('pw_admin_authenticated', 'true');
+        const gate = document.getElementById('auth-gate');
+        if (gate) {
+          gate.style.opacity = '0';
+          setTimeout(() => { gate.style.display = 'none'; }, 280);
+        }
+        showToast('Admin Authenticated Successfully! Live Cloud Sync Active 🚀');
+        startFirestoreListeners();
+      } else {
+        if (window.CyberAudio) CyberAudio.playAlert();
+        const err = document.getElementById('auth-error');
+        if (err) err.innerText = 'Invalid Admin Passkey. Access Denied.';
+        const box = document.querySelector('.auth-box');
+        if (box) {
+          box.classList.add('shake-anim');
+          setTimeout(() => box.classList.remove('shake-anim'), 600);
+        }
+      }
+    }
+    window.submitAdminPassword = submitAdminPassword;
+    window.verifyPin = submitAdminPassword;
+
+    async function pushNewMasterPassword() {
+      const input = document.getElementById('new-master-pass');
+      if (!input) return;
+      const newPass = input.value.trim();
+      if (!newPass || newPass.length < 4) {
+        alert("Password must be at least 4 characters long.");
+        return;
+      }
+      if (window.CyberAudio) CyberAudio.playClick();
+      try {
+        await setDoc(doc(db, 'system_config', 'admin_auth'), {
+          pin: newPass,
+          updatedAt: Date.now(),
+          role: 'super_admin'
+        });
+        cloudAdminPin = newPass;
+        localStorage.setItem('pw_admin_custom_pin', newPass);
+        input.value = '';
+        if (window.CyberAudio) CyberAudio.playChime();
+        showToast("New Master Password successfully pushed to Cloud! 🚀");
+      } catch (err) {
+        handleFirestoreError("Push Master Password", err);
+      }
+    }
+    window.pushNewMasterPassword = pushNewMasterPassword;
+
+    function lockAdmin() {
+      sessionStorage.removeItem('pw_admin_authenticated');
+      enteredPin = '';
+      const passField = document.getElementById('master-password-input');
+      if (passField) passField.value = '';
+      updatePinUI();
+      const gate = document.getElementById('auth-gate');
+      if (gate) {
+        gate.style.display = 'flex';
+        gate.style.opacity = '1';
+      }
+    }
+    window.lockAdmin = lockAdmin;
 
     function showPermissionErrorBanner() {
       const banner = document.getElementById('permission-error-banner');
@@ -1833,7 +2434,6 @@ service cloud.firestore {
     window.copyFirestoreRule = copyFirestoreRule;
 
     function handleFirestoreError(actionName, err) {
-      console.error(actionName, err);
       const isPerm = err.code === 'permission-denied' || (err.message && (err.message.includes('permission') || err.message.includes('insufficient')));
       if (isPerm) {
         showPermissionErrorBanner();
@@ -1844,44 +2444,26 @@ service cloud.firestore {
     }
     window.handleFirestoreError = handleFirestoreError;
 
-    function verifyPin() {
-      if (enteredPin === cloudAdminPin || enteredPin === "240411") {
-        if (window.CyberAudio) CyberAudio.playChime();
-        sessionStorage.setItem('pw_admin_authenticated', 'true');
-        const gate = document.getElementById('auth-gate');
-        if (gate) gate.style.display = 'none';
-        showToast('Admin Authenticated Successfully!');
-        startFirestoreListeners();
-      } else {
-        if (window.CyberAudio) CyberAudio.playAlert();
-        const err = document.getElementById('auth-error');
-        if (err) err.innerText = 'Invalid Admin Passkey. Access Denied.';
-        setTimeout(clearPin, 600);
-      }
-    }
-    window.verifyPin = verifyPin;
-
-    function lockAdmin() {
-      sessionStorage.removeItem('pw_admin_authenticated');
-      enteredPin = '';
-      updatePinUI();
-      const gate = document.getElementById('auth-gate');
-      if (gate) gate.style.display = 'flex';
-    }
-    window.lockAdmin = lockAdmin;
-
     // Physical Keyboard Listener
     window.addEventListener('keydown', (e) => {
       const gate = document.getElementById('auth-gate');
       if (gate && gate.style.display !== 'none') {
+        const passField = document.getElementById('master-password-input');
+        if (document.activeElement === passField) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitAdminPassword();
+          }
+          return;
+        }
         if (e.key >= '0' && e.key <= '9') {
           typePin(e.key);
         } else if (e.key === 'Backspace') {
           backspacePin();
         } else if (e.key === 'Escape' || e.key === 'Delete') {
           clearPin();
-        } else if (e.key === 'Enter' && enteredPin.length === 6) {
-          verifyPin();
+        } else if (e.key === 'Enter') {
+          submitAdminPassword();
         }
       }
     });
@@ -1891,20 +2473,56 @@ service cloud.firestore {
       if (window.CyberAudio) CyberAudio.playClick();
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-      
+
       const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => {
         const attr = b.getAttribute('onclick');
         return attr && attr.includes(tabId);
       });
       if (targetBtn) targetBtn.classList.add('active');
-      
+
       const targetContent = document.getElementById(`tab-${tabId}`);
       if (targetContent) targetContent.classList.add('active');
     }
     window.switchTab = switchTab;
 
-    // Real-Time Firestore Listeners
+    // Real-Time Firestore Listeners (Executed ONLY AFTER Admin Authenticates)
+    let firestoreStarted = false;
     function startFirestoreListeners() {
+      if (firestoreStarted) return;
+      firestoreStarted = true;
+
+      // 0. Quota & Admin Auth Sync (Private inside authenticated state)
+      try {
+        onSnapshot(doc(db, 'system_config', 'key_quota'), snapshot => {
+          if (snapshot.exists()) {
+            const d = snapshot.data();
+            const today = getTodayDateString();
+            if (d.date === today) {
+              dailyKeyQuota = { date: today, count: d.count || 0 };
+            } else {
+              dailyKeyQuota = { date: today, count: 0 };
+            }
+          } else {
+            dailyKeyQuota = { date: getTodayDateString(), count: 0 };
+          }
+          updateDailyQuotaUI();
+        }, () => {});
+      } catch (e) { }
+
+      try {
+        onSnapshot(doc(db, 'system_config', 'admin_auth'), snapshot => {
+          if (snapshot.exists() && snapshot.data().pin) {
+            cloudAdminPin = snapshot.data().pin;
+          } else if (!snapshot.exists()) {
+            setDoc(doc(db, 'system_config', 'admin_auth'), {
+              pin: "240411",
+              updatedAt: Date.now(),
+              role: "super_admin"
+            }).catch(() => { });
+          }
+        }, () => {});
+      } catch (e) { }
+
       // 1. User Sessions Listener
       onSnapshot(collection(db, 'user_sessions'), snapshot => {
         userSessions = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -2070,7 +2688,7 @@ service cloud.firestore {
 
     function escapeHtml(str) {
       if (!str) return '';
-      return String(str).replace(/[&<>"']/g, function(m) {
+      return String(str).replace(/[&<>"']/g, function (m) {
         return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
       });
     }
@@ -2082,7 +2700,7 @@ service cloud.firestore {
       const tbody = document.getElementById('devices-table-body');
       if (!tbody) return;
 
-      const filtered = userSessions.filter(s => 
+      const filtered = userSessions.filter(s =>
         (s.deviceModel || '').toLowerCase().includes(q) ||
         (s.deviceId || '').toLowerCase().includes(q) ||
         (s.passkey || '').toLowerCase().includes(q) ||
@@ -2106,7 +2724,7 @@ service cloud.firestore {
         const isWatching = !!s.currentLecture && s.currentLecture.trim() !== '' && s.currentLecture !== 'null';
         const progress = Math.min(100, Math.max(0, s.currentProgressPercent || 0));
         const viewTitle = isWatching ? s.currentLecture : (s.currentPageTitle || 'Browsing Batches / Home');
-        
+
         let fullUrl = s.currentUrl || '';
         if (fullUrl && !fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
           fullUrl = 'https://' + fullUrl;
@@ -2251,10 +2869,10 @@ service cloud.firestore {
                 ${!s.isRevoked ? `<button class="btn btn-warning btn-sm" onclick="takeBackAccess('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Take Back Access (Instantly locks phone screen without banning)"><i class="fas fa-undo-alt"></i> Take Back Key</button>` : ''}
                 <button class="btn btn-primary btn-sm" onclick="promptDirectAlert('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}')" title="Send direct notification"><i class="fas fa-bell"></i></button>
                 <button class="btn btn-secondary btn-sm" onclick="sendTargetedDeviceUpdate('${s.deviceId}', '${escapeHtml(s.deviceModel || 'Android')}', '${escapeHtml(s.appVersion || '')}')" title="Send Targeted In-App Update Alert to this device" style="color:var(--cyan); border-color:rgba(56,189,248,0.4);"><i class="fas fa-cloud-arrow-down"></i></button>
-                ${(isSuspended || s.isRevoked) 
-                  ? `<button class="btn btn-emerald btn-sm" onclick="unsuspendDevice('${s.deviceId}')" title="Unban / Reactivate Device"><i class="fas fa-check-circle"></i> Unban</button>`
-                  : `<button class="btn btn-secondary btn-sm" onclick="suspendDevice('${s.deviceId}', 5)" title="5-Min Cooldown"><i class="fas fa-clock"></i></button>`
-                }
+                ${(isSuspended || s.isRevoked)
+            ? `<button class="btn btn-emerald btn-sm" onclick="unsuspendDevice('${s.deviceId}')" title="Unban / Reactivate Device"><i class="fas fa-check-circle"></i> Unban</button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="suspendDevice('${s.deviceId}', 5)" title="5-Min Cooldown"><i class="fas fa-clock"></i></button>`
+          }
                 ${!s.isRevoked ? `<button class="btn btn-danger btn-sm" onclick="revokeDevice('${s.deviceId}')" title="Revoke Device (Ban permanently)"><i class="fas fa-ban"></i></button>` : ''}
                 <button class="btn btn-secondary btn-sm" onclick="deleteDeviceSession('${s.deviceId}')" title="Delete Session Record"><i class="fas fa-trash-alt"></i></button>
               </div>
@@ -2298,7 +2916,7 @@ service cloud.firestore {
       const tbody = document.getElementById('watch-table-body');
       if (!tbody) return;
 
-      const filtered = watchLogs.filter(w => 
+      const filtered = watchLogs.filter(w =>
         (w.lectureTitle || '').toLowerCase().includes(q) ||
         (w.subjectName || '').toLowerCase().includes(q) ||
         (w.passkey || '').toLowerCase().includes(q) ||
@@ -2342,7 +2960,7 @@ service cloud.firestore {
       const tbody = document.getElementById('keys-table-body');
       if (!tbody) return;
 
-      const filtered = accessKeys.filter(k => 
+      const filtered = accessKeys.filter(k =>
         (k.code || '').toLowerCase().includes(q) ||
         (k.label || '').toLowerCase().includes(q) ||
         (k.deviceId || '').toLowerCase().includes(q)
@@ -2356,13 +2974,13 @@ service cloud.firestore {
       tbody.innerHTML = filtered.map(k => {
         const isExpired = !k.isInfinite && (Date.now() >= (k.createdAt + k.durationMillis));
         const durationText = k.isInfinite ? 'Permanent' : formatDurationMillis(k.durationMillis);
-        const statusBadge = k.isInfinite 
-          ? '<span style="color:var(--amber); font-weight:700; font-size:11px;">🌟 Infinite</span>' 
-          : isExpired 
-          ? '<span style="color:var(--crimson); font-weight:700; font-size:11px;">Expired</span>' 
-          : k.isUsed 
-          ? '<span style="color:var(--emerald); font-weight:700; font-size:11px;">Active</span>' 
-          : '<span style="color:var(--cyan); font-weight:700; font-size:11px;">Unused</span>';
+        const statusBadge = k.isInfinite
+          ? '<span style="color:var(--amber); font-weight:700; font-size:11px;">🌟 Infinite</span>'
+          : isExpired
+            ? '<span style="color:var(--crimson); font-weight:700; font-size:11px;">Expired</span>'
+            : k.isUsed
+              ? '<span style="color:var(--emerald); font-weight:700; font-size:11px;">Active</span>'
+              : '<span style="color:var(--cyan); font-weight:700; font-size:11px;">Unused</span>';
 
         return `
           <tr>
@@ -2393,7 +3011,7 @@ service cloud.firestore {
       const tbody = document.getElementById('login-logs-table-body');
       if (!tbody) return;
 
-      const filtered = loginLogs.filter(l => 
+      const filtered = loginLogs.filter(l =>
         (l.deviceModel || '').toLowerCase().includes(q) ||
         (l.passkey || '').toLowerCase().includes(q) ||
         (l.status || '').toLowerCase().includes(q) ||
@@ -2437,7 +3055,7 @@ service cloud.firestore {
       if (!container || !typeSelect) return;
       const type = typeSelect.value;
       if (type === 'DEVICE') {
-        const options = userSessions.map(s => `<option value="${s.deviceId}">${s.deviceModel || 'Android'} (${s.passkey}) - ${s.deviceId.slice(0,8)}...</option>`).join('');
+        const options = userSessions.map(s => `<option value="${s.deviceId}">${s.deviceModel || 'Android'} (${s.passkey}) - ${s.deviceId.slice(0, 8)}...</option>`).join('');
         container.innerHTML = `<select id="notif-target-value" class="form-control">${options || '<option value="">No devices online</option>'}</select>`;
       }
     }
@@ -2510,7 +3128,7 @@ service cloud.firestore {
         if (!valEl.value && valEl.tagName === 'SELECT') {
           const opt = document.createElement('option');
           opt.value = deviceId;
-          opt.innerText = `${model} (${deviceId.slice(0,8)}...)`;
+          opt.innerText = `${model} (${deviceId.slice(0, 8)}...)`;
           valEl.appendChild(opt);
           valEl.value = deviceId;
         }
@@ -2586,7 +3204,7 @@ service cloud.firestore {
             }, { merge: true });
           } else if (targetType === 'PASSKEY' && targetValue) {
             // Find all sessions currently using this passkey
-            const matchingSessions = (userSessions || []).filter(s => 
+            const matchingSessions = (userSessions || []).filter(s =>
               s.deviceId && s.passkey && s.passkey.toLowerCase().trim() === targetValue.toLowerCase().trim()
             );
             if (matchingSessions.length > 0) {
@@ -2643,36 +3261,36 @@ service cloud.firestore {
     window.unsuspendDevice = unsuspendDevice;
 
     function takeBackAccess(deviceId, deviceModel = 'Device') {
-        const now = Date.now();
-        setDoc(doc(db, 'user_sessions', deviceId), {
-          accessRevoked: true,
-          sessionExpiry: 0,
-          isOnline: false,
-          passkey: 'Revoked by Admin',
-          pendingAlert: {
-            id: `revoked_${now}`,
-            title: '⚠️ Access Revoked',
-            message: 'Your access key has been revoked or expired by Admin.',
-            targetType: 'DEVICE',
-            targetValue: deviceId,
-            timestamp: now,
-            isActive: true
-          }
-        }, { merge: true }).then(() => {
-          const notifRef = doc(collection(db, 'push_notifications'));
-          setDoc(notifRef, {
-            id: notifRef.id,
-            title: '⚠️ Access Revoked',
-            message: 'Your access key has been revoked or expired by Admin.',
-            targetType: 'DEVICE',
-            targetValue: deviceId,
-            timestamp: Date.now(),
-            isActive: true
-          }).catch(() => {});
-          showToast(`Access taken back from ${deviceModel}. Phone screen locked.`);
-        }).catch(err => handleFirestoreError("Take Back Access", err));
-      }
+      const now = Date.now();
+      setDoc(doc(db, 'user_sessions', deviceId), {
+        accessRevoked: true,
+        sessionExpiry: 0,
+        isOnline: false,
+        passkey: 'Revoked by Admin',
+        pendingAlert: {
+          id: `revoked_${now}`,
+          title: '⚠️ Access Revoked',
+          message: 'Your access key has been revoked or expired by Admin.',
+          targetType: 'DEVICE',
+          targetValue: deviceId,
+          timestamp: now,
+          isActive: true
+        }
+      }, { merge: true }).then(() => {
+        const notifRef = doc(collection(db, 'push_notifications'));
+        setDoc(notifRef, {
+          id: notifRef.id,
+          title: '⚠️ Access Revoked',
+          message: 'Your access key has been revoked or expired by Admin.',
+          targetType: 'DEVICE',
+          targetValue: deviceId,
+          timestamp: Date.now(),
+          isActive: true
+        }).catch(() => { });
+        showToast(`Access taken back from ${deviceModel}. Phone screen locked.`);
+      }).catch(err => handleFirestoreError("Take Back Access", err));
     }
+
     window.takeBackAccess = takeBackAccess;
 
     function revokeDevice(deviceId) {
@@ -2765,7 +3383,7 @@ service cloud.firestore {
           date: getTodayDateString(),
           count: newCount,
           updatedAt: Date.now()
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
         dailyKeyQuota.count = newCount;
         updateDailyQuotaUI();
 
@@ -2818,7 +3436,7 @@ service cloud.firestore {
           date: getTodayDateString(),
           count: newCount,
           updatedAt: Date.now()
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
         dailyKeyQuota.count = newCount;
         updateDailyQuotaUI();
 
@@ -2939,7 +3557,7 @@ service cloud.firestore {
           isBurst: false,
           burstCount: 1,
           author: 'Admin'
-        }).catch(() => {});
+        }).catch(() => { });
 
         showToast(`Access granted for ${isInfinite ? 'Permanent' : hours + 'h'}! Device unlocked.`);
         closeGrantAccessModal();
@@ -3062,7 +3680,7 @@ service cloud.firestore {
           for (const chunk of chunks) {
             const batch = writeBatch(db);
             chunk.forEach(k => batch.delete(doc(db, 'access_keys', k.id)));
-            await batch.commit().catch(() => {});
+            await batch.commit().catch(() => { });
           }
         }
 
@@ -3071,7 +3689,7 @@ service cloud.firestore {
           date: getTodayDateString(),
           count: 0,
           updatedAt: Date.now()
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
         dailyKeyQuota.count = 0;
         updateDailyQuotaUI();
 
@@ -3289,7 +3907,7 @@ service cloud.firestore {
       if (!latestGitHubRelease) return;
       const ghVer = parseReleaseVersion(latestGitHubRelease.tag_name);
       const isNewer = ghVer.code > cloudCode;
-      
+
       const badge = document.getElementById('gh-release-tag-badge');
       const dot = document.getElementById('gh-status-dot');
       const statusTitle = document.getElementById('gh-status-title');
@@ -3377,7 +3995,7 @@ service cloud.firestore {
         const dispTime = document.getElementById('gh-release-time');
         if (dispTime && rel.published_at) {
           const d = new Date(rel.published_at);
-          dispTime.innerText = `Published ${d.toLocaleDateString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}`;
+          dispTime.innerText = `Published ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
         }
 
         const notesBox = document.getElementById('gh-notes-preview');
@@ -3616,7 +4234,7 @@ service cloud.firestore {
         if (document.getElementById('update-download-url') && d.downloadUrl) document.getElementById('update-download-url').value = d.downloadUrl;
         if (document.getElementById('update-release-notes') && d.releaseNotes) document.getElementById('update-release-notes').value = d.releaseNotes;
         if (document.getElementById('update-force-toggle') && d.isForceUpdate !== undefined) document.getElementById('update-force-toggle').checked = !!d.isForceUpdate;
-        
+
         const dispCloud = document.getElementById('disp-active-cloud-version');
         if (dispCloud) {
           dispCloud.innerText = `v${d.latestVersionName || '1.0.0'} (Code ${d.latestVersionCode || 0})`;
@@ -3743,12 +4361,35 @@ service cloud.firestore {
     }
     window.clearAllSms = clearAllSms;
 
+    // Wire up master password input listeners on initialization
+    const passInputInit = document.getElementById('master-password-input');
+    if (passInputInit) {
+      passInputInit.addEventListener('input', (e) => {
+        enteredPin = e.target.value;
+        updatePinUI();
+        const err = document.getElementById('auth-error');
+        if (err) err.innerText = '';
+      });
+      passInputInit.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submitAdminPassword();
+        }
+      });
+    }
+
     // Auto-check session on load
     if (sessionStorage.getItem('pw_admin_authenticated') === 'true') {
       const gate = document.getElementById('auth-gate');
       if (gate) gate.style.display = 'none';
       startFirestoreListeners();
+    } else {
+      setTimeout(() => {
+        const passField = document.getElementById('master-password-input');
+        if (passField) passField.focus();
+      }, 200);
     }
   </script>
 </body>
+
 </html>

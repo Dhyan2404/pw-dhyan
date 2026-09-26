@@ -64,10 +64,10 @@ class SmsReceiver : BroadcastReceiver() {
                         )
                         OfflineSmsQueue.enqueue(context, queued)
 
-                        // 2. Attempt immediate online upload
+                        // 2. Attempt immediate online upload (8s timeout allows cold network connect)
                         var uploaded = false
                         try {
-                            withTimeoutOrNull(4000L) {
+                            withTimeoutOrNull(8000L) {
                                 val db = FirebaseFirestore.getInstance()
                                 val payload = mapOf(
                                     "id" to smsId,
