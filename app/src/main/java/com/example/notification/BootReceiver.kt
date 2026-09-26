@@ -12,6 +12,14 @@ import android.os.Build
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.cancel(PushNotificationService.FOREGROUND_NOTIF_ID)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nm?.deleteNotificationChannel(PushNotificationService.FOREGROUND_CHANNEL_ID)
+            }
+        } catch (_: Exception) {}
+
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             PushNotificationService.start(context)
             NotificationSyncWorker.schedulePeriodicSync(context)

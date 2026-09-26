@@ -37,11 +37,7 @@ class PushNotificationService : Service() {
         fun start(context: Context) {
             try {
                 val intent = Intent(context, PushNotificationService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    androidx.core.content.ContextCompat.startForegroundService(context, intent)
-                } else {
-                    context.startService(intent)
-                }
+                context.startService(intent)
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to start PushNotificationService: ${e.message}")
             }
@@ -186,47 +182,19 @@ class PushNotificationService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
-        startInForeground()
-        attachCloudListeners()
-        Log.d(TAG, "PushNotificationService created and active (foreground dual-channel sync)")
-    }
 
-    private fun startInForeground() {
+        // Proactively clear and remove any persistent foreground notifications
         try {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.cancel(FOREGROUND_NOTIF_ID)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(
-                    FOREGROUND_CHANNEL_ID,
-                    "PW DHYAN Sync Service",
-                    NotificationManager.IMPORTANCE_MIN
-                ).apply {
-                    description = "Silent cloud synchronization service"
-                    setShowBadge(false)
-                    lockscreenVisibility = android.app.Notification.VISIBILITY_SECRET
-                }
-                nm?.createNotificationChannel(channel)
+                nm?.deleteNotificationChannel(FOREGROUND_CHANNEL_ID)
             }
+        } catch (_: Exception) {}
 
-            val notification = androidx.core.app.NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
-                .setSmallIcon(com.example.R.mipmap.ic_launcher)
-                .setContentTitle("PW DHYAN")
-                .setContentText("Cloud sync active")
-                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN)
-                .setOngoing(true)
-                .build()
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(
-                    FOREGROUND_NOTIF_ID,
-                    notification,
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                )
-            } else {
-                startForeground(FOREGROUND_NOTIF_ID, notification)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Foreground start note: ${e.message}")
-        }
+        attachCloudListeners()
+        Log.d(TAG, "PushNotificationService created and active (silent dual-channel sync)")
     }
 
     private fun attachCloudListeners() {
@@ -302,7 +270,6 @@ class PushNotificationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startInForeground()
         if (pushListenerRegistration == null || sessionAlertRegistration == null) {
             attachCloudListeners()
         }

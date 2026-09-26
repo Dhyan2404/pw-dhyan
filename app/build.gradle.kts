@@ -17,8 +17,8 @@ android {
     applicationId = "com.dhyan.pwmod"
     minSdk = 24
     targetSdk = 35
-    versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 53
-    versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "53"}"
+    versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 69
+    versionName = "1.0.${System.getenv("GITHUB_RUN_NUMBER") ?: "69"}"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

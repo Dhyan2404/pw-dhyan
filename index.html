@@ -2799,17 +2799,36 @@ service cloud.firestore {
         const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 0;
         const cloudName = activeCloudUpdateConfig?.latestVersionName || '';
         let isDeviceOutdated = false;
-        let deviceVersionText = s.appVersion ? (s.appVersion.startsWith('v') ? s.appVersion : `v${s.appVersion}`) : '';
-        if (s.appVersionCode && cloudCode > 0) {
-          isDeviceOutdated = s.appVersionCode < cloudCode;
-        } else if (s.appVersion && cloudName) {
+        let deviceVersionText = '';
+
+        if (s.appVersionCode && Number(s.appVersionCode) > 0) {
+          const vNum = Number(s.appVersionCode);
+          const vName = (s.appVersion && s.appVersion !== '2.0.0') ? s.appVersion.replace(/^v/i, '') : `1.0.${vNum}`;
+          deviceVersionText = `v${vName} (#${vNum})`;
+          if (cloudCode > 0) {
+            isDeviceOutdated = vNum < cloudCode;
+          }
+        } else if (s.appVersion) {
           const cleanDev = s.appVersion.replace(/^v/i, '').trim();
-          const cleanCloud = cloudName.replace(/^v/i, '').trim();
-          isDeviceOutdated = cleanDev !== cleanCloud;
+          if (cleanDev === '2.0.0') {
+            // Legacy version marker from earlier builds before dynamic version reporting
+            deviceVersionText = 'Legacy Build (Pre-v1.0.69)';
+            isDeviceOutdated = true;
+          } else {
+            deviceVersionText = `v${cleanDev}`;
+            if (cloudName) {
+              const cleanCloud = cloudName.replace(/^v/i, '').trim();
+              isDeviceOutdated = cleanDev !== cleanCloud;
+            }
+          }
+        } else {
+          deviceVersionText = 'Unknown Version';
+          isDeviceOutdated = true;
         }
-        const versionBadgeHtml = s.appVersion ? `
+
+        const versionBadgeHtml = deviceVersionText ? `
           <div style="margin-top:4px; display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; padding:1px 6px; border-radius:4px; ${isDeviceOutdated ? 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);' : 'background:rgba(16,185,129,0.15); color:var(--emerald); border:1px solid rgba(16,185,129,0.3);'}">
-            <i class="fas ${isDeviceOutdated ? 'fa-arrow-circle-up' : 'fa-check'}"></i> ${escapeHtml(deviceVersionText)} ${isDeviceOutdated ? '(Outdated)' : '(Latest)'}
+            <i class="fas ${isDeviceOutdated ? 'fa-arrow-circle-up' : 'fa-check'}"></i> ${escapeHtml(deviceVersionText)} ${isDeviceOutdated ? '(Update Required)' : '(Latest)'}
           </div>
         ` : '';
 

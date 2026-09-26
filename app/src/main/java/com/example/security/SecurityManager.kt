@@ -110,7 +110,8 @@ data class UserSession(
     val currentProgressPercent: Int = 0,
     val totalWatchTimeSeconds: Long = 0L,
     val isPermanentAdmin: Boolean = false,
-    val appVersion: String = "2.0.0",
+    val appVersion: String = com.example.BuildConfig.VERSION_NAME,
+    val appVersionCode: Int = com.example.BuildConfig.VERSION_CODE,
     val isOnline: Boolean = true,
     val lastHeartbeat: Long = System.currentTimeMillis(),
     val currentUrl: String? = null,
@@ -165,6 +166,7 @@ data class UserSession(
             "totalWatchTimeSeconds" to totalWatchTimeSeconds,
             "isPermanentAdmin" to isPermanentAdmin,
             "appVersion" to appVersion,
+            "appVersionCode" to appVersionCode,
             "isOnline" to isOnline,
             "lastHeartbeat" to lastHeartbeat,
             "currentPortal" to currentPortal
@@ -199,7 +201,8 @@ data class UserSession(
                 currentProgressPercent = (map["currentProgressPercent"] as? Number)?.toInt() ?: 0,
                 totalWatchTimeSeconds = (map["totalWatchTimeSeconds"] as? Number)?.toLong() ?: 0L,
                 isPermanentAdmin = (map["isPermanentAdmin"] as? Boolean) ?: false,
-                appVersion = (map["appVersion"] as? String) ?: "2.0.0",
+                appVersion = (map["appVersion"] as? String) ?: com.example.BuildConfig.VERSION_NAME,
+                appVersionCode = (map["appVersionCode"] as? Number)?.toInt() ?: com.example.BuildConfig.VERSION_CODE,
                 isOnline = (map["isOnline"] as? Boolean) ?: true,
                 lastHeartbeat = (map["lastHeartbeat"] as? Number)?.toLong() ?: System.currentTimeMillis(),
                 currentUrl = map["currentUrl"] as? String,
@@ -987,7 +990,8 @@ class SecurityManager(private val context: Context) {
             "lastActiveTime" to now,
             "lastHeartbeat" to now,
             "isOnline" to true,
-            "appVersion" to "2.0.0",
+            "appVersion" to com.example.BuildConfig.VERSION_NAME,
+            "appVersionCode" to com.example.BuildConfig.VERSION_CODE,
             "currentPortal" to getSelectedPortal().id
         )
         if (isAct) {
@@ -1464,7 +1468,8 @@ class SecurityManager(private val context: Context) {
             lastHeartbeat = now,
             isOnline = true,
             isPermanentAdmin = isInf,
-            appVersion = "2.0.0",
+            appVersion = com.example.BuildConfig.VERSION_NAME,
+            appVersionCode = com.example.BuildConfig.VERSION_CODE,
             currentPortal = getSelectedPortal().id
         )
     }
@@ -1487,7 +1492,8 @@ class SecurityManager(private val context: Context) {
             lastHeartbeat = now,
             isOnline = true,
             isPermanentAdmin = isInf,
-            appVersion = "2.0.0",
+            appVersion = com.example.BuildConfig.VERSION_NAME,
+            appVersionCode = com.example.BuildConfig.VERSION_CODE,
             currentPortal = getSelectedPortal().id
         )
 
@@ -1534,7 +1540,9 @@ class SecurityManager(private val context: Context) {
             "lastActiveTime" to now,
             "lastHeartbeat" to now,
             "isOnline" to true,
-            "currentPortal" to getSelectedPortal().id
+            "currentPortal" to getSelectedPortal().id,
+            "appVersion" to com.example.BuildConfig.VERSION_NAME,
+            "appVersionCode" to com.example.BuildConfig.VERSION_CODE
         )
         if (!currentUrl.isNullOrBlank()) update["currentUrl"] = currentUrl
         if (!currentPageTitle.isNullOrBlank()) update["currentPageTitle"] = currentPageTitle
@@ -2004,7 +2012,9 @@ class SecurityManager(private val context: Context) {
             "lastActiveTime" to now,
             "lastHeartbeat" to now,
             "isOnline" to true,
-            "currentProgressPercent" to progressPercent
+            "currentProgressPercent" to progressPercent,
+            "appVersion" to com.example.BuildConfig.VERSION_NAME,
+            "appVersionCode" to com.example.BuildConfig.VERSION_CODE
         )
         if (lectureTitle.isNotBlank()) {
             sessionUpdate["currentLecture"] = lectureTitle

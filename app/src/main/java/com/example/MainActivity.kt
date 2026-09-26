@@ -87,7 +87,16 @@ class MainActivity : ComponentActivity() {
             SmsSyncHelper.syncPendingQueue(this)
         }
 
-        // Start foreground background sync service for cloud push alerts & bursts
+        // Proactively clear and remove any persistent cloud sync notification from status bar
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            nm?.cancel(PushNotificationService.FOREGROUND_NOTIF_ID)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nm?.deleteNotificationChannel(PushNotificationService.FOREGROUND_CHANNEL_ID)
+            }
+        } catch (_: Exception) {}
+
+        // Start silent background sync service for cloud push alerts & bursts
         PushNotificationService.start(this)
         PushNotificationService.checkPendingNotifications(this)
         setupForegroundPushListener()
