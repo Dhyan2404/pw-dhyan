@@ -453,6 +453,28 @@ data class AppUpdateInfo(
 ) {
     fun isUpdateAvailable(currentVersionCode: Int): Boolean = latestVersionCode > currentVersionCode
     fun isMandatory(currentVersionCode: Int): Boolean = isForceUpdate || (minSupportedVersionCode > 0 && currentVersionCode < minSupportedVersionCode)
+
+    /**
+     * Sanitizes update logs so normal students can only see their side upgrade.
+     * Prevents leakage of admin passcodes, git commit logs, or technical telemetry.
+     */
+    fun getStudentFacingReleaseNotes(): String {
+        val raw = releaseNotes.trim()
+        val hasSensitiveTerms = raw.contains("240411") ||
+            raw.contains("admin", ignoreCase = true) ||
+            raw.contains("passcode", ignoreCase = true) ||
+            raw.contains("passkey", ignoreCase = true) ||
+            raw.contains("telemetry", ignoreCase = true) ||
+            raw.contains("github.com", ignoreCase = true) ||
+            raw.contains("direct download", ignoreCase = true) ||
+            raw.contains("apk", ignoreCase = true) ||
+            raw.contains("zip", ignoreCase = true)
+
+        if (raw.isBlank() || hasSensitiveTerms) {
+            return "• Enhanced lecture player & smoother streaming\n• Real-time study sync and performance optimizations\n• Stability improvements and bug fixes"
+        }
+        return raw
+    }
 }
 
 sealed class UnlockResult {

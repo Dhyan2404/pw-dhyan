@@ -1473,8 +1473,9 @@ service cloud.firestore {
           </div>
 
           <div style="margin-bottom:16px;">
-            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">RELEASE NOTES / WHAT'S NEW</label>
-            <textarea id="update-release-notes" class="form-control" rows="2" placeholder="e.g. Eradicate StudyParcham auth lock screen, gatekeeper bypass, and sync liquid player."></textarea>
+            <label style="font-size:11px; font-weight:600; color:var(--text-muted); display:block; margin-bottom:4px;">STUDENT-FACING UPGRADE NOTES (What's New for Students)</label>
+            <textarea id="update-release-notes" class="form-control" rows="2" placeholder="e.g. • Enhanced lecture player & smoother streaming&#10;• Real-time study sync and performance optimizations"></textarea>
+            <small style="color:var(--text-muted); font-size:11px; display:block; margin-top:4px;"><i class="fas fa-shield-alt" style="color:var(--emerald);"></i> Note: Admin keys, passcodes, and internal developer logs are automatically blocked from student view.</small>
           </div>
 
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:20px;">
@@ -3263,6 +3264,28 @@ service cloud.firestore {
       }
     }
 
+    function sanitizeReleaseNotesForStudents(rawNotes) {
+      if (!rawNotes || typeof rawNotes !== 'string') {
+        return "• Enhanced lecture player & smoother streaming\n• Real-time study sync and performance optimizations\n• Stability improvements and bug fixes";
+      }
+      const lower = rawNotes.toLowerCase();
+      if (
+        lower.includes('240411') ||
+        lower.includes('admin') ||
+        lower.includes('passcode') ||
+        lower.includes('passkey') ||
+        lower.includes('telemetry') ||
+        lower.includes('github') ||
+        lower.includes('direct download') ||
+        lower.includes('.apk') ||
+        lower.includes('.zip')
+      ) {
+        return "• Enhanced lecture player & smoother streaming\n• Real-time study sync and performance optimizations\n• Stability improvements and bug fixes";
+      }
+      return rawNotes.trim();
+    }
+    window.sanitizeReleaseNotesForStudents = sanitizeReleaseNotesForStudents;
+
     async function checkGitHubReleasesNow(isBackground = false) {
       if (isCheckingGitHub) return;
       isCheckingGitHub = true;
@@ -3302,12 +3325,9 @@ service cloud.firestore {
 
         const notesBox = document.getElementById('gh-notes-preview');
         if (notesBox) {
-          if (rel.body && rel.body.trim()) {
-            notesBox.style.display = 'block';
-            notesBox.innerText = `Release Notes: ${rel.body.trim()}`;
-          } else {
-            notesBox.style.display = 'none';
-          }
+          const studentNotes = sanitizeReleaseNotesForStudents(rel.body);
+          notesBox.style.display = 'block';
+          notesBox.innerText = `Student Upgrade Notes: ${studentNotes}`;
         }
 
         const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 0;
@@ -3322,7 +3342,7 @@ service cloud.firestore {
           if (document.getElementById('update-version-code')) document.getElementById('update-version-code').value = ghVer.code;
           if (document.getElementById('update-version-name')) document.getElementById('update-version-name').value = ghVer.name;
           if (document.getElementById('update-download-url')) document.getElementById('update-download-url').value = apkUrl;
-          if (document.getElementById('update-release-notes') && rel.body) document.getElementById('update-release-notes').value = rel.body.trim();
+          if (document.getElementById('update-release-notes')) document.getElementById('update-release-notes').value = sanitizeReleaseNotesForStudents(rel.body);
 
           if (autoDeployChecked) {
             // Auto deploy zero-click update!
@@ -3365,7 +3385,7 @@ service cloud.firestore {
       const ghVer = parseReleaseVersion(rel.tag_name);
       const apkAsset = (rel.assets || []).find(a => (a.name || '').toLowerCase().endsWith('.apk')) || null;
       const apkUrl = apkAsset ? apkAsset.browser_download_url : `https://github.com/Dhyan2404/pw-dhyan/releases/download/${rel.tag_name}/PW-DHYAN.apk`;
-      const notes = (rel.body || '').trim() || `Official update ${rel.tag_name} released.`;
+      const notes = sanitizeReleaseNotesForStudents(rel.body);
 
       if (document.getElementById('update-version-code')) document.getElementById('update-version-code').value = ghVer.code;
       if (document.getElementById('update-version-name')) document.getElementById('update-version-name').value = ghVer.name;
@@ -3380,7 +3400,7 @@ service cloud.firestore {
     async function broadcastAppUpdatePush(versionName, versionCode, releaseNotes, isForce) {
       const now = Date.now();
       const title = isForce ? `🚨 MANDATORY UPDATE: PW DHYAN v${versionName}` : `🚀 New Update Available: PW DHYAN v${versionName}`;
-      const message = releaseNotes ? releaseNotes : `Version ${versionName} is now ready! Tap to update and get the latest fixes.`;
+      const message = `PW DHYAN v${versionName} is ready! Tap to install the latest lecture streaming improvements and bug fixes.`;
 
       // 1. Dispatch push notification to collection
       const notifRef = doc(collection(db, 'push_notifications'));
@@ -3432,7 +3452,7 @@ service cloud.firestore {
       const versionName = document.getElementById('update-version-name')?.value?.trim() || `1.0.${versionCode}`;
       const minVersion = parseInt(document.getElementById('update-min-version')?.value) || 50;
       const downloadUrl = document.getElementById('update-download-url')?.value?.trim() || `https://github.com/Dhyan2404/pw-dhyan/releases/download/v${versionName}/PW-DHYAN.apk`;
-      const releaseNotes = document.getElementById('update-release-notes')?.value?.trim() || '';
+      const releaseNotes = sanitizeReleaseNotesForStudents(document.getElementById('update-release-notes')?.value?.trim());
       const isForceUpdate = document.getElementById('update-force-toggle')?.checked || false;
       const shouldPush = forceBroadcast || (document.getElementById('update-send-push-toggle')?.checked ?? true);
 
@@ -3463,7 +3483,7 @@ service cloud.firestore {
     async function sendUpdatePushNotificationOnly() {
       const versionName = document.getElementById('update-version-name')?.value?.trim() || '1.0.55';
       const versionCode = parseInt(document.getElementById('update-version-code')?.value) || 55;
-      const releaseNotes = document.getElementById('update-release-notes')?.value?.trim() || '';
+      const releaseNotes = sanitizeReleaseNotesForStudents(document.getElementById('update-release-notes')?.value?.trim());
       const isForceUpdate = document.getElementById('update-force-toggle')?.checked || false;
 
       if (!confirm(`Broadcast update notification for v${versionName} to ALL connected devices now?`)) return;
@@ -3482,14 +3502,13 @@ service cloud.firestore {
       const targetName = model || deviceId;
       const cloudName = activeCloudUpdateConfig?.latestVersionName || 'latest';
       const cloudCode = activeCloudUpdateConfig?.latestVersionCode || 55;
-      const notes = activeCloudUpdateConfig?.releaseNotes || 'New version is ready.';
       const isForce = !!activeCloudUpdateConfig?.isForceUpdate;
 
       if (!confirm(`Send instant in-app update notification to "${targetName}"?\nCurrent: ${curVer || 'unknown'} -> Target: v${cloudName}`)) return;
 
       const now = Date.now();
       const title = isForce ? `🚨 Mandatory Update Required (v${cloudName})` : `🚀 Update Available (v${cloudName})`;
-      const msg = `Please update your app to v${cloudName}. ${notes}`;
+      const msg = `PW DHYAN v${cloudName} is ready! Tap to install the latest performance optimizations and bug fixes.`;
 
       try {
         const notifRef = doc(collection(db, 'push_notifications'));

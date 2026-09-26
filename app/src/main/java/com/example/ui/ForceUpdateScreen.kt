@@ -147,25 +147,23 @@ fun ForceUpdateScreen(
                 }
             }
 
-            if (updateInfo.releaseNotes.isNotBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant.copy(alpha = 0.6f)),
-                    shape = RoundedCornerShape(12.dp),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(GlassBorder, GlassBorder)))
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = "What's New:",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = GoldenAccent)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = updateInfo.releaseNotes,
-                            style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary.copy(alpha = 0.9f), lineHeight = 18.sp)
-                        )
-                    }
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant.copy(alpha = 0.6f)),
+                shape = RoundedCornerShape(12.dp),
+                border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(GlassBorder, GlassBorder)))
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = "What's Improved in this Update:",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = CyberCyan)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = updateInfo.getStudentFacingReleaseNotes(),
+                        style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary.copy(alpha = 0.9f), lineHeight = 18.sp)
+                    )
                 }
             }
 
